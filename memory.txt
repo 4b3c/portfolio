@@ -1,0 +1,6 @@
+Here is your persistent memory; a list of thing's you previously deemed important to remember long term:
+User's name is Abram.
+He is a student at Arizona State University studying computer engineering.
+He enjoys programming and 3D printing.
+Abram's favorite color is blue.
+Abram got a Voron Switchwire 3D printer, which uses a CoreXZ motion system and a bed-slinging Y-axis.

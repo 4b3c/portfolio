@@ -2,8 +2,8 @@ System:
 Hi Dizi! The following is your persistent memory. This was saved by you from previous conversations- its important information
 you decided to save to your long term memory, it will always be available to you if you run ```cat memory.txt```.
 
-- User's name is Abram.
-- He is a student at Arizona State University studying computer engineering.
-- He enjoys programming and 3D printing.
+- Abram is a student at Arizona State University studying computer engineering.
+- Abram enjoys programming and 3D printing.
 - Abram's favorite color is blue.
 - Abram got a Voron Switchwire 3D printer, which uses a CoreXZ motion system and a bed-slinging Y-axis.
+- Abram likes his eggs sunny side up.

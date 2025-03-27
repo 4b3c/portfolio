@@ -17,16 +17,16 @@ try:
 except FileNotFoundError:
     long_term_memory = ""
 
-initial_prompt = system_instructions + long_term_memory
+initial_prompt = system_instructions + long_term_memory + "\nSystem: You are now online. Say hi!\n"
 
-conversation = [initial_prompt]  # list of strings like "User: ...", "Dizi: ..."
+conversation = [initial_prompt]
 
 def query(prompt, stream=False):
     payload = {
         'model': MODEL_NAME,
         'prompt': prompt,
         'stream': stream,
-        'options': {"temperature": 0.7}
+        'options': {"temperature": 0.4}
     }
     response = requests.post(OLLAMA_API_URL, json=payload, stream=stream)
 
@@ -43,7 +43,7 @@ def query(prompt, stream=False):
             return f"Error: {response.status_code} - {response.text}"
 
 def detect_and_execute(assistant_reply):
-    match = re.search(r"```(?:bash|python)?\s*\n?(.*?)```", assistant_reply, re.DOTALL)
+    match = re.search(r"```(.*?)```", assistant_reply, re.DOTALL)
     if not match:
         return
 
@@ -52,27 +52,23 @@ def detect_and_execute(assistant_reply):
         return
 
     try:
-        result = subprocess.run(command_to_run, shell=True, capture_output=True, text=True, timeout=30)
+        result = subprocess.run(command_to_run, shell=True, capture_output=True, text=True, timeout=5)
         output_text = result.stdout.strip()
         error_text = result.stderr.strip()
+        if (len(output_text) > 300):
+            output_text = output_text[:300] + "..."
+        if (len(error_text) > 300):
+            error_text = error_text[:300] + "..."
     except Exception as e:
         output_text = ""
         error_text = f"Error during execution: {e}"
 
-    if error_text:
-        capability_response = f"capability output: (error)\n{error_text}"
-    elif output_text:
-        capability_response = f"capability output: {output_text}"
-    else:
-        capability_response = "capability output: (no output)"
-
-    print(capability_response)
-    conversation.append(f"Dizi (tool output): {output_text if output_text else error_text}")
+    print(f"System: {output_text if output_text else error_text}")
+    conversation.append(f"System: {output_text if output_text else error_text}")
 
 # --- Main Loop ---
 
 while True:
-
     convo_text = "\n".join(conversation)
     prompt = f"{convo_text}\nDizi:"
 

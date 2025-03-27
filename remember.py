@@ -10,5 +10,5 @@ if __name__ == "__main__":
         memory_item = " ".join(sys.argv[1:])
     # Append the memory item to memory.txt
     with open("memory.txt", "a", encoding="utf-8") as memfile:
-        memfile.write(memory_item.strip() + "\n")
+        memfile.write(" - " + memory_item.strip() + "\n")
         print(f"Successfully remembered: {memory_item}")

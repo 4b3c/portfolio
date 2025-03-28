@@ -32,7 +32,6 @@ except FileNotFoundError:
 initial_prompt = system_instructions + long_term_memory + "\nSystem: You are now online. Say hi to Abram!\n"
 conversation = [initial_prompt]
 
-
 def query(prompt):
     payload = {
         'model': MODEL_NAME,
@@ -59,11 +58,11 @@ def query(prompt):
 def detect_and_execute(assistant_reply, name):
     match = re.search(r"```(.*?)```", assistant_reply, re.DOTALL)
     if not match:
-        return
+        return None
 
     command_to_run = match.group(1).strip()
     if not command_to_run:
-        return
+        return None
 
     try:
         result = subprocess.run(command_to_run, shell=True, capture_output=True, text=True, timeout=5)
@@ -73,8 +72,7 @@ def detect_and_execute(assistant_reply, name):
         output_text = ""
         error_text = f"Error during execution: {e}"
 
-    print(f"{BLUE}System:{RESET} {name} ran a command. Command output: [{output_text if output_text else error_text}]")
-    conversation.append(f"System: {name} ran a command. Command output: [{output_text if output_text else error_text}]")
+    return f"{name} ran a command. Command output: [{output_text if output_text else error_text}]"
 
 async def read_terminal_input(incoming):
     user_input = await ainput(f"{RED}Abram: {RESET}")
@@ -83,6 +81,7 @@ async def read_terminal_input(incoming):
 
 
 async def dizi_main():
+    on_discord = False
     incoming = asyncio.Queue()
     outgoing = asyncio.Queue()
 
@@ -96,7 +95,13 @@ async def dizi_main():
 
         dizi_reply = query(prompt)
         conversation.append(f"Dizi: {dizi_reply}")
-        detect_and_execute(dizi_reply, "Dizi")
+        cmd_out = detect_and_execute(dizi_reply, "Dizi")
+        if cmd_out:
+            print(f"{BLUE}System:{RESET} {cmd_out}")
+            conversation.append(f"System: {cmd_out}")
+        if on_discord:
+            await discord_bot.send_message(dizi_reply)
+            if cmd_out: await discord_bot.send_message(f"```Command output: {cmd_out}```")
         
         # Open terminal and discord input streams
         terminal_input = asyncio.create_task(read_terminal_input(incoming))
@@ -104,14 +109,22 @@ async def dizi_main():
         terminal_input.cancel()
 
         conversation.append(f"Abram: {user_input}")
-        detect_and_execute(user_input, "Abram")
+        cmd_out = detect_and_execute(user_input, "Abram")
+        if cmd_out:
+            print(f"{BLUE}System:{RESET} {cmd_out}")
+            conversation.append(f"System: {cmd_out}")
+            if on_discord: await discord_bot.send_message(f"```Command output: {cmd_out}```")
 
         if "(From Discord)" in user_input:
-            await discord_bot.bot_channel.send(dizi_reply)
-        elif user_input.lower() in ("exit", "quit"):
+            on_discord = True
+        elif "exit" in user_input:
             break
+        else:
+            on_discord = False
 
     print("\nExiting Dizi. Goodbye!")
+    await discord_bot.send_message("Goodbye!")
+    await discord_bot.close()
     with open(f"conversations/{time.time()}.txt", "w") as f:
         f.write("\n".join(conversation))
 

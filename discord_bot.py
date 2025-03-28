@@ -20,17 +20,18 @@ class DiziBot(discord.Client):
 
     async def start(self):
         await super().start(token)
+    
+    async def send_message(self, message):
+        await self.bot_channel.send(message)
 
     async def on_ready(self):
         self.bot_channel = self.get_channel(channel_id)
-        if self.bot_channel:
-            await self.bot_channel.send("Hello! I'm online!")
 
     async def on_message(self, message):
         if message.author.id == abram_id:
             print(f"(From Discord) {message.content}")
-            await self.incoming_queue.put(message.content)
+            await self.incoming_queue.put(f"(From Discord) {message.content}")
 
     async def message_loop(self):
         reply = await self.outgoing_queue.get()
-        await self.bot_channel.send(reply)
+        await self.send_message(reply)

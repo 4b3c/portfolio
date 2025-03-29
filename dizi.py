@@ -57,28 +57,36 @@ def query(prompt):
     return full_reply.strip()
 
 def detect_and_execute(assistant_reply, name):
-    match = re.search(r"```(.*?)```", assistant_reply, re.DOTALL)
-    if not match:
-        return None
-
-    command_to_run = match.group(1).strip()
-    if not command_to_run:
+    matches = re.findall(r"```(.*?)```", assistant_reply, re.DOTALL)
+    if matches == None:
         return None
     
-    if "python restart.py" in command_to_run:
-        print(f"{BLUE}System:{RESET} Restarting Dizi...")
-        subprocess.Popen(["python", "restart.py"])
-        sys.exit()
+    output = ""
+    for command_block in matches:
+        command_to_run = command_block.strip()
 
-    try:
-        result = subprocess.run(command_to_run, shell=True, capture_output=True, text=True, timeout=5)
-        output_text = result.stdout.strip()
-        error_text = result.stderr.strip()
-    except Exception as e:
-        output_text = ""
-        error_text = f"Error during execution: {e}"
+        if not command_to_run:
+            return None
+        
+        command_to_run = command_to_run.replace("bash", "").strip()
+        command_to_run = command_to_run.replace("python python", "python").strip()
+        
+        if "python restart.py" in command_to_run:
+            print(f"{BLUE}System:{RESET} Restarting Dizi...")
+            subprocess.Popen(["python", "restart.py"])
+            sys.exit()
 
-    return f"{name} ran a command. Command output: [{output_text if output_text else error_text}]"
+        try:
+            result = subprocess.run(command_to_run, shell=True, capture_output=True, text=True, timeout=5)
+            output_text = result.stdout
+            error_text = result.stderr
+        except Exception as e:
+            output_text = ""
+            error_text = f"Error during execution: {e}"
+
+        output += f"{name} ran [{command_to_run}];\nHere is the output: [{'\n' if output_text else ''}{output_text if output_text else error_text}]\n"
+
+    return output
 
 async def read_terminal_input(incoming):
     user_input = await ainput(f"{RED}Abram: {RESET}")
@@ -103,7 +111,7 @@ async def dizi_main():
         conversation.append(f"Dizi: {dizi_reply}")
         cmd_out = detect_and_execute(dizi_reply, "Dizi")
         if cmd_out:
-            print(f"{BLUE}System:{RESET} {cmd_out}")
+            print(f"{BLUE}System:{RESET} {cmd_out}", flush=True)
             conversation.append(f"System: {cmd_out}")
         if on_discord:
             await discord_bot.send_message(dizi_reply)
@@ -117,7 +125,7 @@ async def dizi_main():
         conversation.append(f"Abram: {user_input}")
         cmd_out = detect_and_execute(user_input, "Abram")
         if cmd_out:
-            print(f"{BLUE}System:{RESET} {cmd_out}")
+            print(f"{BLUE}System:{RESET} {cmd_out}", flush=True)
             conversation.append(f"System: {cmd_out}")
             if on_discord: await discord_bot.send_message(f"```Command output: {cmd_out}```")
 

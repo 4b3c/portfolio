@@ -68,9 +68,6 @@ def detect_and_execute(assistant_reply, name):
         if not command_to_run:
             return None
         
-        command_to_run = command_to_run.replace("bash", "").strip()
-        command_to_run = command_to_run.replace("python python", "python").strip()
-        
         if "python restart.py" in command_to_run:
             print(f"{BLUE}System:{RESET} Restarting Dizi...")
             subprocess.Popen(["python", "restart.py"])

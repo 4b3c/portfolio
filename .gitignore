@@ -161,3 +161,5 @@ cython_debug/
 
 
 /conversations
+.google.json
+.token.json

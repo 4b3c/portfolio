@@ -1,3 +1,4 @@
+import sys
 import requests
 import subprocess
 import re
@@ -63,6 +64,11 @@ def detect_and_execute(assistant_reply, name):
     command_to_run = match.group(1).strip()
     if not command_to_run:
         return None
+    
+    if "python restart.py" in command_to_run:
+        print(f"{BLUE}System:{RESET} Restarting Dizi...")
+        subprocess.Popen(["python", "restart.py"])
+        sys.exit()
 
     try:
         result = subprocess.run(command_to_run, shell=True, capture_output=True, text=True, timeout=5)
@@ -123,7 +129,6 @@ async def dizi_main():
             on_discord = False
 
     print("\nExiting Dizi. Goodbye!")
-    await discord_bot.send_message("Goodbye!")
     await discord_bot.close()
     with open(f"conversations/{time.time()}.txt", "w") as f:
         f.write("\n".join(conversation))

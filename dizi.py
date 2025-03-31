@@ -51,6 +51,7 @@ def query(prompt):
         if line:
             data = json.loads(line.decode('utf-8'))
             chunk = data.get("response", "")
+            chunk = chunk.replace("```bash", "```")
             print(chunk, end='', flush=True)
             full_reply += chunk
     print()  # newline after streaming

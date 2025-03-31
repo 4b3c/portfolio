@@ -35,6 +35,7 @@ These are python tools available to you currently:
 - tools/push_to_git.py "{commit message}" - Pushes the current state of Dizi (you) to github.
 - tools/pull_from_git.py - Pulls the most recent version of Dizi's (your) code.
 - tools/fetch_schedule.py "{number}" - Pulls the next number of events from my Google Calendar.
+- tools/research.py "{search term}" - Uses duckduckgo to find the top 3 snippets about a topic.
 
 Examples:
 To output "Hello, John Doe!" type something like this to generate a greeting:

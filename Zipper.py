@@ -1,3 +1,4 @@
+import platform
 import sys
 import requests
 import subprocess
@@ -5,7 +6,7 @@ import re
 import json
 import time
 import asyncio
-from discord_bot import DiziBot
+from discord_bot import ZipperBot
 from aioconsole import ainput
 
 
@@ -15,12 +16,15 @@ OLLAMA_API_URL = "http://localhost:11434/api/generate"
 RED = "\033[91m"
 GREEN = "\033[92m"
 BLUE = "\033[94m"
+YELLOW = "\033[93m"
+MAGENTA = "\033[95m"
 RESET = "\033[0m"
 
 
 # Load system instructions (personality, rules, tool syntax)
 with open("instructions.txt", "r", encoding="utf-8") as f:
     system_instructions = f.read()
+    system_instructions = system_instructions.replace("{{OS}}", platform.platform())
 
 # Load persistent memory
 try:
@@ -51,9 +55,9 @@ def query(prompt):
         if line:
             data = json.loads(line.decode('utf-8'))
             chunk = data.get("response", "")
-            chunk = chunk.replace("```bash", "```")
-            print(chunk, end='', flush=True)
             full_reply += chunk
+            print(chunk, end='', flush=True)
+
     print()  # newline after streaming
     return full_reply.strip()
 
@@ -70,7 +74,7 @@ def detect_and_execute(assistant_reply, name):
             return None
         
         if "python restart.py" in command_to_run:
-            print(f"{BLUE}System:{RESET} Restarting Dizi...")
+            print(f"{BLUE}System:{RESET} Restarting Zipper...")
             subprocess.Popen(["python", "restart.py"])
             sys.exit()
 
@@ -82,7 +86,7 @@ def detect_and_execute(assistant_reply, name):
             output_text = ""
             error_text = f"Error during execution: {e}"
 
-        output += f"{name} ran [{command_to_run}];\nHere is the output: [{'\n' if output_text else ''}{output_text if output_text else error_text}]\n"
+        output += f"{name} ran [{command_to_run}];\nOutput: [{'\n' if output_text else ''}{output_text if output_text else error_text}]\n"
 
     return output
 
@@ -92,27 +96,27 @@ async def read_terminal_input(incoming):
 
 
 
-async def dizi_main():
+async def Zipper_main():
     on_discord = False
     incoming = asyncio.Queue()
     outgoing = asyncio.Queue()
 
-    discord_bot = DiziBot(incoming, outgoing)
+    discord_bot = ZipperBot(incoming, outgoing)
     asyncio.create_task(discord_bot.start())
 
     while True:
         convo_text = "\n".join(conversation)
-        prompt = f"{convo_text}\nDizi:"
-        print(f"{GREEN}Dizi:{RESET} ", end='', flush=True)
+        prompt = f"{convo_text}\nZipper:"
+        print(f"{GREEN}Zipper:{RESET} ", end='', flush=True)
 
-        dizi_reply = query(prompt)
-        conversation.append(f"Dizi: {dizi_reply}")
-        cmd_out = detect_and_execute(dizi_reply, "Dizi")
+        Zipper_reply = query(prompt)
+        conversation.append(f"Zipper: {Zipper_reply}")
+        cmd_out = detect_and_execute(Zipper_reply, "Zipper")
         if cmd_out:
             print(f"{BLUE}System:{RESET} {cmd_out}", flush=True)
             conversation.append(f"System: {cmd_out}")
         if on_discord:
-            await discord_bot.send_message(dizi_reply)
+            await discord_bot.send_message(Zipper_reply)
             if cmd_out: await discord_bot.send_message(f"```Command output: {cmd_out}```")
         
         # Open terminal and discord input streams
@@ -134,11 +138,11 @@ async def dizi_main():
         else:
             on_discord = False
 
-    print("\nExiting Dizi. Goodbye!")
+    print("\nExiting Zipper. Goodbye!")
     await discord_bot.close()
     with open(f"conversations/{time.time()}.txt", "w") as f:
         f.write("\n".join(conversation))
 
 
 if __name__ == "__main__":
-    asyncio.run(dizi_main())
+    asyncio.run(Zipper_main())

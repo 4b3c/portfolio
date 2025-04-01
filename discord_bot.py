@@ -12,7 +12,7 @@ intents = discord.Intents.default()
 intents.message_content = True
 
 
-class DiziBot(discord.Client):
+class ZipperBot(discord.Client):
     def __init__(self, incoming_queue, outgoing_queue, **kwargs):
         super().__init__(intents=intents, **kwargs)
         self.incoming_queue = incoming_queue

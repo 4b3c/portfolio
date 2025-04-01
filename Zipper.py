@@ -87,9 +87,9 @@ def detect_and_execute(assistant_reply, name):
             error_text = f"Error during execution: {e}"
 
         if error_text:
-            output += f"{RED}\n\t{name} ran:\n\t> {command_to_run}\n\tError:\n\t> {error_text}{RESET}\n"
+            output += f"\n\t{name} ran:\n\t> {command_to_run}\n\tError:\n\t> {error_text}\n"
         else:
-            output += f"{YELLOW}\n\t{name} ran:\n\t> {command_to_run}\n\tOutput:\n\t> {output_text}{RESET}\n"
+            output += f"\n\t{name} ran:\n\t> {command_to_run}\n\tOutput:\n\t> {output_text}\n"
 
 
 
@@ -118,7 +118,7 @@ async def Zipper_main():
         conversation.append(f"Zipper: {Zipper_reply}")
         cmd_out = detect_and_execute(Zipper_reply, "Zipper")
         if cmd_out:
-            print(f"{BLUE}System:{RESET} {cmd_out}", flush=True)
+            print(f"{BLUE}System:{RED if "Error:" in cmd_out else YELLOW}{cmd_out}{RESET}", flush=True)
             conversation.append(f"System: {cmd_out}")
         if on_discord:
             await discord_bot.send_message(Zipper_reply)
@@ -132,7 +132,7 @@ async def Zipper_main():
         conversation.append(f"Abram: {user_input}")
         cmd_out = detect_and_execute(user_input, "Abram")
         if cmd_out:
-            print(f"{BLUE}System:{RESET} {cmd_out}", flush=True)
+            print(f"{BLUE}System:{RED if "Error:" in cmd_out else YELLOW}{cmd_out}{RESET}", flush=True)
             conversation.append(f"System: {cmd_out}")
             if on_discord: await discord_bot.send_message(f"```Command output: {cmd_out}```")
 

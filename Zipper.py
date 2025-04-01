@@ -17,7 +17,7 @@ RED = "\033[91m"
 GREEN = "\033[92m"
 BLUE = "\033[94m"
 YELLOW = "\033[93m"
-MAGENTA = "\033[95m"
+PURPLE = "\033[95m"
 RESET = "\033[0m"
 
 
@@ -87,7 +87,7 @@ def detect_and_execute(assistant_reply, name):
             error_text = f"Error during execution: {e}"
 
         if error_text:
-            output += f"{MAGENTA}\n\t{name} ran:\n\t> {command_to_run}\n\tError:\n\t> {error_text}{RESET}\n"
+            output += f"{RED}\n\t{name} ran:\n\t> {command_to_run}\n\tError:\n\t> {error_text}{RESET}\n"
         else:
             output += f"{YELLOW}\n\t{name} ran:\n\t> {command_to_run}\n\tOutput:\n\t> {output_text}{RESET}\n"
 
@@ -96,7 +96,7 @@ def detect_and_execute(assistant_reply, name):
     return output
 
 async def read_terminal_input(incoming):
-    user_input = await ainput(f"{RED}Abram: {RESET}")
+    user_input = await ainput(f"{PURPLE}Abram: {RESET}")
     await incoming.put(user_input)
 
 

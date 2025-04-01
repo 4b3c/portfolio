@@ -1,7 +1,7 @@
 import subprocess
 import sys
 
-message = sys.argv[0]
+message = sys.argv[1]
 
 subprocess.run(['git', 'add', '.'], check=True)
 subprocess.run(['git', 'commit', '-m', message], check=True)

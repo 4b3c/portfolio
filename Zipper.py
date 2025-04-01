@@ -80,13 +80,18 @@ def detect_and_execute(assistant_reply, name):
 
         try:
             result = subprocess.run(command_to_run, shell=True, capture_output=True, text=True, timeout=5)
-            output_text = result.stdout
-            error_text = result.stderr
+            output_text = result.stdout.strip().replace("\n", "\n\t> ")
+            error_text = result.stderr.strip().replace("\n", "\n\t> ")
         except Exception as e:
             output_text = ""
             error_text = f"Error during execution: {e}"
 
-        output += f"{name} ran [{command_to_run}];\nOutput: [{'\n' if output_text else ''}{output_text if output_text else error_text}]\n"
+        if error_text:
+            output += f"{MAGENTA}\n\t{name} ran:\n\t> {command_to_run}\n\tError:\n\t> {error_text}{RESET}\n"
+        else:
+            output += f"{YELLOW}\n\t{name} ran:\n\t> {command_to_run}\n\tOutput:\n\t> {output_text}{RESET}\n"
+
+
 
     return output
 

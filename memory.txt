@@ -7,3 +7,4 @@ you decided to save to your long term memory, it will always be available to you
 - Abram's favorite color is blue and he likes his eggs sunny side up.
 - Abram wants to eventually explore Natural Language Processing (NLP) capabilities to improve my understanding of human language.
 - Abram has to go to the gym tomorrow morning.
+- I created a new virtual environment for the Google API library, but it timed out. I should have checked if the library was installed before proceeding.

@@ -43,9 +43,8 @@ def query(prompt):
         'prompt': prompt,
         'stream': True,
         'options': {
-            'temperature': 0.2,
-            'stop': ['System:', 'User:', 'Abram:', 'Output:'],
-            'max_tokens': 100
+            'temperature': 0.25,
+            'stop': ['System:', 'User:', 'Abram:', 'Output:']
             }
     }
     response = requests.post(OLLAMA_API_URL, json=payload, stream=True)
@@ -62,7 +61,7 @@ def query(prompt):
     return full_reply.strip()
 
 def detect_and_execute(assistant_reply, name):
-    matches = re.findall(r"```(.*?)```", assistant_reply, re.DOTALL)
+    matches = re.findall(r"<<<(.*?)>>>", assistant_reply, re.DOTALL)
     if matches == None:
         return None
     
@@ -117,12 +116,13 @@ async def Zipper_main():
         Zipper_reply = query(prompt)
         conversation.append(f"Zipper: {Zipper_reply}")
         cmd_out = detect_and_execute(Zipper_reply, "Zipper")
+        if on_discord:
+            await discord_bot.send_message(Zipper_reply if Zipper_reply else "Empty response.")
+            if cmd_out: await discord_bot.send_message(f"```Command output: {cmd_out}```")
         if cmd_out:
             print(f"{BLUE}System:{RED if "Error:" in cmd_out else YELLOW}{cmd_out}{RESET}", flush=True)
             conversation.append(f"System: {cmd_out}")
-        if on_discord:
-            await discord_bot.send_message(Zipper_reply)
-            if cmd_out: await discord_bot.send_message(f"```Command output: {cmd_out}```")
+        
         
         # Open terminal and discord input streams
         terminal_input = asyncio.create_task(read_terminal_input(incoming))

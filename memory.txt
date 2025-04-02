@@ -1,9 +1,10 @@
-System:
-Hi Zipper! The following is your persistent memory. This was saved by you from previous conversations- its important information
-you decided to save to your long term memory, it will always be available to you if you run ```python read_memory.py```.
+Okay Zipper, before you talk to Abram, here is your persistent memory. This was saved by you from previous conversations- its important information you decided to save, it will always be available to you if you run <<<python read_memory.py>>>.
 
+Memories:
 - Abram is a student at Arizona State University studying computer engineering.
 - Abram enjoys programming and 3D printing.
 - Abram's favorite color is blue and he likes his eggs sunny side up.
-- Abram wants to eventually explore Natural Language Processing (NLP) capabilities to improve my understanding of human language.
+- Abram wants to explore Natural Language Processing to improve my understanding of human language.
 - Abram enjoys rock climbing
+- Main goal: Interpret and run Abram's commands
+- New note: Abram wants me to help him with Red Black Trees test tomorrow

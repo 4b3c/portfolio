@@ -163,3 +163,4 @@ zipper-venv/
 /conversations
 .google.json
 .token.json
+.DS_Store

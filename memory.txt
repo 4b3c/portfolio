@@ -6,5 +6,3 @@ Memories:
 - Abram's favorite color is blue and he likes his eggs sunny side up.
 - Abram wants to explore Natural Language Processing to improve my understanding of human language.
 - Abram enjoys rock climbing
-- Main goal: Interpret and run Abram's commands
-- New note: Abram wants me to help him with Red Black Trees test tomorrow

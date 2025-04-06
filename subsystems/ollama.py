@@ -2,10 +2,22 @@ from collections.abc import Generator
 import requests
 import json
 import asyncio
-from subsystem import Subsystem
+from .subsystem import Subsystem
 
 MODEL_NAME = "llama3.2"
 OLLAMA_API_URL = "http://localhost:11434/api/generate"
+
+def get_intructions():
+    with open("subsystems/conversation/instructions.txt", "r") as f:
+        instructions = f.read()
+    f.close()
+    return instructions
+
+def get_memory():
+    with open("subsystems/conversation/memory.txt", "r") as f:
+        memory = f.read()
+    f.close()
+    return memory
 
 def stream_ollama(prompt: str) -> Generator[str, None, None]:
     payload = {
@@ -29,6 +41,7 @@ def stream_ollama(prompt: str) -> Generator[str, None, None]:
 class Ollama(Subsystem):
     def __init__(self):
         super().__init__("Ollama")
+        self.conversation = get_intructions() + get_memory() + "\nSystem: You are now online. Say hi to Abram.\n"
         self.channel_ollama_stream = self.create_channel("ollama_stream")
         self.channel_ollama_state = self.create_channel("ollama_state")
         self.channel_ollama_output = self.create_channel("ollama_output")
@@ -36,11 +49,12 @@ class Ollama(Subsystem):
     # The console's waiter will route to this with the prompt
     async def prompt_ollama(self, data):
         await self.channel_ollama_state.send("[Starting]")
+        self.conversation += data
         full_response = ""
         loop = asyncio.get_running_loop()
 
         def run_stream():
-            for chunk in stream_ollama(data):
+            for chunk in stream_ollama(self.conversation):
                 asyncio.run_coroutine_threadsafe(
                     self.channel_ollama_stream.send(chunk),
                     loop

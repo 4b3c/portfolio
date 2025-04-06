@@ -1,6 +1,6 @@
 import re
 import subprocess
-from subsystem import Subsystem
+from .subsystem import Subsystem
 
 RED = "\033[91m"
 GREEN = "\033[92m"
@@ -16,7 +16,7 @@ class Actions(Subsystem):
 
     # Console and Ollama will route to this, which will detect and run commands
     async def command_input(self, data):
-        matches = re.findall(r"<<<(.*?)>>>", data, re.DOTALL)
+        matches = re.findall(r"```bash\s*(.*?)```", data, re.DOTALL)
         if not matches:
             await self.channel_command_output.send("")
             return
@@ -38,4 +38,4 @@ class Actions(Subsystem):
             if error_text: output += f"{RED}\n    Ran:\n\t> {command_to_run}\n     Error:\n\t> {error_text}\n{RESET}"
             else: output += f"{YELLOW}\n    Ran:\n\t> {command_to_run}\n    Output:\n\t> {output_text}\n{RESET}"
 
-        await self.channel_command_output.send(output)
+        await self.channel_command_output.send(f"\n{BLUE}System:{output}")

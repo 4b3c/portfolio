@@ -1,11 +1,5 @@
 import asyncio
-from actions import Actions
-from console import Console
-from discordbot import Discord
-from ollama import Ollama
-from router import Router
-from waiter import Waiter
-
+from subsystems import *
 
 async def main():
     router = Router()
@@ -40,9 +34,9 @@ async def main():
     router.route(ollama_waiter.channel_command_output).to(console.ollama_actions_output)
     router.route(discord.channel_user_input).to(console.discord_interrupt)
 
-    await asyncio.sleep(2)
+    await asyncio.sleep(1)
     print("Starting Zipper...")
-    await ollama.prompt_ollama("Hello!")
+    await ollama.prompt_ollama("")
 
     # Keep alive forever
     while True:

@@ -1,7 +1,7 @@
 from enum import Enum
 from aioconsole import ainput
 import asyncio
-from subsystem import Subsystem
+from .subsystem import Subsystem
 
 RED = "\033[91m"
 GREEN = "\033[92m"
@@ -12,7 +12,6 @@ RESET = "\033[0m"
 
 ABRAM = f"{PURPLE}Abram:{RESET} "
 ZIPPER = f"{GREEN}Zipper:{RESET} "
-SYSTEM = f"{BLUE}System:{RESET} "
 
 
 class ConsoleState(Enum):
@@ -39,7 +38,7 @@ class Console(Subsystem):
 
     async def received_input(self, data):
         if self.ainput_task: self.ainput_task.cancel()
-        await self.channel_user_input.send(data)
+        await self.channel_user_input.send("Abram: " + data)
         self.set_state(ConsoleState.MY_COMMANDS_RUNNING)
 
     async def terminal_input(self):
@@ -68,12 +67,12 @@ class Console(Subsystem):
     # Ollama's Actions will route to this
     async def ollama_actions_output(self, data):
         await self.wait_until(ConsoleState.OLLAMA_COMMANDS_RUNNING)
-        print((SYSTEM + data) if data else "")
+        print((data) if data else "")
         self.ainput_task = asyncio.create_task(self.terminal_input())
         self.set_state(ConsoleState.INPUT)
 
     # My Actions will route to this
     async def my_actions_output(self, data):
         await self.wait_until(ConsoleState.MY_COMMANDS_RUNNING)
-        print((SYSTEM + data) if data else "")
+        print((data) if data else "")
         self.set_state(ConsoleState.STREAMING)

@@ -1,4 +1,4 @@
-from subsystem import Subsystem
+from .subsystem import Subsystem
 from discord import Intents, Client
 import asyncio
 import os
@@ -28,7 +28,7 @@ class DiscordBot(Client):
     
     async def send_message(self, message) -> None:
         if self.bot_channel and message.strip():
-            await self.bot_channel.send(message)
+            await self.bot_channel.send(message[:1999])
 
     async def on_message(self, message) -> None:
         if message.author.id == abram_id:

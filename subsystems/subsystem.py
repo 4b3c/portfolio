@@ -1,5 +1,5 @@
 import asyncio
-from router import Channel, Router
+from .router import Channel
 
 
 class Subsystem:

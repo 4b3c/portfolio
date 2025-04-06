@@ -22,6 +22,7 @@ class DiscordBot(Client):
         self.internal_channel: Channel = internal_channel
         self.bot_channel: TextChannel = None
         self.disabled = True
+        self.typing_task = None
 
     async def start(self) -> None:
         await super().start(token)
@@ -38,13 +39,30 @@ class DiscordBot(Client):
             self.disabled = False
             await self.internal_channel.send(Message("Discord", message.content))
 
+    async def _typing_loop(self):
+        async with self.bot_channel.typing():
+            while True:
+                await asyncio.sleep(5)  # re-triggers before Discord timeout
+
+    async def start_typing(self):
+        if self.bot_channel and not self.typing_task:
+            self.typing_task = asyncio.create_task(self._typing_loop())
+
+    async def stop_typing(self):
+        if self.typing_task:
+            self.typing_task.cancel()
+            try:
+                await self.typing_task
+            except asyncio.CancelledError:
+                pass
+            self.typing_task = None
+
 
 
 class Discord(Subsystem):
     def __init__(self):
         super().__init__("Discord")
         self.channel_user_input = self.create_channel("user-input")
-
         self.discord_bot = DiscordBot(self.channel_user_input)
         asyncio.create_task(self.discord_bot.start())
 
@@ -55,17 +73,24 @@ class Discord(Subsystem):
         elif "[Disable]" in message.text:
             self.discord_bot.disabled = True
 
+    # Ollama-state will route to this
+    async def ollama_state(self, message: Message):
+        if "[Starting]" in message.text:
+            await self.discord_bot.start_typing()
+        elif "[Complete]" in message.text:
+            await self.discord_bot.stop_typing()
+
     # Ollama output will route to this
     async def ollama_output(self, message: Message):
-        if self.discord_bot.disabled: return
+        if self.discord_bot.disabled or not message.text: return
         await self.discord_bot.send_message(message.text)
 
     # Ollama's Actions will route to this
     async def ollama_actions_output(self, message: Message):
-        if self.discord_bot.disabled: return
-        await self.discord_bot.send_message(message.role + ": " + message.text)
+        if self.discord_bot.disabled or not message.text: return
+        await self.discord_bot.send_message("```" + message.role + ": " + message.text + "```")
 
     # My Actions will route to this
     async def my_actions_output(self, message: Message):
-        if self.discord_bot.disabled: return
-        await self.discord_bot.send_message(message.role + ": " + message.text)
+        if self.discord_bot.disabled or not message.text: return
+        await self.discord_bot.send_message("```" + message.role + ": " + message.text + "```")

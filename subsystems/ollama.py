@@ -27,7 +27,7 @@ def stream_ollama(prompt: str) -> Generator[str, None, None]:
         'model': MODEL_NAME,
         'prompt': prompt,
         'stream': True,
-        'options': {'temperature': 0.2, 'stop': ['System:', 'Abram:']}
+        'options': {'temperature': 0.2, 'stop': ['System:', 'Abram:', 'Output:']}
     }
     try:
         response = requests.post(OLLAMA_API_URL, json=payload, stream=True)
@@ -74,9 +74,9 @@ class Ollama(Subsystem):
 
         await self.channel_ollama_state.send(Message("Zipper-state", "[Complete]"))
         await self.channel_ollama_output.send(Message("Zipper", full_response))
-        self.add_to_conversation("\nZipper: " + full_response + "\n")
+        await self.add_to_conversation(Message("Zipper", full_response))
 
     async def add_to_conversation(self, message: Message):
         if not message.text: return
-        self.conversation += f"{message.role}: {message.text}"
+        self.conversation += f"{message.role}: {message.text}\n"
         self.save_conversation()

@@ -75,7 +75,7 @@ class Console(Subsystem):
     async def discord_interrupt(self, message: Message):
         await self.wait_until(ConsoleState.INPUT)
         await self.received_input(message.text)
-        self.display("Console", message.text)
+        self.display(Message("Ignore", message.text), "\n")
 
     # Ollama's Actions will route to this
     async def ollama_actions_output(self, message: Message):

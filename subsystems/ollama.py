@@ -11,13 +11,13 @@ MODEL_NAME = "llama3.2"
 OLLAMA_API_URL = "http://localhost:11434/api/generate"
 
 def get_intructions():
-    with open("prompts/instructions.txt", "r") as f:
+    with open("prompts/instructions.txt", "r", encoding="utf-8") as f:
         instructions = f.read()
     f.close()
     return instructions.replace("{{OS}}", platform.platform())
 
 def get_memory():
-    with open("prompts/memory.txt", "r") as f:
+    with open("prompts/memory.txt", "r", encoding="utf-8") as f:
         memory = f.read()
     f.close()
     return memory
@@ -62,7 +62,7 @@ class Ollama(Subsystem):
         loop = asyncio.get_running_loop()
 
         def run_stream():
-            for chunk in stream_ollama(self.conversation):
+            for chunk in stream_ollama(self.conversation + f"Zipper: {message.text}"):
                 asyncio.run_coroutine_threadsafe(
                     self.channel_ollama_stream.send(Message("Zipper-stream", chunk)),
                     loop

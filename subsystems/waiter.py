@@ -13,7 +13,7 @@ class Waiter(Subsystem):
         if self.received["command-output"] == None: return
         
         await self.channel_command_output.send(self.received["command-output"])
-        await self.channel_done_waiting.send(Message("Waiter", ""))
+        await self.channel_done_waiting.send(Message("Waiter", "")) # Prompts ollama to respond
         self.received["command-input"] = None
         self.received["command-output"] = None
 

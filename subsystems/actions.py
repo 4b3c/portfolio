@@ -1,3 +1,4 @@
+import sys
 import re
 import subprocess
 from .subsystem import Subsystem
@@ -11,7 +12,11 @@ class Actions(Subsystem):
 
     # Console and Ollama will route to this, which will detect and run commands
     async def command_input(self, message: Message):
-        matches = re.findall(r"```bash\s*(.*?)```", message.text, re.DOTALL)
+        if message.role == "Abram" and message.text == "/restart":
+            subprocess.Popen(["python", "tools/restart.py"])
+            sys.exit(0)
+
+        matches = re.findall(r"```bash\s*(.*?)```", message.text, re.DOTALL)        
         if not matches:
             await self.channel_command_output.send(Message("System", ""))
             return

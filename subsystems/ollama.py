@@ -1,20 +1,23 @@
 from collections.abc import Generator
+import platform
+import time
 import requests
 import json
 import asyncio
 from .subsystem import Subsystem
+from .router import Message
 
 MODEL_NAME = "llama3.2"
 OLLAMA_API_URL = "http://localhost:11434/api/generate"
 
 def get_intructions():
-    with open("subsystems/conversation/instructions.txt", "r") as f:
+    with open("prompts/instructions.txt", "r") as f:
         instructions = f.read()
     f.close()
-    return instructions
+    return instructions.replace("{{OS}}", platform.platform())
 
 def get_memory():
-    with open("subsystems/conversation/memory.txt", "r") as f:
+    with open("prompts/memory.txt", "r") as f:
         memory = f.read()
     f.close()
     return memory
@@ -42,21 +45,26 @@ class Ollama(Subsystem):
     def __init__(self):
         super().__init__("Ollama")
         self.conversation = get_intructions() + get_memory() + "\nSystem: You are now online. Say hi to Abram.\n"
-        self.channel_ollama_stream = self.create_channel("ollama_stream")
-        self.channel_ollama_state = self.create_channel("ollama_state")
-        self.channel_ollama_output = self.create_channel("ollama_output")
+        self.channel_ollama_stream = self.create_channel("ollama-stream")
+        self.channel_ollama_state = self.create_channel("ollama-state")
+        self.channel_ollama_output = self.create_channel("ollama-output")
+        self.conversation_file = f"conversations/{time.time()}.txt"
+
+    def save_conversation(self):
+        with open(self.conversation_file, "w") as f:
+            f.write(self.conversation)
+        f.close()
 
     # The console's waiter will route to this with the prompt
-    async def prompt_ollama(self, data):
-        await self.channel_ollama_state.send("[Starting]")
-        self.conversation += data
+    async def prompt_ollama(self, message: Message):
+        await self.channel_ollama_state.send(Message("Zipper-state", "[Starting]"))
         full_response = ""
         loop = asyncio.get_running_loop()
 
         def run_stream():
             for chunk in stream_ollama(self.conversation):
                 asyncio.run_coroutine_threadsafe(
-                    self.channel_ollama_stream.send(chunk),
+                    self.channel_ollama_stream.send(Message("Zipper-stream", chunk)),
                     loop
                 )
                 nonlocal full_response
@@ -64,5 +72,11 @@ class Ollama(Subsystem):
 
         await asyncio.to_thread(run_stream)
 
-        await self.channel_ollama_state.send("[Complete]")
-        await self.channel_ollama_output.send(full_response)
+        await self.channel_ollama_state.send(Message("Zipper-state", "[Complete]"))
+        await self.channel_ollama_output.send(Message("Zipper", full_response))
+        self.add_to_conversation("\nZipper: " + full_response + "\n")
+
+    async def add_to_conversation(self, message: Message):
+        if not message.text: return
+        self.conversation += f"{message.role}: {message.text}"
+        self.save_conversation()

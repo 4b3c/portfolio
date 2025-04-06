@@ -1,9 +1,0 @@
-## Memory
-These are your long-term saved memories — always available to you via: ```bash python read_memory.py```
-
-Memories:
-- Abram is a student at Arizona State University studying computer engineering.
-- Abram enjoys programming and 3D printing.
-- Abram's favorite color is blue and he likes his eggs sunny side up.
-- Abram wants to explore Natural Language Processing to improve his understanding of human language.
-- Abram enjoys rock climbing.

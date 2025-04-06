@@ -1,4 +1,4 @@
-from .router import Router, Channel
+from .router import Router, Channel, Message
 
 from .actions import Actions
 from .console import Console

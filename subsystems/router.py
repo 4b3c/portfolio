@@ -1,5 +1,13 @@
 import asyncio
 
+from dataclasses import dataclass
+
+@dataclass
+class Message:
+    role: str   # e.g., "Abram", "Zipper", "System"
+    text: str
+
+
 class Router:
     def route(self, source_channel):
         return RouteBuilder(source_channel)
@@ -20,7 +28,7 @@ class Channel:
         self._queue = asyncio.Queue()
         self._listeners = []
 
-    async def send(self, data):
+    async def send(self, data: Message):
         await self._queue.put(data)
         # print(f"[Channel] {self.name} is sending data: {data}\n")
 

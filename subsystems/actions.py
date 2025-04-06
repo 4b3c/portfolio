@@ -1,13 +1,8 @@
 import re
 import subprocess
 from .subsystem import Subsystem
+from .router import Message
 
-RED = "\033[91m"
-GREEN = "\033[92m"
-BLUE = "\033[94m"
-YELLOW = "\033[93m"
-PURPLE = "\033[95m"
-RESET = "\033[0m"
 
 class Actions(Subsystem):
     def __init__(self):
@@ -15,10 +10,10 @@ class Actions(Subsystem):
         self.channel_command_output = self.create_channel("command-output")
 
     # Console and Ollama will route to this, which will detect and run commands
-    async def command_input(self, data):
-        matches = re.findall(r"```bash\s*(.*?)```", data, re.DOTALL)
+    async def command_input(self, message: Message):
+        matches = re.findall(r"```bash\s*(.*?)```", message.text, re.DOTALL)
         if not matches:
-            await self.channel_command_output.send("")
+            await self.channel_command_output.send(Message("System", ""))
             return
         
         output = ""
@@ -35,7 +30,7 @@ class Actions(Subsystem):
                 output_text = ""
                 error_text = f"Error during execution: {e}"
 
-            if error_text: output += f"{RED}\n    Ran:\n\t> {command_to_run}\n     Error:\n\t> {error_text}\n{RESET}"
-            else: output += f"{YELLOW}\n    Ran:\n\t> {command_to_run}\n    Output:\n\t> {output_text}\n{RESET}"
+            if error_text: output += f"\n    Ran:\n\t> {command_to_run}\n     Error:\n\t> {error_text}\n"
+            else: output += f"\n    Ran:\n\t> {command_to_run}\n    Output:\n\t> {output_text}\n"
 
-        await self.channel_command_output.send(f"\n{BLUE}System:{output}")
+        await self.channel_command_output.send(Message("System", output))

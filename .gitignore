@@ -160,7 +160,7 @@ cython_debug/
 #.idea/
 
 zipper-venv/
-/conversations
+conversations/
 .google.json
 .token.json
 .DS_Store

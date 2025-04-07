@@ -49,8 +49,8 @@ class Console(Subsystem):
 
     async def received_input(self, input_text: str):
         if self.ainput_task: self.ainput_task.cancel()
-        await self.channel_user_input.send(Message("Abram", input_text))
         self.set_state(ConsoleState.MY_COMMANDS_RUNNING)
+        await self.channel_user_input.send(Message("Abram", input_text))
 
     async def terminal_input(self):
         self.display(Message("Abram", ""))
@@ -81,11 +81,12 @@ class Console(Subsystem):
     async def ollama_actions_output(self, message: Message):
         await self.wait_until(ConsoleState.OLLAMA_COMMANDS_RUNNING)
         if message.text: self.display(message)
-        self.ainput_task = asyncio.create_task(self.terminal_input())
         self.set_state(ConsoleState.INPUT)
+        self.ainput_task = asyncio.create_task(self.terminal_input())
 
     # My Actions will route to this
     async def my_actions_output(self, message: Message):
         await self.wait_until(ConsoleState.MY_COMMANDS_RUNNING)
-        if message.text: self.display(message)
         self.set_state(ConsoleState.STREAMING)
+        if message.text: self.display(message)
+        

@@ -13,13 +13,11 @@ OLLAMA_API_URL = "http://localhost:11434/api/generate"
 def get_intructions():
     with open("prompts/instructions.txt", "r", encoding="utf-8") as f:
         instructions = f.read()
-    f.close()
     return instructions.replace("{{OS}}", platform.platform())
 
 def get_memory():
     with open("prompts/memory.txt", "r", encoding="utf-8") as f:
         memory = f.read()
-    f.close()
     return memory
 
 def stream_ollama(prompt: str) -> Generator[str, None, None]:
@@ -53,7 +51,6 @@ class Ollama(Subsystem):
     def save_conversation(self):
         with open(self.conversation_file, "w") as f:
             f.write(self.conversation)
-        f.close()
 
     # The console's waiter will route to this with the prompt
     async def prompt_ollama(self, message: Message):

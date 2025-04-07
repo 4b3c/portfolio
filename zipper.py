@@ -18,8 +18,10 @@ async def main():
     router.route(console.channel_user_input).to(my_waiter.receive_input)
     router.route(console.channel_user_input).to(ollama.add_to_conversation)
 
-    # From my_actions/my_waiter
+    # From my_actions
     router.route(my_actions.channel_command_output).to(my_waiter.receive_output)
+
+    # From my_waiter
     router.route(my_waiter.channel_command_output).to(ollama.add_to_conversation)
     router.route(my_waiter.channel_command_output).to(discord.my_actions_output)
     router.route(my_waiter.channel_command_output).to(console.my_actions_output)
@@ -33,8 +35,10 @@ async def main():
     router.route(ollama.channel_ollama_output).to(ollama_actions.command_input)
     router.route(ollama.channel_ollama_output).to(discord.ollama_output)
 
-    # From ollama_actions/ollama_waiter
+    # From ollama_actions
     router.route(ollama_actions.channel_command_output).to(ollama_waiter.receive_output)
+
+    # From ollama_waiter
     router.route(ollama_waiter.channel_command_output).to(discord.ollama_actions_output)
     router.route(ollama_waiter.channel_command_output).to(console.ollama_actions_output)
     router.route(ollama_waiter.channel_command_output).to(ollama.add_to_conversation)

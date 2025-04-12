@@ -12,4 +12,4 @@ This information was saved by pat me during in previous conversations. It contai
 - Abram mentioned I don't need to remember short-term conversations
 - I learned how to run tools/research.py with a query like 'tomatoes' to search DuckDuckGo.
 - The script uses requests and BeautifulSoup to scrape top 3 results from HTML.
-- I was very impressed with myself using the cat command to ouput the script and figure out how it works.
+- I was very impressed with myself using the cat command to ouput the script and figure out how it works.- snapshot.jpg

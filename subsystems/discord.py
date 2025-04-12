@@ -1,6 +1,6 @@
 from .subsystem import Subsystem
 from .router import Channel, Message
-from discord import Intents, Client, TextChannel
+from discord import Intents, Client, TextChannel, File
 import asyncio
 import os
 from dotenv import load_dotenv
@@ -33,6 +33,11 @@ class DiscordBot(Client):
     async def send_message(self, message) -> None:
         if self.bot_channel and message.strip():
             await self.bot_channel.send(message[:1999])
+
+    async def send_file(self, file_path) -> None:
+        if self.bot_channel and os.path.exists(file_path):
+            with open(file_path, 'rb') as file:
+                await self.bot_channel.send(file=File(file, os.path.basename(file_path)))
 
     async def on_message(self, message) -> None:
         if message.author.id == abram_id:
@@ -94,3 +99,7 @@ class Discord(Subsystem):
     async def my_actions_output(self, message: Message):
         if self.discord_bot.disabled or not message.text: return
         await self.discord_bot.send_message("```" + message.role + ": " + message.text + "```")
+
+    async def send_file(self, message: Message):
+        print("Sending file to Discord:", message.text, "!")
+        await self.discord_bot.send_file(message.text)

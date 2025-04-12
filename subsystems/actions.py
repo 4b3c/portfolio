@@ -9,12 +9,16 @@ class Actions(Subsystem):
     def __init__(self):
         super().__init__("Actions")
         self.channel_command_output = self.create_channel("command-output")
+        self.channel_discord_file = self.create_channel("discord-file")
 
     # Console and Ollama will route to this, which will detect and run commands
     async def command_input(self, message: Message):
-        if "Abram" in message.role and "/restart" in message.text:
+        if "/restart" in message.text:
             subprocess.Popen(["python", "tools/restart.py"])
             sys.exit(0)
+        elif "/send_file" in message.text:
+            filename = message.text.split("/send_file ")[1].split(" ")[0].strip()
+            await self.channel_discord_file.send(Message("System", filename))
 
         matches = re.findall(r"```bash\s*(.*?)```", message.text, re.DOTALL)        
         if not matches:

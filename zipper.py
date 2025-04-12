@@ -20,6 +20,7 @@ async def main():
 
     # From my_actions
     router.route(my_actions.channel_command_output).to(my_waiter.receive_output)
+    router.route(my_actions.channel_discord_file).to(discord.send_file)
 
     # From my_waiter
     router.route(my_waiter.channel_command_output).to(ollama.add_to_conversation)
@@ -37,6 +38,7 @@ async def main():
 
     # From ollama_actions
     router.route(ollama_actions.channel_command_output).to(ollama_waiter.receive_output)
+    router.route(ollama_actions.channel_discord_file).to(discord.send_file)
 
     # From ollama_waiter
     router.route(ollama_waiter.channel_command_output).to(discord.ollama_actions_output)

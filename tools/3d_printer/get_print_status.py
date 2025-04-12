@@ -3,7 +3,7 @@ import printer
 
 def get_printer_status():
     try:
-        resp = requests.get(f"{printer.BASE_URL}/printer/objects/query?heater_bed&extruder&print_stats")
+        resp = requests.get(f"{printer.BASE_URL}/printer/objects/query?heater_bed&extruder&display_status")
         resp.raise_for_status()
         return resp.json()
     except Exception as e:
@@ -14,4 +14,4 @@ print("\nFetching printer status...")
 status = get_printer_status()
 if status:
     print("Printer Status:")
-    print(status['result'])
+    print(status['result']['status'])

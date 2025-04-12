@@ -25,7 +25,7 @@ def stream_ollama(messages: list[dict[str, str]]) -> Generator[str, None, None]:
         'model': MODEL_NAME,
         'messages': messages,
         'stream': True,
-        'options': {'temperature': 0.2, 'stop': ['(awaiting block execution)','[terminal output]', '\n\n\n']}
+        'options': {'temperature': 0.2, 'stop': ['(waiting for block execution)', '(awaiting block execution)','[terminal output]', '\n\n\n']}
     }
     try:
         response = requests.post(OLLAMA_API_URL, json=payload, stream=True)

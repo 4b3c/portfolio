@@ -12,7 +12,7 @@ class Actions(Subsystem):
 
     # Console and Ollama will route to this, which will detect and run commands
     async def command_input(self, message: Message):
-        if message.role == "Abram" and message.text == "/restart":
+        if "Abram" in message.role and "/restart" in message.text:
             subprocess.Popen(["python", "tools/restart.py"])
             sys.exit(0)
 

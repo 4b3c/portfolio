@@ -80,6 +80,7 @@ class Discord(Subsystem):
 
     # Ollama-state will route to this
     async def ollama_state(self, message: Message):
+        if self.discord_bot.disabled: return
         if "[Starting]" in message.text:
             await self.discord_bot.start_typing()
         elif "[Complete]" in message.text:

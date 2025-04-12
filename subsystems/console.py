@@ -48,14 +48,27 @@ class Console(Subsystem):
             await asyncio.sleep(0.2)
 
     async def received_input(self, input_text: str):
-        if self.ainput_task: self.ainput_task.cancel()
+        if self.ainput_task and not self.ainput_task.done():
+            self.ainput_task.cancel()
+            try:
+                await self.ainput_task
+            except asyncio.CancelledError:
+                pass
         self.set_state(ConsoleState.MY_COMMANDS_RUNNING)
         await self.channel_user_input.send(Message("Abram", input_text))
 
     async def terminal_input(self):
-        self.display(Message("Abram", ""))
-        input_text = await ainput()
-        await self.received_input(input_text)
+        try:
+            print(f"[DEBUG] Prompting for input...")
+            self.display(Message("Abram", ""))
+            loop = asyncio.get_running_loop()
+            input_text = await loop.run_in_executor(None, input)
+            print(f"[DEBUG] Got input: {input_text!r}")
+            await self.received_input(input_text)
+        except Exception as e:
+            print(f"[ERROR] terminal_input failed: {e}")
+
+
 
     # Ollama-stream will route to this
     async def stream(self, message: Message):
@@ -79,10 +92,21 @@ class Console(Subsystem):
 
     # Ollama's Actions will route to this
     async def ollama_actions_output(self, message: Message):
+        print(f"[DEBUG] Entered ollama_actions_output")
         await self.wait_until(ConsoleState.OLLAMA_COMMANDS_RUNNING)
-        if message.text: self.display(message)
+        if message.text:
+            print(f"[DEBUG] Displaying: {message.text}")
+            self.display(message)
         self.set_state(ConsoleState.INPUT)
+        if self.ainput_task and not self.ainput_task.done():
+            self.ainput_task.cancel()
+            try:
+                await self.ainput_task
+            except asyncio.CancelledError:
+                pass
+        print(f"[DEBUG] Starting ainput task")
         self.ainput_task = asyncio.create_task(self.terminal_input())
+
 
     # My Actions will route to this
     async def my_actions_output(self, message: Message):

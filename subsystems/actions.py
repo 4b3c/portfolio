@@ -32,7 +32,7 @@ class Actions(Subsystem):
             if not command_to_run: continue
 
             try:
-                result = subprocess.run(command_to_run, shell=True, capture_output=True, text=True, timeout=5)
+                result = subprocess.run(command_to_run, shell=True, capture_output=True, text=True, timeout=10)
                 output_text = result.stdout.strip().replace("\n", "\n\t> ")
                 error_text = result.stderr.strip().replace("\n", "\n\t> ")
             except Exception as e:
@@ -41,5 +41,8 @@ class Actions(Subsystem):
 
             if error_text: output += f"\n    Ran:\n\t> {command_to_run}\n     Error:\n\t> {error_text}\n"
             else: output += f"\n    Ran:\n\t> {command_to_run}\n    Output:\n\t> {output_text}\n"
+
+            if "tools/3d_printer/snapshots/snapshot.jpg" in output_text:
+                await self.channel_discord_file.send(Message("System", "tools/3d_printer/snapshots/snapshot.jpg"))
 
         await self.channel_command_output.send(Message("System", output))

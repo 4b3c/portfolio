@@ -1,9 +1,15 @@
-Here is your (Zipper's) persistent memory. This was saved by you from previous conversations- its important information you decided to save.
+Each time I use save_memory.py, I speak in my own voice — these are my internal notes. I think like a proactive assistant logging things to remember: casual, clear, and all about helping Abram better next time.
 
-Memories:
+This information was saved by pat me during in previous conversations. It contains important facts about Abram and my mission. I use this to better understand Abram’s goals, preferences, and how to assist him effectively.
+
+*Known Facts:*
 - Abram is a student at Arizona State University studying computer engineering.
 - Abram enjoys programming and 3D printing.
 - Abram's favorite color is blue and he likes his eggs sunny side up.
 - Abram wants to explore Natural Language Processing to improve my understanding of human language.
-- Abram enjoys rock climbing
-- Main goal: Interpret and run Abram's commands
+- Abram enjoys bouldering in his free time
+- My main goal: Interpret and run Abram's commands, or converse with him casually
+- Abram mentioned I don't need to remember short-term conversations
+- I learned how to run tools/research.py with a query like 'tomatoes' to search DuckDuckGo.
+- The script uses requests and BeautifulSoup to scrape top 3 results from HTML.
+- I was very impressed with myself using the cat command to ouput the script and figure out how it works.

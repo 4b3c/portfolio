@@ -25,7 +25,7 @@ def stream_ollama(messages: list[dict[str, str]]) -> Generator[str, None, None]:
         'model': MODEL_NAME,
         'messages': messages,
         'stream': True,
-        'options': {'temperature': 0.2, 'stop': ['System:', 'Abram:', 'Output:']}
+        'options': {'temperature': 0.2, 'stop': ['(awaiting block execution)','[terminal output]', '\n\n\n']}
     }
     try:
         response = requests.post(OLLAMA_API_URL, json=payload, stream=True)
@@ -43,6 +43,7 @@ class Ollama(Subsystem):
         super().__init__("Ollama")
         self.conversation: list[dict[str, str]] = [
                 {"role": "system", "content": get_intructions()},
+                {"role": "assistant", "content": get_memory()},
                 {"role": "user", "content": "Hi Zipper! I am Abram. You are my AI assistant, welcome back online!"}
             ]
         self.channel_ollama_stream = self.create_channel("ollama-stream")
@@ -79,12 +80,11 @@ class Ollama(Subsystem):
     async def add_to_conversation(self, message: Message):
         if not message.text: return
         if message.role == "System":
-            sender_role = "system"
+            self.conversation.append({"role": "assistant", "content": "[terminal output](START)\n" + message.text + "\n[terminal output](END)"})
         elif message.role == "Abram":
-            sender_role = "user"
+            self.conversation.append({"role": "user", "content": message.text})
         elif message.role == "Zipper":
-            sender_role = "assistant"
+            self.conversation.append({"role": "assistant", "content": message.text})
         else:
             raise ValueError(f"Unknown role in message: {message.role}")
-        self.conversation.append({"role": sender_role, "content": message.text})
         self.save_conversation()

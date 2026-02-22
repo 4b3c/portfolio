@@ -1,0 +1,22 @@
+[
+  {
+    "module": "interface",
+    "input": null,
+    "called": [
+      {
+        "module": "router",
+        "input": "Hello",
+        "called": [
+          {
+            "module": "interface",
+            "input": "Hello! How can I assist you today?",
+            "called": [],
+            "output": "User ended the conversation."
+          }
+        ],
+        "output": "Route task completed with no issues: User terminated the conversation."
+      }
+    ],
+    "Output": "Route task completed with no issues: User terminated the conversation."
+  }
+]

@@ -1,24 +1,26 @@
 {
-    "registry": {
-        "interface": "\nThe interface module is the entry point for user interaction. It prompts the user for input and routes it to the appropriate module. It also handles displaying output from other modules back to the user.\n\n- \"input\" defines the message to display to the user. This is typically the output from another module that needs to be shown to the user, but could also be a custom message if the interface module is called directly.\n",
-        "router": "\nThe router module takes some input and decides which module to call based on the content of the input. It uses the Ollama API to determine the best module for the given input.\n\n- \"input\" defines a message which the router will read and decide which module to call. This is typically user input from the interface module, but could also be output from another module that needs further processing.\n"
-    },
-    "trace": [
+  "registry": {
+    "interface": "\nThe interface module is the entry point for user interaction. It prompts the user for input and routes it to the appropriate module. It also handles displaying output from other modules back to the user.\n\n- \"input\" defines the message to display to the user. This is typically the output from another module that needs to be shown to the user, but could also be a custom message if the interface module is called directly.\n",
+    "router": "\nThe router module takes some input and decides which module to call based on the content of the input. It uses the Ollama API to determine the best module for the given input.\n\n- \"input\" defines a message which the router will read and decide which module to call. This is typically user input from the interface module, but could also be output from another module that needs further processing.\n",
+    "assistant": "\nThe assistant module is responsible for conversational tasks, answering questions, and providing help based on the input it receives. It can be used for a wide range of purposes, such as answering user queries, providing explanations, or assisting with tasks that don't fit into other specific modules.\n\n- \"input\" defines the task or question that the assistant should help with.\n"
+  },
+  "trace": [
+    {
+      "module": "interface",
+      "input": null,
+      "called": [
         {
-            "module": "interface",
-            "input": null
-        },
-        {
-            "module": "router",
-            "input": "Hello"
-        },
-        {
-            "module": "interface",
-            "input": "Hello "
+          "module": "router",
+          "input": "Hello!",
+          "called": [
+            {
+              "module": "assistant",
+              "input": "Hello!",
+              "called": []
+            }
+          ]
         }
-    ],
-    "current": {
-        "module": "interface",
-        "input": "Hello "
+      ]
     }
+  ]
 }

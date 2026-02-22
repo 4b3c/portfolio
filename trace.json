@@ -5,18 +5,18 @@
     "called": [
       {
         "module": "router",
-        "input": "Hello",
+        "input": "Hello!",
         "called": [
           {
-            "module": "interface",
-            "input": "Hello! How can I assist you today?",
+            "module": "assistant",
+            "input": "Hello!",
             "called": [],
-            "output": "User ended the conversation."
+            "output": "Assistant session completed."
           }
         ],
-        "output": "Route task completed with no issues: User terminated the conversation."
+        "output": "Route task completed with no issues: Assistant session completed."
       }
     ],
-    "Output": "Route task completed with no issues: User terminated the conversation."
+    "output": "Completed session with output: Route task completed with no issues: Assistant session completed."
   }
 ]

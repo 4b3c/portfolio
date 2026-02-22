@@ -18,4 +18,4 @@ class InterfaceModule(Module):
     
     def resume(self, data):
         print(data, "\n")
-        return self.run(None)
+        return self.complete(f"Completed session with output: {data}")

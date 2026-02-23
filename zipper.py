@@ -3,8 +3,8 @@ from modules.interface import InterfaceModule
 from modules.router import RouterModule
 from modules.assistant import AssistantModule
 
-CONTEXT_PATH = "context.json"
-TRACE_PATH = "trace.json"
+CONTEXT_PATH = "data/context.json"
+TRACE_PATH = "data/trace.json"
 
 MODULES = {
     "interface": InterfaceModule,

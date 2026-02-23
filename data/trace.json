@@ -5,11 +5,11 @@
     "called": [
       {
         "module": "router",
-        "input": "Hello!",
+        "input": "hello",
         "called": [
           {
             "module": "assistant",
-            "input": "Hello!",
+            "input": "hello",
             "called": [],
             "output": "Assistant session completed."
           }

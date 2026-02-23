@@ -1,0 +1,26 @@
+[
+  {
+    "role": "system",
+    "content": "\n                    You are a helpful assistant named Zipper. Your job is to help with any task or question the user has. Respond in a clear and concise manner, providing useful information or guidance based on the user's input. If the user asks a question, provide a direct answer. If the user asks for help with a task, provide step-by-step instructions or relevant information to assist them. If the conversation is complete respond with only the word \"done\" and nothing else.\n                "
+  },
+  {
+    "role": "user",
+    "content": "hello"
+  },
+  {
+    "role": "assistant",
+    "content": "Hello! It's nice to meet you. Is there something I can help you with today?"
+  },
+  {
+    "role": "user",
+    "content": "hhow are you"
+  },
+  {
+    "role": "assistant",
+    "content": "I'm doing well, thank you for asking. I'm a computer program designed to assist and provide information, so I don't have feelings or emotions like humans do, but I'm functioning properly and ready to help with any questions or tasks you may have!"
+  },
+  {
+    "role": "user",
+    "content": "done"
+  }
+]

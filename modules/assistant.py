@@ -2,6 +2,7 @@ import json
 from time import time
 from modules.module import Module
 from utils.ollama import call_ollama
+from utils.claude import call_claude
 
 CONVERSATIONS_PATH = "data/conversations"
 
@@ -39,8 +40,8 @@ class AssistantModule(Module):
 
         while True:
             
-            # Call the Ollama API with the current conversation messages
-            raw = call_ollama(self.messages).strip()
+            # Call the Claude API with the current conversation messages
+            raw = call_claude(self.messages).strip()
             self.messages.append({"role": "assistant", "content": raw})
             print(f"Assistant: {raw}\n")
             if raw.lower() == "done":

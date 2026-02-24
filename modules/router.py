@@ -1,6 +1,7 @@
 import json
 from modules.module import Module
 from utils.ollama import call_ollama
+from utils.claude import call_claude
 
 class RouterModule(Module):
     """
@@ -36,11 +37,11 @@ class RouterModule(Module):
             }
         ]
         
-        raw = call_ollama(messages).strip()
+        raw = call_claude(messages).strip()
         try:
             result = json.loads(raw)
         except json.JSONDecodeError:
-            return self.fail(f"Failed to parse Ollama response: {raw}")
+            return self.fail(f"Failed to parse Claude response: {raw}")
         target = result["module"]
         routed_input = result["input"]
 

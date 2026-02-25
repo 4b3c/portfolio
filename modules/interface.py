@@ -1,11 +1,7 @@
 from modules.module import Module
 
 class InterfaceModule(Module):
-    """
-    The interface module is the entry point for user interaction. It prompts the user for input and routes it to the appropriate module. It also handles displaying output from other modules back to the user.
-
-    - "input" defines the message to display to the user. This is typically the output from another module that needs to be shown to the user, but could also be a custom message if the interface module is called directly.
-    """
+    """Collects user input and forwards it to the router. Displays returned output to the user."""
 
     def run(self, data) -> dict:
         user_input = input("User: ")

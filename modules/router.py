@@ -4,11 +4,7 @@ from utils.ollama import call_ollama
 from utils.claude import call_claude
 
 class RouterModule(Module):
-    """
-    The router module takes some input and decides which module to call based on the content of the input. It uses the Ollama API to determine the best module for the given input.
-    
-    - "input" defines a message which the router will read and decide which module to call. This is typically user input from the interface module, but could also be output from another module that needs further processing.
-    """
+    """Reads user input and routes it to the appropriate module. Input: a natural language string."""
 
     def run(self, data) -> dict:
         registry = self.context["registry"]

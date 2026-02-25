@@ -14,7 +14,6 @@ If action is required, use this syntax:
 
 For plain-string modules (bash, summarize, search, reason), use one parameter named "input".
 For structured modules, include one parameter per field.
-Never include nested XML examples inside parameter values.
 
 Available modules:
 {{AVAILABLE_MODULES_JSON}}

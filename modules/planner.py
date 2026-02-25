@@ -3,7 +3,7 @@ import os
 import re
 from datetime import datetime
 from modules.module import Module
-from utils.claude import OPUS, call_claude
+from utils.claude import OPUS, ClaudeRateLimitPause, call_claude
 from utils.colors import print_error, print_state, stream_label, stream_end, LineStream, _MAGENTA, _WHITE
 from utils.conversation import ConversationStore
 from utils.function_calls import contains_function_call_markup, maybe_dispatch_module_call
@@ -221,6 +221,16 @@ class PlannerModule(Module):
 
                 print_state("[Planner] Finalizing plan document.")
                 return self._finalize_plan(raw)
+        except ClaudeRateLimitPause as e:
+            payload = {
+                "signal": "WAIT_FOR_USER_INPUT",
+                "wait_for_user_input": True,
+                "message": "Claude rate limit hit in planner module. Wait a few minutes, then tell me to continue.",
+                "planner_conversation_id": self.planner_conversation_id,
+                "error": str(e),
+            }
+            self._persist()
+            return self.complete(json.dumps(payload, indent=2))
         except Exception as e:
             return self.fail(f"Plan generation failed: {e}")
 

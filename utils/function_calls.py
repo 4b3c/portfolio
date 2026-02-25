@@ -12,37 +12,49 @@ FUNCTION_CALL_BLOCK_RE = re.compile(
 )
 
 
+def _find_tag_tokens(text: str, tag_name: str):
+    tag_re = re.compile(rf"<\s*(/?)\s*{re.escape(tag_name)}\b[^>]*>", re.IGNORECASE)
+    for m in tag_re.finditer(text):
+        yield {
+            "is_close": bool(m.group(1)),
+            "start": m.start(),
+            "end": m.end(),
+            "raw": m.group(0),
+        }
+
+
 def _find_callable_block_at_end(text: str):
     """
     Return (start, end, module_name, invoke_body) for a valid top-level function call
     block that is the final non-whitespace content in text.
-    Nested <function_calls> blocks are rejected.
+    Nested tags inside the block are allowed as content as long as the outer
+    block is balanced and valid.
     """
     if not text:
         return None
 
-    # Require exactly one top-level function_calls block in the whole response.
-    if text.count(OPEN_FUNCTION_CALL_TAG) != 1 or text.count(CLOSE_FUNCTION_CALL_TAG) != 1:
+    end_non_ws = len(text.rstrip())
+    stack = []
+    top_level_blocks = []
+
+    for tok in _find_tag_tokens(text, "function_calls"):
+        if not tok["is_close"]:
+            stack.append(tok["start"])
+            continue
+        if not stack:
+            return None
+        start = stack.pop()
+        if not stack:
+            top_level_blocks.append((start, tok["end"]))
+
+    if stack:
         return None
 
-    starts = [m.start() for m in re.finditer(re.escape(OPEN_FUNCTION_CALL_TAG), text)]
-    for start in reversed(starts):
-        close_idx = text.find(CLOSE_FUNCTION_CALL_TAG, start)
-        if close_idx == -1:
-            continue
-        end = close_idx + len(CLOSE_FUNCTION_CALL_TAG)
-
+    for start, end in reversed(top_level_blocks):
         # Function call block must be the final non-whitespace content.
-        if text[end:].strip():
+        if end != end_non_ws:
             continue
-
         block = text[start:end]
-
-        # Reject nested function_calls inside candidate block.
-        inner = block[len(OPEN_FUNCTION_CALL_TAG) : -len(CLOSE_FUNCTION_CALL_TAG)]
-        if OPEN_FUNCTION_CALL_TAG in inner:
-            continue
-
         match = FUNCTION_CALL_BLOCK_RE.match(block)
         if not match:
             continue
@@ -56,13 +68,14 @@ def _find_callable_block_at_end(text: str):
 
 def _parse_top_level_parameters(invoke_body: str):
     """
-    Parse only top-level <parameter name="...">...</parameter> blocks.
-    Reject nested/ambiguous parameter tags to avoid accidental parsing when
-    examples are embedded in parameter text.
+    Parse top-level <parameter name="...">...</parameter> blocks.
+    Nested <parameter> tags are treated as literal value content and must close
+    before the top-level parameter closes.
     """
     s = invoke_body or ""
     i = 0
     params = {}
+    nested_tag_re = re.compile(r"<\s*(/?)\s*parameter\b[^>]*>", re.IGNORECASE)
 
     while True:
         # Skip whitespace between parameter blocks.
@@ -78,25 +91,34 @@ def _parse_top_level_parameters(invoke_body: str):
         name = open_match.group(1).strip()
         if not PARAM_NAME_RE.match(name):
             return None
-        i += open_match.end()
+        value_start = i + open_match.end()
+        i = value_start
 
-        close_rel = s.find("</parameter>", i)
-        if close_rel == -1:
+        depth = 1
+        cursor = i
+        value_end = None
+        while depth > 0:
+            m = nested_tag_re.search(s, cursor)
+            if not m:
+                return None
+            if m.group(1):
+                depth -= 1
+                if depth == 0:
+                    value_end = m.start()
+                    i = m.end()
+                    break
+            else:
+                depth += 1
+            cursor = m.end()
+
+        if value_end is None:
             return None
 
-        value = s[i:close_rel]
-
-        # Disallow nested parameter tags in values. This prevents accidental
-        # argument overrides when prompt examples include parameter XML.
-        if "<parameter" in value or "</parameter>" in value:
-            return None
-
+        value = s[value_start:value_end]
         # Disallow duplicate top-level params.
         if name in params:
             return None
         params[name] = value
-
-        i = close_rel + len("</parameter>")
 
     return params
 
@@ -104,6 +126,22 @@ def _parse_top_level_parameters(invoke_body: str):
 def contains_function_call_markup(text: str) -> bool:
     t = text or ""
     return OPEN_FUNCTION_CALL_TAG in t or CLOSE_FUNCTION_CALL_TAG in t
+
+
+def first_completed_function_call_prefix(text: str) -> str | None:
+    """Return text up to the first balanced <function_calls>...</function_calls> block."""
+    t = text or ""
+    stack = []
+    for tok in _find_tag_tokens(t, "function_calls"):
+        if not tok["is_close"]:
+            stack.append(tok["start"])
+            continue
+        if not stack:
+            return None
+        stack.pop()
+        if not stack:
+            return t[: tok["end"]]
+    return None
 
 
 def extract_module_call(text: str):

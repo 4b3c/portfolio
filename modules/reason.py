@@ -1,7 +1,7 @@
 import json
 import os
 from modules.module import Module
-from utils.claude import OPUS
+from utils.claude import OPUS, ClaudeRateLimitPause
 from utils.colors import print_error, print_state, _MAGENTA
 from utils.conversation import ConversationStore, stream_response
 from utils.function_calls import contains_function_call_markup, maybe_dispatch_module_call
@@ -109,5 +109,13 @@ class ReasonModule(Module):
             clear_reason_state()
             return self.complete(answer)
         except Exception as e:
+            if isinstance(e, ClaudeRateLimitPause):
+                payload = {
+                    "signal": "WAIT_FOR_USER_INPUT",
+                    "wait_for_user_input": True,
+                    "message": "Claude rate limit hit in reason module. Wait a few minutes, then tell me to continue.",
+                    "reason_conversation_id": self.reason_conversation_id,
+                }
+                return self.complete(json.dumps(payload, indent=2))
             print_error("Reasoning error:", str(e))
             return self.fail(str(e))

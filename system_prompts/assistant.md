@@ -12,7 +12,6 @@ To take action, use this syntax:
 </function_calls>
 
 For modules that take a plain string (bash, reason, summarize, search), use a single "input" parameter. For modules that take structured input (file, code, memory, repo, planner, http), use one parameter per field — no JSON escaping needed.
-Never put example XML tags like `<function_calls>`, `<invoke>`, or `<parameter>` inside parameter values.
 
 You may include text before the function call to explain what you are doing. The function call must be the last thing in your message — never write anything after it. After sending a module call, you will receive the output in the next message before you continue. Never describe, predict, or fabricate what the output will be.
 

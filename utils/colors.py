@@ -95,6 +95,27 @@ class LineStream:
             return
         self._buf += text
 
+        # Hide function-call XML even when no dedicated function-call color is used.
+        if self._hide_fn and not self._fn_color:
+            if not self._in_fn:
+                open_idx = self._buf.find(OPEN_FUNCTION_CALL_TAG)
+                if open_idx != -1:
+                    prefix = self._buf[:open_idx]
+                    if prefix:
+                        sys.stdout.write(self._base + _fmt(prefix))
+                        sys.stdout.flush()
+                    self._buf = self._buf[open_idx + len(OPEN_FUNCTION_CALL_TAG):]
+                    self._in_fn = True
+
+            if self._in_fn:
+                close_idx = self._buf.find(CLOSE_FUNCTION_CALL_TAG)
+                if close_idx != -1:
+                    self._buf = self._buf[close_idx + len(CLOSE_FUNCTION_CALL_TAG):]
+                    self._in_fn = False
+                    self._cut_off = True
+                else:
+                    return
+
         # Detect function-call block start immediately (even before newline).
         if self._fn_color and not self._in_fn:
             open_idx = self._buf.find(OPEN_FUNCTION_CALL_TAG)
@@ -149,7 +170,9 @@ class LineStream:
     def flush(self):
         if self._buf:
             if self._in_fn:
-                sys.stdout.write(f"{self._fn_color}  {self._buf.strip()}{_R}")
+                if not self._hide_fn:
+                    color = self._fn_color or self._base
+                    sys.stdout.write(f"{color}  {self._buf.strip()}{_R}")
             else:
                 sys.stdout.write(self._base + _fmt(self._buf))
             sys.stdout.flush()

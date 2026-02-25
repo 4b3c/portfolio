@@ -2,7 +2,7 @@ import json
 import os
 import re
 from modules.module import Module
-from utils.claude import HAIKU, SONNET, OPUS, call_claude
+from utils.claude import HAIKU, SONNET, OPUS, ClaudeRateLimitPause, call_claude
 from utils.colors import print_user, print_error, print_state, print_info, _YELLOW, _CYAN
 from utils.conversation import ConversationStore, stream_response
 from utils.function_calls import contains_function_call_markup, maybe_dispatch_module_call
@@ -51,7 +51,15 @@ class AssistantModule(Module):
         return False
 
     def _recent_context_for_classification(self) -> str:
-        recent = [m for m in self.messages if m.get("role") in {"user", "assistant"}][-2:]
+        recent = []
+        for m in self.messages:
+            role = m.get("role")
+            if role not in {"user", "assistant"}:
+                continue
+            if role == "user" and self._is_synthetic_user_message(m.get("content", "")):
+                continue
+            recent.append(m)
+        recent = recent[-2:]
         if not recent:
             return "(none)"
 
@@ -104,7 +112,7 @@ class AssistantModule(Module):
             if msg.get("role") != "user":
                 continue
             content = msg.get("content", "")
-            if re.match(r"^\[.+ output\]:", content):
+            if self._is_synthetic_user_message(content):
                 continue
             self._update_model_for_user_input(content, announce=False)
             return
@@ -122,10 +130,25 @@ class AssistantModule(Module):
             if msg.get("role") != "user":
                 continue
             content = msg.get("content", "")
-            if re.match(r"^\[.+ output\]:", content):
+            if self._is_synthetic_user_message(content):
                 continue
             return content
         return ""
+
+    def _is_tool_output_user_message(self, content: str) -> bool:
+        text = (content or "").strip()
+        return bool(
+            re.match(r"^\[[^\]]+\soutput\]:", text, flags=re.IGNORECASE)
+            or text.startswith("[TOOL OUTPUT")
+        )
+
+    def _is_synthetic_user_message(self, content: str) -> bool:
+        text = (content or "").strip()
+        if self._is_tool_output_user_message(text):
+            return True
+        if text.startswith("[Compacted context from conversation "):
+            return True
+        return False
 
     def _should_auto_compact(self) -> bool:
         if not self.messages:
@@ -147,11 +170,20 @@ class AssistantModule(Module):
             return
 
         latest_goal = self._latest_real_user_input()
-        transcript = "\n\n".join(
-            f"{m.get('role', 'unknown').upper()}:\n{m.get('content', '')}"
-            for m in self.messages
-            if m.get("role") != "system"
-        )
+        lines = []
+        for m in self.messages:
+            role = m.get("role", "unknown")
+            if role == "system":
+                continue
+            content = m.get("content", "")
+            if role == "user" and self._is_tool_output_user_message(content):
+                role_label = "TOOL_OUTPUT"
+            elif role == "user" and content.startswith("[Compacted context from conversation "):
+                role_label = "COMPACTED_CONTEXT"
+            else:
+                role_label = role.upper()
+            lines.append(f"{role_label}:\n{content}")
+        transcript = "\n\n".join(lines)
 
         compact_messages = [
             {
@@ -267,17 +299,54 @@ class AssistantModule(Module):
             return
         self.store.save(self.conversation_id, json.dumps(self.messages, indent=2))
 
+    def _parse_wait_signal(self, text: str) -> dict | None:
+        if not isinstance(text, str):
+            return None
+        stripped = text.strip()
+        if not stripped.startswith("{"):
+            return None
+        try:
+            payload = json.loads(stripped)
+        except Exception:
+            return None
+        if payload.get("signal") == "WAIT_FOR_USER_INPUT" or payload.get("wait_for_user_input") is True:
+            return payload
+        return None
+
+    def _pause_for_user_input(self, message: str):
+        if message:
+            print_state(f"[Pause] {message}")
+        while True:
+            user_input = input(print_user()).strip()
+            if not user_input:
+                continue
+            if user_input.startswith("/"):
+                if self.handle_command(user_input):
+                    if not self.messages:
+                        return
+                    continue
+            self._update_model_for_user_input(user_input)
+            self.messages.append({"role": "user", "content": user_input})
+            self._persist()
+            return
+
     def conversation_loop(self) -> dict:
         while True:
             self._maybe_auto_compact()
-            raw = stream_response(
-                self.messages,
-                self.current_model,
-                "Assistant:",
-                _YELLOW,
-                fn_color=_CYAN,
-                hide_fn_calls=True,
-            )
+            try:
+                raw = stream_response(
+                    self.messages,
+                    self.current_model,
+                    "Assistant:",
+                    _YELLOW,
+                    fn_color=_CYAN,
+                    hide_fn_calls=True,
+                )
+            except ClaudeRateLimitPause as e:
+                print_state(f"[Rate limit hit for {self.current_model}.]")
+                print_error("Claude pause:", str(e))
+                self._pause_for_user_input("Wait a few minutes, then tell me to continue.")
+                continue
             self.messages.append({"role": "assistant", "content": raw})
             self._persist()
 
@@ -323,10 +392,28 @@ class AssistantModule(Module):
     def resume(self, result) -> dict:
         self.conversation_id = result.get("conversation_id", self.conversation_id)
         called_module = result.get("called_module", "module")
+        if not self.conversation_id:
+            ids = self.store.list_ids()
+            if ids:
+                self.conversation_id = ids[-1]
+            else:
+                return self.fail("No assistant conversation found to resume.")
 
         with open(self.store.path(self.conversation_id)) as f:
             self.messages = json.load(f)
 
         self._refresh_model_from_history()
-        self.messages.append({"role": "user", "content": f"[{called_module} output]: {result['output']}"})
+        self.messages.append(
+            {
+                "role": "user",
+                "content": (
+                    f"[TOOL OUTPUT - assistant ran {called_module}]\n"
+                    f"{result['output']}"
+                ),
+            }
+        )
+        wait_payload = self._parse_wait_signal(result.get("output", ""))
+        if wait_payload:
+            self._persist()
+            self._pause_for_user_input(wait_payload.get("message", "Module requested user input before continuing."))
         return self.conversation_loop()

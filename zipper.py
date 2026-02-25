@@ -12,6 +12,20 @@ def save_trace(trace, path):
         json.dump(trace, f, indent=2)
 
 
+def _is_conversation_key(key: str) -> bool:
+    return key == "conversation_id" or key.endswith("_conversation_id")
+
+
+def _collect_conversation_ids(nodes: list[dict]) -> dict:
+    """Collect nearest conversation-id keys from a root->leaf node path."""
+    merged = {}
+    for node in nodes:
+        for key, value in node.items():
+            if _is_conversation_key(key) and isinstance(value, str):
+                merged[key] = value
+    return merged
+
+
 def find_active_path(node):
     """Recursively find the path of incomplete (no output) nodes from root to deepest active call."""
     if "output" in node:
@@ -37,7 +51,7 @@ def main_loop(trace, stack, current_node, result, trace_file):
                 }
                 # Preserve conversation identifiers for nested module sessions.
                 for key, value in result.items():
-                    if key.endswith("_conversation_id") and isinstance(value, str):
+                    if _is_conversation_key(key) and isinstance(value, str):
                         child_node[key] = value
 
                 current_node["called"].append(child_node)
@@ -162,8 +176,7 @@ def restart_run():
         "output": "Process restarted successfully.",
         "called_module": "restart",
     }
-    if "conversation_id" in restart_node:
-        result["conversation_id"] = restart_node["conversation_id"]
+    result.update(_collect_conversation_ids(active_path))
 
     print_module("Resuming module:", current_node['module'])
     result = stack[-1][0].resume(result)

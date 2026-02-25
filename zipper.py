@@ -2,6 +2,11 @@ import json
 from modules.interface import InterfaceModule
 from modules.router import RouterModule
 from modules.assistant import AssistantModule
+from modules.bash import BashModule
+from modules.file import FileModule
+from modules.memory import MemoryModule
+from modules.summarize import SummarizeModule
+from modules.search import SearchModule
 
 CONTEXT_PATH = "data/context.json"
 TRACE_PATH = "data/trace.json"
@@ -10,6 +15,11 @@ MODULES = {
     "interface": InterfaceModule,
     "router": RouterModule,
     "assistant": AssistantModule,
+    "bash": BashModule,
+    "file": FileModule,
+    "memory": MemoryModule,
+    "summarize": SummarizeModule,
+    "search": SearchModule,
 }
 
 def save_context(context):
@@ -70,7 +80,7 @@ def run():
 
             caller_module, current_node = stack[-1]
             print(f"Resuming module: {current_node['module']}")
-            result = caller_module.resume(result["output"])
+            result = caller_module.resume(result)
 
 if __name__ == "__main__":
     run()

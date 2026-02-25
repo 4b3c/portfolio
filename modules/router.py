@@ -46,5 +46,5 @@ class RouterModule(Module):
 
         return self.call(target, routed_input)
 
-    def resume(self, data):
-        return self.complete(f"Route task completed with no issues: {data}")
+    def resume(self, result):
+        return self.complete(f"Route task completed with no issues: {result['output']}")

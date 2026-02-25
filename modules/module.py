@@ -13,8 +13,8 @@ class Module:
     def run(self, data) -> dict:
         raise NotImplementedError
     
-    def resume(self, data) -> dict:
-        return self.complete(data)
+    def resume(self, result) -> dict:
+        return self.complete(result["output"])
     
     def call(self, module, data):
         return {"module": module, "input": data}

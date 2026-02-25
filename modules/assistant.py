@@ -1,7 +1,6 @@
 import json
 from time import time
 from modules.module import Module
-from utils.ollama import call_ollama
 from utils.claude import call_claude
 
 CONVERSATIONS_PATH = "data/conversations"
@@ -19,10 +18,39 @@ class AssistantModule(Module):
         super().__init__(context_path)
         self.messages = []
         self.conversation_id = (str(int(time())) + "0")[-6:-1]
-    
+
+    def conversation_loop(self) -> dict:
+        while True:
+            raw = call_claude(self.messages).strip()
+            self.messages.append({"role": "assistant", "content": raw})
+
+            # Check if the assistant wants to call another module
+            try:
+                parsed = json.loads(raw)
+                if "module" in parsed and "input" in parsed:
+                    save_conversation(self.messages, path=f"{self.conversation_id}.json")
+                    result = self.call(parsed["module"], parsed["input"])
+                    result["conversation_id"] = self.conversation_id
+                    result["called_module"] = parsed["module"]
+                    return result
+            except (json.JSONDecodeError, TypeError):
+                pass
+
+            print(f"Assistant: {raw}\n")
+            if raw.lower() == "done":
+                break
+
+            user_input = input("User (type 'done' to finish): ")
+            self.messages.append({"role": "user", "content": user_input})
+            if user_input.lower() == "done":
+                break
+
+            save_conversation(self.messages, path=f"{self.conversation_id}.json")
+
+        save_conversation(self.messages, path=f"{self.conversation_id}.json")
+        return self.complete("Assistant session completed.")
+
     def run(self, data) -> dict:
-        payload = data["input"]
-        
         self.messages = [
             {
                 "role": "system", "content": f"""
@@ -37,42 +65,18 @@ class AssistantModule(Module):
                 """
             },
             {
-                "role": "user", "content": payload
+                "role": "user", "content": data["input"]
             }
         ]
+        return self.conversation_loop()
 
-        while True:
+    def resume(self, result) -> dict:
+        self.conversation_id = result.get("conversation_id", self.conversation_id)
+        called_module = result.get("called_module", "module")
 
-            # Call the Claude API with the current conversation messages
-            raw = call_claude(self.messages).strip()
-            self.messages.append({"role": "assistant", "content": raw})
+        with open(f"{CONVERSATIONS_PATH}/{self.conversation_id}.json") as f:
+            self.messages = json.load(f)
 
-            # Check if the assistant wants to call another module
-            try:
-                parsed = json.loads(raw)
-                if "module" in parsed and "input" in parsed:
-                    save_conversation(self.messages, path=f"{self.conversation_id}.json")
-                    return self.call(parsed["module"], parsed["input"])
-            except (json.JSONDecodeError, TypeError):
-                pass
-
-            print(f"Assistant: {raw}\n")
-            if raw.lower() == "done":
-                break
-
-            # Prompt the user for input and add it to the conversation messages
-            user_input = input("User (type 'done' to finish): ")
-            self.messages.append({"role": "user", "content": user_input})
-            if user_input.lower() == "done":
-                break
-
-            # Save the conversation after each exchange
-            save_conversation(self.messages, path=f"{self.conversation_id}.json")
-        
-        # Save the final conversation when done
-        save_conversation(self.messages, path=f"{self.conversation_id}.json")
-
-
-        return self.complete("Assistant session completed.")
-    
-            
+        self.messages.append({"role": "user", "content": f"[{called_module} output]: {result['output']}"})
+        print(f"{called_module}: {result['output']}\n")
+        return self.conversation_loop()

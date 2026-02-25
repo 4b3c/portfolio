@@ -10,7 +10,7 @@ OPUS = "claude-opus-4-6"
 client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 
 
-def call_claude(messages: list[dict], model: str = HAIKU, temperature: float = 0.2, stop: list[str] = None) -> str:
+def call_claude(messages: list[dict], model: str = HAIKU, temperature: float = 0.2, stop: list[str] = None, on_token=None) -> str:
     system_parts = [m["content"] for m in messages if m["role"] == "system"]
     filtered = [m for m in messages if m["role"] != "system"]
 
@@ -26,8 +26,14 @@ def call_claude(messages: list[dict], model: str = HAIKU, temperature: float = 0
         kwargs["stop_sequences"] = stop
 
     try:
-        response = client.messages.create(**kwargs)
-        return response.content[0].text
+        if on_token:
+            with client.messages.stream(**kwargs) as stream:
+                for text in stream.text_stream:
+                    on_token(text)
+            return stream.get_final_message().content[0].text
+        else:
+            response = client.messages.create(**kwargs)
+            return response.content[0].text
     except anthropic.APIError as e:
         raise RuntimeError(f"[CLAUDE ERROR] {e}")
 

@@ -1,7 +1,7 @@
 import json
 from modules.module import Module
 from utils.claude import call_claude, OPUS
-from utils.colors import print_reasoning, print_error
+from utils.colors import print_error, stream_label, stream_end, LineStream, _MAGENTA, _WHITE
 
 class ReasonModule(Module):
     """Think through a complex, multi-step problem using a powerful reasoning model before acting. Input: the question or task to reason through. Use this before taking action on anything non-trivial — architecture decisions, debugging strategies, planning sequences of edits, or any task where getting it wrong would be costly. Returns either a reasoned answer or a module call to execute next."""
@@ -27,10 +27,12 @@ Otherwise, respond with your reasoned answer as plain text."""
             {"role": "system", "content": system},
             {"role": "user", "content": question}
         ]
-        print_reasoning("[thinking...]")
         try:
-            answer = call_claude(messages, model=OPUS).strip()
-            print_reasoning(answer)
+            stream_label("Reasoning:", _MAGENTA)
+            ls = LineStream(_WHITE)
+            answer = call_claude(messages, model=OPUS, on_token=ls.token).strip()
+            ls.flush()
+            stream_end()
             return self.complete(answer)
         except Exception as e:
             print_error("Reasoning error:", str(e))

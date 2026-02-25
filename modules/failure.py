@@ -2,7 +2,7 @@ import json
 import os
 import re
 from modules.module import Module
-from utils.colors import print_error, print_failure, print_module_output
+from utils.colors import print_error, stream_label, stream_end, LineStream, _RED, _WHITE
 
 FUNCTION_CALL_RE = re.compile(r"<function_calls>\s*<invoke name=\"(\w+)\">(.*?)</invoke>\s*</function_calls>", re.DOTALL)
 PARAM_RE = re.compile(r'<parameter name="(\w+)">(.*?)</parameter>', re.DOTALL)
@@ -82,7 +82,11 @@ class FailureModule(Module):
             self.messages.append({"role": "user", "content": "Continue your diagnosis."})
 
         while True:
-            raw = call_claude(self.messages, model=OPUS).strip()
+            stream_label("Failure:", _RED)
+            ls = LineStream(_WHITE)
+            raw = call_claude(self.messages, model=OPUS, on_token=ls.token).strip()
+            ls.flush()
+            stream_end()
             self.messages.append({"role": "assistant", "content": raw})
 
             parsed = extract_module_call(raw)
@@ -92,7 +96,6 @@ class FailureModule(Module):
                 result["called_module"] = parsed["module"]
                 return result
 
-            print_failure(raw)
             if raw.lower() == "done":
                 break
 
@@ -123,5 +126,4 @@ class FailureModule(Module):
 
         called_module = result.get("called_module", "module")
         self.messages.append({"role": "user", "content": f"[{called_module} output]: {result['output']}"})
-        print_module_output(called_module, result['output'])
         return self._loop()

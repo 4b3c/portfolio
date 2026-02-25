@@ -4,7 +4,7 @@ import re
 from time import time
 from modules.module import Module
 from utils.claude import call_claude
-from utils.colors import print_assistant, print_user, print_error, print_state, print_info, print_module_output
+from utils.colors import print_user, print_error, print_state, print_info, stream_label, stream_end, LineStream, _YELLOW, _WHITE, _CYAN
 
 CONVERSATIONS_PATH = "data/conversations"
 
@@ -33,7 +33,7 @@ def save_conversation(messages, path="unnamed.json"):
 
 
 def new_conversation_id():
-    return (str(int(time())) + "0")[-6:-1]
+    return (str(int(time())) + "0")[-12:-1]
 
 
 COMMANDS = {
@@ -136,7 +136,11 @@ class AssistantModule(Module):
 
     def conversation_loop(self) -> dict:
         while True:
-            raw = call_claude(self.messages).strip()
+            stream_label("Assistant:", _YELLOW)
+            ls = LineStream(_WHITE, fn_color=_CYAN)
+            raw = call_claude(self.messages, on_token=ls.token).strip()
+            ls.flush()
+            stream_end()
             self.messages.append({"role": "assistant", "content": raw})
 
             # Check if the assistant wants to call another module
@@ -148,11 +152,13 @@ class AssistantModule(Module):
                 result["called_module"] = parsed["module"]
                 return result
 
-            print_assistant(raw)
             if raw.lower() == "done":
                 break
 
             user_input = input(print_user()).strip()
+
+            if not user_input:
+                continue
 
             if user_input.startswith("/"):
                 if self.handle_command(user_input):
@@ -181,5 +187,4 @@ class AssistantModule(Module):
             self.messages = json.load(f)
 
         self.messages.append({"role": "user", "content": f"[{called_module} output]: {result['output']}"})
-        print_module_output(called_module, result['output'])
         return self.conversation_loop()

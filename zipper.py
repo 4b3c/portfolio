@@ -11,6 +11,7 @@ from modules.reason import ReasonModule
 from modules.failure import FailureModule
 from modules.restart import RestartModule
 from modules.code import CodeModule
+from modules.http import HttpModule
 from utils.colors import print_error, print_module, print_state, print_user
 
 CONTEXT_PATH = "data/context.json"
@@ -27,6 +28,7 @@ MODULES = {
     "failure": FailureModule,
     "restart": RestartModule,
     "code": CodeModule,
+    "http": HttpModule,
 }
 
 
@@ -57,7 +59,7 @@ def main_loop(trace, stack, current_node, result):
     while True:
         if "module" in result:
             child_node = {
-                "id": str(uuid.uuid4())[:8],
+                "id": str(uuid.uuid4())[:12],
                 "module": result["module"],
                 "input": result["input"],
                 "called": [],
@@ -84,7 +86,7 @@ def main_loop(trace, stack, current_node, result):
 
             try:
                 new_module = MODULES[module_name](CONTEXT_PATH)
-                print_module("Running module:", module_name)
+                print_module("Running module:", module_name, result.get("input", "") or "")
                 result = new_module.run(result)
                 module = new_module
                 stack.append((module, current_node))
@@ -103,13 +105,14 @@ def main_loop(trace, stack, current_node, result):
                 break
 
             caller_module, current_node = stack[-1]
-            print_module("Resuming module:", current_node['module'])
+            output_preview = (result.get("output", "") or "").strip().split('\n')[0]
+            print_module("Resuming module:", current_node['module'], output_preview)
             result = caller_module.resume(result)
 
 
 def run():
     trace = []
-    root_node = {"id": str(uuid.uuid4())[:8], "module": "assistant", "input": None, "called": []}
+    root_node = {"id": str(uuid.uuid4())[:12], "module": "assistant", "input": None, "called": []}
     trace.append(root_node)
 
     save_trace(trace)
@@ -164,7 +167,7 @@ def restart_run():
     if "conversation_id" in restart_node:
         result["conversation_id"] = restart_node["conversation_id"]
 
-    print_state(f"Resuming module: {current_node['module']}\n")
+    print_module("Resuming module:", current_node['module'])
     result = stack[-1][0].resume(result)
 
     main_loop(trace, stack, current_node, result)

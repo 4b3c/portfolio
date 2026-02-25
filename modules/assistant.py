@@ -5,26 +5,10 @@ from time import time
 from modules.module import Module
 from utils.claude import HAIKU, SONNET, OPUS, call_claude
 from utils.colors import print_user, print_error, print_state, print_info, stream_label, stream_end, LineStream, _YELLOW, _WHITE, _CYAN
+from utils.function_calls import maybe_dispatch_module_call
 from utils.prompts import load_system_prompt
 
 CONVERSATIONS_PATH = "data/conversations"
-
-FUNCTION_CALL_RE = re.compile(r"<function_calls>\s*<invoke name=\"(\w+)\">(.*?)</invoke>\s*</function_calls>", re.DOTALL)
-PARAM_RE = re.compile(r'<parameter name="(\w+)">(.*?)</parameter>', re.DOTALL)
-
-
-def extract_module_call(text: str):
-    """Extract a module call from text, supporting XML function_calls syntax."""
-    match = FUNCTION_CALL_RE.search(text)
-    if match:
-        module_name = match.group(1)
-        params = {m.group(1): m.group(2) for m in PARAM_RE.finditer(match.group(2))}
-        if len(params) == 1 and "input" in params:
-            input_val = params["input"]
-        else:
-            input_val = json.dumps(params)
-        return {"module": module_name, "input": input_val}
-    return None
 
 
 def save_conversation(messages, path="unnamed.json"):
@@ -303,13 +287,11 @@ class AssistantModule(Module):
             self.messages.append({"role": "assistant", "content": raw})
 
             # Check if the assistant wants to call another module
-            parsed = extract_module_call(raw)
-            if parsed and "module" in parsed:
+            module_result = maybe_dispatch_module_call(self, raw, include_called_module=True)
+            if module_result:
                 save_conversation(self.messages, path=f"{self.conversation_id}.json")
-                result = self.call(parsed["module"], parsed.get("input", ""))
-                result["conversation_id"] = self.conversation_id
-                result["called_module"] = parsed["module"]
-                return result
+                module_result["conversation_id"] = self.conversation_id
+                return module_result
 
             if raw.lower() == "done":
                 break

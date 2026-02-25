@@ -2,11 +2,11 @@ import requests
 import json
 
 OLLAMA_API_URL = "http://localhost:11434/api/chat"
-MODEL_NAME = "llama3.2"
+DEFAULT_MODEL = "llama3.2"
 
-def call_ollama(messages: list[dict], temperature: float = 0.2, stop: list[str] = None) -> str:
+def call_ollama(messages: list[dict], model: str = DEFAULT_MODEL, temperature: float = 0.2, stop: list[str] = None) -> str:
     payload = {
-        "model": MODEL_NAME,
+        "model": model,
         "messages": messages,
         "stream": False,
         "options": {

@@ -2,7 +2,7 @@ from modules.module import Module
 from utils.claude import call_claude
 
 class SummarizeModule(Module):
-    """Summarizes a long piece of text concisely. Input: the text to summarize."""
+    """Condense a long piece of text into a concise summary. Input: the text to summarize. Use this when content is too long to reason about directly — paste the raw text and get a summary back before proceeding."""
 
     def run(self, data) -> dict:
         text = data["input"]

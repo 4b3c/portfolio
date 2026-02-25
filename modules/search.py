@@ -11,17 +11,12 @@ class SearchModule(Module):
     def run(self, data) -> dict:
         raw_input = data["input"]
 
-        if isinstance(raw_input, dict):
-            params = raw_input
-        elif raw_input.strip().startswith("{"):
-            try:
-                params = json.loads(raw_input)
-            except json.JSONDecodeError as e:
-                return self.fail(f"Invalid JSON input: {e}")
-        else:
-            params = {}
+        try:
+            params = json.loads(raw_input) if raw_input.strip().startswith("{") else {}
+        except json.JSONDecodeError as e:
+            return self.fail(f"Invalid JSON input: {e}")
 
-        query = params.get("query", raw_input if isinstance(raw_input, str) else "")
+        query = params.get("query", raw_input)
         limit = int(params.get("limit", 5))
 
         if not query:

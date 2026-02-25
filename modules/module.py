@@ -17,6 +17,8 @@ class Module:
         return self.complete(result["output"])
     
     def call(self, module, data):
+        if isinstance(data, dict):
+            data = json.dumps(data)
         return {"module": module, "input": data}
     
     def fail(self, error):

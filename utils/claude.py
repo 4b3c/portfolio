@@ -4,17 +4,18 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-MODEL_NAME = "claude-opus-4-6"
+HAIKU = "claude-haiku-4-5"
+OPUS = "claude-opus-4-6"
 
 client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 
 
-def call_claude(messages: list[dict], temperature: float = 0.2, stop: list[str] = None) -> str:
+def call_claude(messages: list[dict], model: str = HAIKU, temperature: float = 0.2, stop: list[str] = None) -> str:
     system_parts = [m["content"] for m in messages if m["role"] == "system"]
     filtered = [m for m in messages if m["role"] != "system"]
 
     kwargs = {
-        "model": MODEL_NAME,
+        "model": model,
         "max_tokens": 8096,
         "messages": filtered,
         "temperature": temperature,

@@ -7,19 +7,7 @@ from utils.claude import call_claude
 
 SUMMARY_THRESHOLD = 1000
 
-PROTECTED_FILES = {
-    "zipper.py",
-    "modules/interface.py",
-    "modules/assistant.py",
-    "modules/file.py",
-}
-
 VERSIONS_PATH = "data/versions"
-
-
-def is_protected(path: str) -> bool:
-    rel = os.path.relpath(os.path.realpath(path), os.path.realpath("."))
-    return rel in PROTECTED_FILES
 
 
 def create_version_zip():
@@ -36,11 +24,12 @@ def create_version_zip():
 
 
 class FileModule(Module):
-    """Read, write, or list files on disk. Input: JSON with 'action' (list/read/write), 'path', and optionally 'content' for writes. If no input is given, lists all project files. Certain core files are protected and cannot be written."""
+    """Read, write, or list files on disk. Input: JSON with 'action' (list/read/write), 'path', and optionally 'content' for writes. If no input is given, lists all project files. A versioned zip backup is created before every write."""
 
     def run(self, data) -> dict:
         try:
-            params = json.loads(data["input"]) if data["input"].strip().startswith("{") else {}
+            raw = data["input"]
+            params = json.loads(raw) if raw.strip().startswith("{") else {}
             action = params.get("action", "list")
             path = os.path.realpath(params["path"]) if "path" in params else None
         except (json.JSONDecodeError, KeyError) as e:
@@ -80,12 +69,12 @@ class FileModule(Module):
         elif action == "write":
             if not path:
                 return self.fail("'path' is required for write.")
-            if is_protected(path):
-                return self.fail(f"'{os.path.relpath(path)}' is a protected file and cannot be modified.")
             try:
                 zip_path = create_version_zip()
                 content = params.get("content", "")
-                os.makedirs(os.path.dirname(path), exist_ok=True)
+                parent = os.path.dirname(path)
+                if parent:
+                    os.makedirs(parent, exist_ok=True)
                 with open(path, "w") as f:
                     f.write(content)
                 return self.complete(f"Version saved to {zip_path}. Written to {path}.")

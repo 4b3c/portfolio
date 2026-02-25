@@ -5,19 +5,17 @@ from utils.claude import call_claude, OPUS
 from utils.colors import print_error, stream_label, stream_end, LineStream, _RED, _WHITE
 from utils.function_calls import maybe_dispatch_module_call
 from utils.prompts import load_system_prompt
-
-TRACE_PATH = "data/trace.json"
-FAILURE_STATE_PATH = "data/failure_state.json"
-
+from utils.session import state_path, trace_path
 
 def save_state(messages):
-    os.makedirs(os.path.dirname(FAILURE_STATE_PATH), exist_ok=True)
-    with open(FAILURE_STATE_PATH, "w") as f:
+    path = state_path("failure_state.json")
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w") as f:
         json.dump(messages, f)
 
 
 def load_state():
-    with open(FAILURE_STATE_PATH) as f:
+    with open(state_path("failure_state.json")) as f:
         return json.load(f)
 
 
@@ -56,7 +54,7 @@ class FailureModule(Module):
     def run(self, data) -> dict:
         error = data["input"]
 
-        with open(TRACE_PATH) as f:
+        with open(trace_path()) as f:
             trace = json.load(f)
         modules_json = json.dumps(self.registry, indent=2)
         system_prompt = load_system_prompt("failure.md", {"AVAILABLE_MODULES_JSON": modules_json})

@@ -28,6 +28,7 @@ SKIP_DIRS = {
     "dist",
     "build",
     "data/conversations",
+    "data/sessions",
 }
 
 
@@ -93,6 +94,8 @@ class RepoModule(Module):
                 "!.git/**",
                 "--glob",
                 "!node_modules/**",
+                "--glob",
+                "!data/sessions/**",
                 "--glob",
                 "!data/conversations/**",
                 query,

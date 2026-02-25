@@ -2,6 +2,7 @@
 
 import re
 import sys
+from utils.function_calls import CLOSE_FUNCTION_CALL_TAG
 
 # ANSI codes
 _R    = '\033[0m'    # full reset
@@ -65,6 +66,7 @@ class LineStream:
         self._base = base_color
         self._fn_color = fn_color
         self._in_fn = False
+        self._cut_off = False
 
     def _print_line(self, line: str):
         if self._fn_color:
@@ -87,7 +89,13 @@ class LineStream:
         sys.stdout.flush()
 
     def token(self, text: str):
+        if self._cut_off:
+            return
         self._buf += text
+        idx = self._buf.find(CLOSE_FUNCTION_CALL_TAG)
+        if idx != -1:
+            self._buf = self._buf[: idx + len(CLOSE_FUNCTION_CALL_TAG)]
+            self._cut_off = True
         while '\n' in self._buf:
             line, self._buf = self._buf.split('\n', 1)
             self._print_line(line)

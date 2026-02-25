@@ -1,24 +1,26 @@
 import json
 import os
 import re
-from time import time
 from modules.module import Module
 from utils.claude import HAIKU, SONNET, OPUS, call_claude
 from utils.colors import print_user, print_error, print_state, print_info, stream_label, stream_end, LineStream, _YELLOW, _WHITE, _CYAN
 from utils.function_calls import maybe_dispatch_module_call
 from utils.prompts import load_system_prompt
+from utils.session import (
+    conversation_path,
+    list_numeric_conversation_labels,
+    next_compacted_conversation_label,
+    next_root_conversation_label,
+)
 
-CONVERSATIONS_PATH = "data/conversations"
 
-
-def save_conversation(messages, path="unnamed.json"):
-    path = f"{CONVERSATIONS_PATH}/{path}"
+def save_conversation(messages, conversation_id: str):
+    if not conversation_id:
+        return
+    path = conversation_path(conversation_id)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w") as f:
         json.dump(messages, f, indent=2)
-
-
-def new_conversation_id():
-    return (str(int(time())) + "0")[-12:-1]
 
 
 COMMANDS = {
@@ -39,7 +41,7 @@ class AssistantModule(Module):
     def __init__(self, registry=None):
         super().__init__(registry)
         self.messages = []
-        self.conversation_id = new_conversation_id()
+        self.conversation_id = None
         self.current_model = HAIKU
         self.current_difficulty = 1
         self.last_compact_user_turn = 0
@@ -187,7 +189,7 @@ class AssistantModule(Module):
         except Exception:
             return
 
-        self.conversation_id = new_conversation_id()
+        self.conversation_id = next_compacted_conversation_label(old_id)
         self.messages = [
             system_message,
             {
@@ -200,7 +202,7 @@ class AssistantModule(Module):
             },
         ]
         self.last_compact_user_turn = self._user_turn_count()
-        save_conversation(self.messages, path=f"{self.conversation_id}.json")
+        save_conversation(self.messages, self.conversation_id)
         print_state(f"Auto-compacted conversation {old_id} -> {self.conversation_id}")
 
     def _maybe_auto_compact(self):
@@ -220,8 +222,8 @@ class AssistantModule(Module):
             return True
 
         elif cmd == "/new":
-            save_conversation(self.messages, path=f"{self.conversation_id}.json")
-            self.conversation_id = new_conversation_id()
+            save_conversation(self.messages, self.conversation_id)
+            self.conversation_id = next_root_conversation_label()
             self.messages = []
             self.last_compact_user_turn = 0
             print_state(f"\nStarted new conversation {self.conversation_id}.\n")
@@ -231,8 +233,7 @@ class AssistantModule(Module):
             return True
 
         elif cmd == "/list":
-            os.makedirs(CONVERSATIONS_PATH, exist_ok=True)
-            files = sorted(f.replace(".json", "") for f in os.listdir(CONVERSATIONS_PATH) if f.endswith(".json"))
+            files = list_numeric_conversation_labels()
             if files:
                 print_info("\nSaved conversations:")
                 for f in files:
@@ -247,7 +248,7 @@ class AssistantModule(Module):
                 print_info("\nUsage: /load <id>\n")
                 return True
             conv_id = parts[1]
-            path = f"{CONVERSATIONS_PATH}/{conv_id}.json"
+            path = conversation_path(conv_id)
             if not os.path.exists(path):
                 print_error(f"\nConversation '{conv_id}' not found.\n")
                 return True
@@ -262,6 +263,8 @@ class AssistantModule(Module):
         return False
 
     def _init_messages(self, user_input: str):
+        if not self.conversation_id:
+            self.conversation_id = next_root_conversation_label()
         self._update_model_for_user_input(user_input)
         modules_json = json.dumps({k: v for k, v in self.registry.items() if k != "assistant"}, indent=2)
         self.messages = [
@@ -289,7 +292,7 @@ class AssistantModule(Module):
             # Check if the assistant wants to call another module
             module_result = maybe_dispatch_module_call(self, raw, include_called_module=True)
             if module_result:
-                save_conversation(self.messages, path=f"{self.conversation_id}.json")
+                save_conversation(self.messages, self.conversation_id)
                 module_result["conversation_id"] = self.conversation_id
                 return module_result
 
@@ -312,9 +315,9 @@ class AssistantModule(Module):
             if user_input.lower() == "done":
                 break
 
-            save_conversation(self.messages, path=f"{self.conversation_id}.json")
+            save_conversation(self.messages, self.conversation_id)
 
-        save_conversation(self.messages, path=f"{self.conversation_id}.json")
+        save_conversation(self.messages, self.conversation_id)
         return self.complete("Assistant session completed.")
 
     def run(self, data) -> dict:
@@ -325,7 +328,7 @@ class AssistantModule(Module):
         self.conversation_id = result.get("conversation_id", self.conversation_id)
         called_module = result.get("called_module", "module")
 
-        with open(f"{CONVERSATIONS_PATH}/{self.conversation_id}.json") as f:
+        with open(conversation_path(self.conversation_id)) as f:
             self.messages = json.load(f)
 
         self._refresh_model_from_history()

@@ -1,14 +1,14 @@
 import json
+import os
 import sys
 import uuid
 from modules.registry import MODULES, MODULE_DESCRIPTIONS
 from utils.colors import print_error, print_module, print_state, print_user
+from utils.session import create_session, create_session_version_snapshot, current_session_id, trace_path
 
-TRACE_PATH = "data/trace.json"
-
-
-def save_trace(trace):
-    with open(TRACE_PATH, "w") as f:
+def save_trace(trace, path):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w") as f:
         json.dump(trace, f, indent=2)
 
 
@@ -25,76 +25,117 @@ def find_active_path(node):
     return path
 
 
-def main_loop(trace, stack, current_node, result):
+def main_loop(trace, stack, current_node, result, trace_file):
     while True:
-        if "module" in result:
-            child_node = {
-                "id": str(uuid.uuid4())[:12],
-                "module": result["module"],
-                "input": result["input"],
-                "called": [],
-            }
-            # Preserve conversation_id if present so restart can reconstruct assistant state
-            if "conversation_id" in result:
-                child_node["conversation_id"] = result["conversation_id"]
+        try:
+            if "module" in result:
+                child_node = {
+                    "id": str(uuid.uuid4())[:12],
+                    "module": result["module"],
+                    "input": result["input"],
+                    "called": [],
+                }
+                # Preserve conversation identifiers for nested module sessions.
+                for key, value in result.items():
+                    if key.endswith("_conversation_id") and isinstance(value, str):
+                        child_node[key] = value
 
-            current_node["called"].append(child_node)
-            current_node = child_node
+                current_node["called"].append(child_node)
+                current_node = child_node
 
-            save_trace(trace)
+                save_trace(trace, trace_file)
 
-            module_name = result["module"]
-            if module_name not in MODULES:
-                error = f"Module '{module_name}' not found."
-                print_error("Error:", error)
-                result = {"module": "failure", "input": error}
-                continue
+                module_name = result["module"]
+                if module_name not in MODULES:
+                    error = f"Module '{module_name}' not found."
+                    print_error("Error:", error)
+                    result = {"module": "failure", "input": error}
+                    continue
 
-            try:
                 new_module = MODULES[module_name](MODULE_DESCRIPTIONS)
                 print_module("Running module:", module_name, result.get("input", "") or "")
                 result = new_module.run(result)
                 module = new_module
                 stack.append((module, current_node))
-            except Exception as e:
-                error = f"Module '{module_name}' raised an exception: {e}"
+
+            elif "output" in result:
+                current_node["output"] = result["output"]
+                save_trace(trace, trace_file)
+
+                stack.pop()
+
+                if not stack:
+                    break
+
+                caller_module, current_node = stack[-1]
+                output_preview = (result.get("output", "") or "").strip().split('\n')[0]
+                print_module("Resuming module:", current_node["module"], output_preview)
+                result = caller_module.resume(result)
+            else:
+                error = f"Invalid result payload: expected 'module' or 'output', got keys {list(result.keys())}"
                 print_error("Error:", error)
                 result = {"module": "failure", "input": error}
 
-        elif "output" in result:
-            current_node["output"] = result["output"]
-            save_trace(trace)
-
-            stack.pop()
-
-            if not stack:
+        except Exception as e:
+            error = f"Main loop exception: {e}"
+            print_error("Error:", error)
+            # Avoid recursive failure loop if failure itself crashes.
+            if result.get("module") == "failure" or current_node.get("module") == "failure":
+                current_node["output"] = f"Error: {error}"
+                save_trace(trace, trace_file)
                 break
-
-            caller_module, current_node = stack[-1]
-            output_preview = (result.get("output", "") or "").strip().split('\n')[0]
-            print_module("Resuming module:", current_node['module'], output_preview)
-            result = caller_module.resume(result)
+            result = {"module": "failure", "input": error}
 
 
 def run():
+    session_id = create_session()
+    trace_file = trace_path(session_id)
+    print_state(f"[Session] Started {session_id}")
+    try:
+        snapshot_path = create_session_version_snapshot("start", session_id)
+        print_state(f"[Session] Snapshot created: {snapshot_path}")
+    except Exception as e:
+        print_error("Snapshot error:", str(e))
     trace = []
-    root_node = {"id": str(uuid.uuid4())[:12], "module": "assistant", "input": None, "called": []}
+    root_node = {
+        "id": str(uuid.uuid4())[:12],
+        "module": "assistant",
+        "input": None,
+        "called": [],
+        "session_id": session_id,
+    }
     trace.append(root_node)
 
-    save_trace(trace)
+    save_trace(trace, trace_file)
 
     user_input = input(print_user())
     module = MODULES["assistant"](MODULE_DESCRIPTIONS)
     result = module.run({"module": "assistant", "input": user_input})
     stack = [(module, root_node)]
 
-    main_loop(trace, stack, root_node, result)
+    main_loop(trace, stack, root_node, result, trace_file)
 
 
 def restart_run():
     print_state("[Zipper restarting — loading trace...]\n")
+    session_id = current_session_id(create_if_missing=False)
+    if not session_id:
+        print_error("No active session found. Starting fresh.")
+        run()
+        return
+    print_state(f"[Session] Resuming {session_id}")
+    try:
+        snapshot_path = create_session_version_snapshot("restart", session_id)
+        print_state(f"[Session] Snapshot created: {snapshot_path}")
+    except Exception as e:
+        print_error("Snapshot error:", str(e))
+    trace_file = trace_path(session_id)
+    if not os.path.exists(trace_file):
+        print_error("No active session trace found. Starting fresh.")
+        run()
+        return
 
-    with open(TRACE_PATH) as f:
+    with open(trace_file) as f:
         trace = json.load(f)
 
     active_path = find_active_path(trace[0])
@@ -107,7 +148,7 @@ def restart_run():
     # The deepest node is the restart call — mark it complete
     restart_node = active_path[-1]
     restart_node["output"] = "Process restarted successfully."
-    save_trace(trace)
+    save_trace(trace, trace_file)
 
     # Rebuild the stack for all ancestor nodes (everything above restart)
     stack = []
@@ -127,7 +168,7 @@ def restart_run():
     print_module("Resuming module:", current_node['module'])
     result = stack[-1][0].resume(result)
 
-    main_loop(trace, stack, current_node, result)
+    main_loop(trace, stack, current_node, result, trace_file)
 
 
 if __name__ == "__main__":

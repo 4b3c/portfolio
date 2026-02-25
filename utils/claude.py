@@ -1,6 +1,7 @@
 import os
 import anthropic
 from dotenv import load_dotenv
+from utils.function_calls import truncate_after_function_call
 
 load_dotenv()
 
@@ -11,13 +12,21 @@ OPUS = "claude-opus-4-6"
 client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 
 
-def call_claude(messages: list[dict], model: str = HAIKU, temperature: float = 0.2, stop: list[str] = None, on_token=None) -> str:
+def call_claude(
+    messages: list[dict],
+    model: str = HAIKU,
+    temperature: float = 0.2,
+    stop: list[str] = None,
+    on_token=None,
+    timeout: float | None = None,
+    max_tokens: int = 8096,
+) -> str:
     system_parts = [m["content"] for m in messages if m["role"] == "system"]
     filtered = [m for m in messages if m["role"] != "system"]
 
     kwargs = {
         "model": model,
-        "max_tokens": 8096,
+        "max_tokens": max_tokens,
         "messages": filtered,
         "temperature": temperature,
     }
@@ -25,16 +34,18 @@ def call_claude(messages: list[dict], model: str = HAIKU, temperature: float = 0
         kwargs["system"] = "\n".join(system_parts)
     if stop:
         kwargs["stop_sequences"] = stop
+    if timeout is not None:
+        kwargs["timeout"] = timeout
 
     try:
         if on_token:
             with client.messages.stream(**kwargs) as stream:
                 for text in stream.text_stream:
                     on_token(text)
-            return stream.get_final_message().content[0].text
+            return truncate_after_function_call(stream.get_final_message().content[0].text)
         else:
             response = client.messages.create(**kwargs)
-            return response.content[0].text
+            return truncate_after_function_call(response.content[0].text)
     except anthropic.APIError as e:
         raise RuntimeError(f"[CLAUDE ERROR] {e}")
 

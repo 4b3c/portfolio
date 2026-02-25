@@ -2,13 +2,19 @@ import json
 import os
 import re
 from datetime import datetime
+from time import time
 from modules.module import Module
 from utils.claude import OPUS, call_claude
+from utils.colors import print_state, stream_label, stream_end, LineStream, _MAGENTA, _WHITE
 from utils.function_calls import maybe_dispatch_module_call
 from utils.prompts import load_system_prompt
+from utils.session import conversations_dir, state_path
 
 PLANS_ROOT = "data/plans"
-PLANNER_STATE_PATH = "data/planner_state.json"
+MAX_PLANNER_MODULE_CALLS = 6
+PLANNER_MODEL_TIMEOUT_SECONDS = 90
+PLANNER_MAX_TURNS = 8
+PLANNER_MAX_TOKENS_PER_CALL = 1800
 
 
 def _slugify(text: str, max_words: int = 4, max_len: int = 40) -> str:
@@ -31,14 +37,34 @@ def _unique_plan_dir(base_slug: str) -> str:
         i += 1
 
 
-def save_state(messages, pending_plan):
-    os.makedirs("data", exist_ok=True)
-    with open(PLANNER_STATE_PATH, "w") as f:
-        json.dump({"messages": messages, "pending_plan": pending_plan}, f, indent=2)
+def new_conversation_id():
+    return (str(int(time())) + "0")[-12:-1]
+
+
+def save_conversation(messages, conversation_id: str):
+    path = os.path.join(conversations_dir(), f"planner_{conversation_id}.json")
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w") as f:
+        json.dump(messages, f, indent=2)
+
+
+def save_state(messages, pending_plan, planner_conversation_id):
+    path = state_path("planner_state.json")
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w") as f:
+        json.dump(
+            {
+                "messages": messages,
+                "pending_plan": pending_plan,
+                "planner_conversation_id": planner_conversation_id,
+            },
+            f,
+            indent=2,
+        )
 
 
 def load_state():
-    with open(PLANNER_STATE_PATH) as f:
+    with open(state_path("planner_state.json")) as f:
         return json.load(f)
 
 
@@ -49,6 +75,7 @@ class PlannerModule(Module):
         super().__init__(registry)
         self.messages = []
         self.pending_plan = None
+        self.planner_conversation_id = None
 
     def run(self, data) -> dict:
         raw = data["input"]
@@ -74,11 +101,13 @@ class PlannerModule(Module):
                 state = load_state()
                 self.messages = state.get("messages", [])
                 self.pending_plan = state.get("pending_plan")
+                self.planner_conversation_id = state.get("planner_conversation_id")
             except FileNotFoundError:
                 return self.fail("Planner state not found; cannot resume.")
 
         called_module = result.get("called_module", "module")
         self.messages.append({"role": "user", "content": f"[{called_module} output]: {result['output']}"})
+        self._persist()
         return self._create_loop()
 
     def _create_plan(self, params: dict) -> dict:
@@ -106,27 +135,87 @@ class PlannerModule(Module):
             },
             {"role": "user", "content": user_prompt},
         ]
+        self.planner_conversation_id = new_conversation_id()
         self.pending_plan = {
             "objective": objective,
             "short_name": short_name,
             "plan_dir": plan_dir,
+            "module_calls": 0,
+            "planner_conversation_id": self.planner_conversation_id,
         }
+        self._persist()
+        print_state(f"[Planner] Creating plan '{os.path.basename(plan_dir)}' with OPUS...")
         return self._create_loop()
 
     def _create_loop(self) -> dict:
         if self.messages and self.messages[-1]["role"] == "assistant":
             self.messages.append({"role": "user", "content": "Continue planning."})
+            self._persist()
 
         try:
+            turns = 0
             while True:
-                raw = call_claude(self.messages, model=OPUS, temperature=0.2).strip()
-                self.messages.append({"role": "assistant", "content": raw})
+                turns += 1
+                if turns > PLANNER_MAX_TURNS:
+                    return self.fail(
+                        f"Planner exceeded max turns ({PLANNER_MAX_TURNS}). "
+                        "Try a narrower objective."
+                    )
+
+                print_state("[Planner] Reasoning over plan and context...")
+                stream_label("Planner:", _MAGENTA)
+                ls = LineStream(_WHITE)
+                assistant_entry = {"role": "assistant", "content": ""}
+                self.messages.append(assistant_entry)
+                self._persist()
+
+                chars_since_persist = 0
+
+                def on_token(tok: str):
+                    nonlocal chars_since_persist
+                    assistant_entry["content"] += tok
+                    ls.token(tok)
+                    chars_since_persist += len(tok)
+                    if "\n" in tok or chars_since_persist >= 240:
+                        self._persist()
+                        chars_since_persist = 0
+
+                raw = call_claude(
+                    self.messages[:-1],
+                    model=OPUS,
+                    temperature=0.2,
+                    timeout=PLANNER_MODEL_TIMEOUT_SECONDS,
+                    max_tokens=PLANNER_MAX_TOKENS_PER_CALL,
+                    on_token=on_token,
+                ).strip()
+                ls.flush()
+                stream_end()
+                assistant_entry["content"] = raw
+                self._persist()
 
                 module_result = maybe_dispatch_module_call(self, raw, include_called_module=True)
                 if module_result:
-                    save_state(self.messages, self.pending_plan)
+                    call_count = int(self.pending_plan.get("module_calls", 0))
+                    if call_count >= MAX_PLANNER_MODULE_CALLS:
+                        print_state("[Planner] Module call budget reached; forcing plan finalization.")
+                        self.messages.append(
+                            {
+                                "role": "user",
+                                "content": (
+                                    "Stop calling modules. Use the context already gathered and output the final "
+                                    "plan markdown now."
+                                ),
+                            }
+                        )
+                        self._persist()
+                        continue
+                    self.pending_plan["module_calls"] = call_count + 1
+                    print_state(f"[Planner] Gathering context via module: {module_result.get('module')}")
+                    module_result["planner_conversation_id"] = self.planner_conversation_id
+                    self._persist()
                     return module_result
 
+                print_state("[Planner] Finalizing plan document.")
                 return self._finalize_plan(raw)
         except Exception as e:
             return self.fail(f"Plan generation failed: {e}")
@@ -160,8 +249,9 @@ class PlannerModule(Module):
 
         self.messages = []
         self.pending_plan = None
-        if os.path.exists(PLANNER_STATE_PATH):
-            os.remove(PLANNER_STATE_PATH)
+        state_file = state_path("planner_state.json")
+        if os.path.exists(state_file):
+            os.remove(state_file)
 
         payload = {
             "signal": "WAIT_FOR_USER_INPUT",
@@ -170,8 +260,16 @@ class PlannerModule(Module):
             "plan_name": meta["name"],
             "plan_dir": plan_dir,
             "plan_file": plan_path,
+            "planner_conversation_id": self.planner_conversation_id,
+            "planner_conversation_file": os.path.join(conversations_dir(), f"planner_{self.planner_conversation_id}.json"),
         }
+        print_state(f"[Planner] Plan ready: {plan_path} (waiting for user input)")
         return self.complete(json.dumps(payload, indent=2))
+
+    def _persist(self):
+        save_state(self.messages, self.pending_plan, self.planner_conversation_id)
+        if self.planner_conversation_id:
+            save_conversation(self.messages, self.planner_conversation_id)
 
     def _list_plans(self) -> dict:
         if not os.path.exists(PLANS_ROOT):

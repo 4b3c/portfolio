@@ -8,7 +8,13 @@ SUMMARY_THRESHOLD = 1000
 
 
 class FileModule(Module):
-    """Read, write, or list files on disk. Input: JSON with 'action' (list/read/write/new), 'path', and optionally 'content'. Actions: 'list' lists all project files (default); 'read' reads a file (summarized if large, pass full:true to skip); 'new' creates a new file with 'content' string — fails if file already exists; 'write' fully overwrites an existing file. Use 'new' for creating files, 'write' for full rewrites, and the code module for targeted edits."""
+    """Read, write, create, or list files on disk.
+
+    Input: JSON with 'action' in {'list','read','new','write'}, plus 'path' and
+    optional 'content'/'full'. 'list' walks the project tree (excluding hidden
+    dirs, __pycache__, and versions). 'read' summarizes large files unless
+    full=true. 'new' fails if the target exists. 'write' overwrites the target.
+    """
 
     def run(self, data) -> dict:
         try:

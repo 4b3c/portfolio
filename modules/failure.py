@@ -21,7 +21,11 @@ def load_state():
 
 
 class FailureModule(Module):
-    """Diagnoses and repairs failures by analyzing the execution trace and using file/bash tools to find and fix the root cause."""
+    """Diagnose runtime failures from the active session trace and recover via module calls.
+
+    Runs an OPUS-guided loop with persisted conversation/state under the current
+    session so diagnosis can resume after nested module calls or restarts.
+    """
 
     def __init__(self, registry=None):
         super().__init__(registry)

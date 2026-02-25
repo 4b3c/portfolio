@@ -58,7 +58,16 @@ def load_state():
 
 
 class PlannerModule(Module):
-    """Create and manage execution plans. Input: JSON with action in {'create','view','list','update'}. 'create' requires 'objective' and optional 'name'/'context'; planner may call other modules to gather codebase context before writing data/plans/<short-name>/PLAN.md, then returns WAIT_FOR_USER_INPUT so the assistant pauses for user confirmation. 'view' requires 'plan'. 'update' requires 'plan' and supports status/notes. 'list' returns known plans."""
+    """Create and manage plans with persisted planner conversations.
+
+    Input: JSON with action in {'create','view','list','update'}.
+    - create: requires 'objective', optional 'name'/'context'; may gather focused
+      context via module calls, writes `data/plans/<short-name>/PLAN.md`, then
+      returns WAIT_FOR_USER_INPUT.
+    - view: requires 'plan'.
+    - update: requires 'plan', supports status/notes.
+    - list: returns known plans.
+    """
 
     def __init__(self, registry=None):
         super().__init__(registry)

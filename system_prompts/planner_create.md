@@ -13,6 +13,8 @@ To call a module, use this syntax:
 
 For plain-string modules, use one parameter named "input".
 For structured modules, provide one parameter per field.
+Never include nested XML examples inside parameter values.
+If you call a module, the `<function_calls>...</function_calls>` block must be the final content in your response.
 
 Available modules:
 {{AVAILABLE_MODULES_JSON}}

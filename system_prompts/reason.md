@@ -14,10 +14,12 @@ If action is required, use this syntax:
 
 For plain-string modules (bash, summarize, search, reason), use one parameter named "input".
 For structured modules, include one parameter per field.
+Never include nested XML examples inside parameter values.
 
 Available modules:
 {{AVAILABLE_MODULES_JSON}}
 
 Prefer the smallest number of module calls needed; avoid broad exploratory tool sequences unless strictly necessary.
+If you call a module, make the function call block the final content in your response.
 
 If no action is needed, respond with your reasoned answer as plain text.

@@ -6,7 +6,7 @@ from utils.session import conversations_dir
 
 
 class ConversationStore:
-    """Session-scoped conversation id/path manager for agent types."""
+    """Session-scoped conversation ID/path manager for per-agent transcripts."""
 
     def __init__(self, kind: str):
         self.kind = kind

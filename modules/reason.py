@@ -35,7 +35,12 @@ def clear_reason_state():
 
 
 class ReasonModule(Module):
-    """Think through a complex, multi-step problem using a powerful reasoning model before acting. Input: the question or task to reason through. Use this before taking action on anything non-trivial — architecture decisions, debugging strategies, planning sequences of edits, or any task where getting it wrong would be costly. Returns either a reasoned answer or a module call to execute next."""
+    """Reason deeply with OPUS before acting on complex tasks.
+
+    Input: a question/task string. Maintains a session-scoped reason conversation
+    log so intermediate reasoning context is saved across module calls. Returns
+    either a direct answer or a single module-call payload for the main loop.
+    """
 
     def __init__(self, registry=None):
         super().__init__(registry)

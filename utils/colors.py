@@ -59,6 +59,7 @@ class LineStream:
 
     If fn_color is set, lines inside <function_calls>...</function_calls> blocks
     are printed in that color with indentation instead of the base color.
+    If hide_fn_calls=True, function-call XML is suppressed from terminal output.
     """
 
     def __init__(self, base_color: str = _WHITE, fn_color: str = None, hide_fn_calls: bool = False):

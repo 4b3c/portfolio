@@ -22,4 +22,7 @@ To call a module, use this syntax:
 </invoke>
 </function_calls>
 
+Never include nested XML examples inside parameter values.
+If you call a module, the function call block must be the final content in your response.
+
 When the issue is resolved, respond with only the word "done".

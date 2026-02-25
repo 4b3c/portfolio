@@ -4,6 +4,7 @@ import zipfile
 from time import time
 from modules.module import Module
 from utils.claude import call_claude
+from utils.prompts import load_system_prompt
 
 SUMMARY_THRESHOLD = 1000
 
@@ -55,7 +56,7 @@ class FileModule(Module):
                     content = f.read()
                 if not full and len(content) > SUMMARY_THRESHOLD:
                     messages = [
-                        {"role": "system", "content": "You are a concise summarizer. Summarize the given file contents clearly and briefly, preserving the key information."},
+                        {"role": "system", "content": load_system_prompt("summarizer.md")},
                         {"role": "user", "content": content}
                     ]
                     summary = call_claude(messages).strip()

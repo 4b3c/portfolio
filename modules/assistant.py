@@ -5,6 +5,7 @@ from time import time
 from modules.module import Module
 from utils.claude import HAIKU, SONNET, OPUS, call_claude
 from utils.colors import print_user, print_error, print_state, print_info, stream_label, stream_end, LineStream, _YELLOW, _WHITE, _CYAN
+from utils.prompts import load_system_prompt
 
 CONVERSATIONS_PATH = "data/conversations"
 
@@ -44,7 +45,7 @@ COMMANDS = {
 }
 
 AUTO_COMPACT_MIN_MESSAGES = 18
-AUTO_COMPACT_MAX_CHARS = 28000
+AUTO_COMPACT_MAX_CHARS = 12000
 AUTO_COMPACT_COOLDOWN_USER_TURNS = 4
 
 
@@ -94,17 +95,7 @@ class AssistantModule(Module):
         classifier_messages = [
             {
                 "role": "system",
-                "content": (
-                    "Classify user task difficulty from 1 to 5 for model routing.\n"
-                    "Use both recent chat context and the latest input.\n"
-                    "Do not default to 3 unless moderate complexity is clear.\n"
-                    "1 = greeting/chitchat/acknowledgment/simple conversational response.\n"
-                    "2 = single straightforward task with little reasoning.\n"
-                    "3 = moderate reasoning or a few steps.\n"
-                    "4 = complex multi-constraint task with several coordinated steps.\n"
-                    "5 = many-part, multifaceted, high-complexity problem.\n"
-                    "Respond with only one digit: 1, 2, 3, 4, or 5."
-                ),
+                "content": load_system_prompt("assistant_classifier.md"),
             },
             {
                 "role": "user",
@@ -196,16 +187,7 @@ class AssistantModule(Module):
         compact_messages = [
             {
                 "role": "system",
-                "content": (
-                    "You compact chat history for a coding assistant.\n"
-                    "Keep only context that is still useful for the current direction.\n"
-                    "Remove stale, completed, repeated, or off-track details.\n"
-                    "Output exactly these sections in plain text:\n"
-                    "CURRENT_DIRECTION:\n"
-                    "ESSENTIAL_CONTEXT:\n"
-                    "OPEN_ITEMS:\n"
-                    "DROPPED_AS_IRRELEVANT:\n"
-                ),
+                "content": load_system_prompt("assistant_compact.md"),
             },
             {
                 "role": "user",
@@ -297,32 +279,14 @@ class AssistantModule(Module):
 
     def _init_messages(self, user_input: str):
         self._update_model_for_user_input(user_input)
+        modules_json = json.dumps({k: v for k, v in self.registry.items() if k != "assistant"}, indent=2)
         self.messages = [
             {
-                "role": "system", "content": f"""
-                    You are a helpful assistant named Zipper. Respond clearly and concisely. If the conversation is complete, respond with only the word "done".
-
-                    You have NO built-in abilities to read files, run commands, search the web, or perform any actions yourself. The only way to take action is to use a function call.
-
-                    To take action, use this syntax:
-
-                    <function_calls>
-                    <invoke name="<module_name>">
-                    <parameter name="<param_name>"><value></parameter>
-                    </invoke>
-                    </function_calls>
-
-                    For modules that take a plain string (bash, reason, summarize, search), use a single "input" parameter. For modules that take structured input (file, code, memory), use one parameter per field — no JSON escaping needed.
-
-                    You may include text before the function call to explain what you are doing. The function call must be the last thing in your message — never write anything after it. After sending a module call, you will receive the output in the next message before you continue. Never describe, predict, or fabricate what the output will be.
-
-                    Available modules:
-                    {json.dumps({k: v for k, v in self.registry.items() if k != "assistant"}, indent=2)}
-
-                    If you need to read a file, run a command, search, or do anything beyond answering from knowledge — use a module. Never fabricate results. Never claim you saw output you haven't received. If you don't know something, say so or call a module to find out.
-
-                    Choose modules based on their descriptions. If a tool call fails, do not repeat it — try a different approach. When in doubt about a complex task, call reason first.
-                """
+                "role": "system",
+                "content": load_system_prompt(
+                    "assistant.md",
+                    {"AVAILABLE_MODULES_JSON": modules_json},
+                ),
             },
             {"role": "user", "content": user_input}
         ]

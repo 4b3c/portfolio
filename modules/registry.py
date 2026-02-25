@@ -5,6 +5,8 @@ from modules.failure import FailureModule
 from modules.file import FileModule
 from modules.http import HttpModule
 from modules.memory import MemoryModule
+from modules.planner import PlannerModule
+from modules.repo import RepoModule
 from modules.reason import ReasonModule
 from modules.restart import RestartModule
 from modules.search import SearchModule
@@ -15,6 +17,8 @@ MODULES = {
     "bash": BashModule,
     "file": FileModule,
     "memory": MemoryModule,
+    "planner": PlannerModule,
+    "repo": RepoModule,
     "summarize": SummarizeModule,
     "search": SearchModule,
     "reason": ReasonModule,

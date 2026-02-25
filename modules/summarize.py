@@ -1,5 +1,6 @@
 from modules.module import Module
 from utils.claude import call_claude
+from utils.prompts import load_system_prompt
 
 class SummarizeModule(Module):
     """Condense a long piece of text into a concise summary. Input: the text to summarize. Use this when content is too long to reason about directly — paste the raw text and get a summary back before proceeding."""
@@ -7,7 +8,7 @@ class SummarizeModule(Module):
     def run(self, data) -> dict:
         text = data["input"]
         messages = [
-            {"role": "system", "content": "You are a concise summarizer. Summarize the given text clearly and briefly, preserving the key information."},
+            {"role": "system", "content": load_system_prompt("summarizer.md")},
             {"role": "user", "content": text}
         ]
         try:

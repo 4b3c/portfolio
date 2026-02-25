@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 HAIKU = "claude-haiku-4-5"
+SONNET = "claude-sonnet-4-5"
 OPUS = "claude-opus-4-6"
 
 client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])

@@ -8,7 +8,7 @@ class ReasonModule(Module):
 
     def run(self, data) -> dict:
         question = data["input"]
-        registry = self.context.get("registry", {})
+        registry = self.registry
         modules_info = json.dumps({k: v for k, v in registry.items() if k != "reason"}, indent=2)
 
         system = f"""You are an expert reasoning assistant with access to a set of modules to act on your conclusions.

@@ -1,40 +1,10 @@
 import json
 import sys
 import uuid
-from modules.assistant import AssistantModule
-from modules.bash import BashModule
-from modules.file import FileModule
-from modules.memory import MemoryModule
-from modules.summarize import SummarizeModule
-from modules.search import SearchModule
-from modules.reason import ReasonModule
-from modules.failure import FailureModule
-from modules.restart import RestartModule
-from modules.code import CodeModule
-from modules.http import HttpModule
+from modules.registry import MODULES, MODULE_DESCRIPTIONS
 from utils.colors import print_error, print_module, print_state, print_user
 
-CONTEXT_PATH = "data/context.json"
 TRACE_PATH = "data/trace.json"
-
-MODULES = {
-    "assistant": AssistantModule,
-    "bash": BashModule,
-    "file": FileModule,
-    "memory": MemoryModule,
-    "summarize": SummarizeModule,
-    "search": SearchModule,
-    "reason": ReasonModule,
-    "failure": FailureModule,
-    "restart": RestartModule,
-    "code": CodeModule,
-    "http": HttpModule,
-}
-
-
-def save_context(context):
-    with open(CONTEXT_PATH, "w") as f:
-        json.dump(context, f, indent=2)
 
 
 def save_trace(trace):
@@ -72,10 +42,6 @@ def main_loop(trace, stack, current_node, result):
             current_node = child_node
 
             save_trace(trace)
-            save_context({
-                "registry": {name: cls.__doc__ for name, cls in MODULES.items()},
-                "trace": trace,
-            })
 
             module_name = result["module"]
             if module_name not in MODULES:
@@ -85,7 +51,7 @@ def main_loop(trace, stack, current_node, result):
                 continue
 
             try:
-                new_module = MODULES[module_name](CONTEXT_PATH)
+                new_module = MODULES[module_name](MODULE_DESCRIPTIONS)
                 print_module("Running module:", module_name, result.get("input", "") or "")
                 result = new_module.run(result)
                 module = new_module
@@ -116,13 +82,9 @@ def run():
     trace.append(root_node)
 
     save_trace(trace)
-    save_context({
-        "registry": {name: cls.__doc__ for name, cls in MODULES.items()},
-        "trace": trace,
-    })
 
     user_input = input(print_user())
-    module = AssistantModule(CONTEXT_PATH)
+    module = MODULES["assistant"](MODULE_DESCRIPTIONS)
     result = module.run({"module": "assistant", "input": user_input})
     stack = [(module, root_node)]
 
@@ -134,11 +96,6 @@ def restart_run():
 
     with open(TRACE_PATH) as f:
         trace = json.load(f)
-
-    save_context({
-        "registry": {name: cls.__doc__ for name, cls in MODULES.items()},
-        "trace": trace,
-    })
 
     active_path = find_active_path(trace[0])
 
@@ -155,7 +112,7 @@ def restart_run():
     # Rebuild the stack for all ancestor nodes (everything above restart)
     stack = []
     for node in active_path[:-1]:
-        m = MODULES[node["module"]](CONTEXT_PATH)
+        m = MODULES[node["module"]](MODULE_DESCRIPTIONS)
         stack.append((m, node))
 
     # Resume the parent module with the restart output

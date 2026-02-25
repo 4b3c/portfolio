@@ -3,12 +3,8 @@ import json
 class Module:
     """Base class for all modules. Do not use directly."""
 
-    def __init__(self, context_path):
-        self.context = self.load_context(context_path)
-    
-    def load_context(self, path):
-        with open(path) as f:
-            return json.load(f)
+    def __init__(self, registry=None):
+        self.registry = registry or {}
     
     def run(self, data) -> dict:
         raise NotImplementedError

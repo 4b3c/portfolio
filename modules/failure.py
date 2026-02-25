@@ -72,8 +72,8 @@ def load_state():
 class FailureModule(Module):
     """Diagnoses and repairs failures by analyzing the execution trace and using file/bash tools to find and fix the root cause."""
 
-    def __init__(self, context_path):
-        super().__init__(context_path)
+    def __init__(self, registry=None):
+        super().__init__(registry)
         self.messages = []
 
     def _loop(self) -> dict:

@@ -4,31 +4,25 @@ import re
 from time import time
 from modules.module import Module
 from utils.claude import call_claude
+from utils.colors import print_assistant, print_user, print_error, print_state, print_info, print_module_output
 
 CONVERSATIONS_PATH = "data/conversations"
 
-CODE_FENCE_RE = re.compile(r"```(?:\w+)?\s*(\{.*?\})\s*```", re.DOTALL)
+FUNCTION_CALL_RE = re.compile(r"<function_calls>\s*<invoke name=\"(\w+)\">(.*?)</invoke>\s*</function_calls>", re.DOTALL)
+PARAM_RE = re.compile(r'<parameter name="(\w+)">(.*?)</parameter>', re.DOTALL)
 
 
 def extract_module_call(text: str):
-    """Extract a module call JSON from text, supporting code-fenced and bare-only JSON."""
-    # Try all code fences — pick the first one that parses as a module call
-    for match in CODE_FENCE_RE.finditer(text):
-        try:
-            parsed = json.loads(match.group(1))
-            if "module" in parsed:
-                return parsed
-        except json.JSONDecodeError:
-            continue
-    # Only fall back to bare JSON if it's the entire message (no surrounding text)
-    stripped = text.strip()
-    if stripped.startswith("{") and stripped.endswith("}"):
-        try:
-            parsed = json.loads(stripped)
-            if "module" in parsed:
-                return parsed
-        except json.JSONDecodeError:
-            pass
+    """Extract a module call from text, supporting XML function_calls syntax."""
+    match = FUNCTION_CALL_RE.search(text)
+    if match:
+        module_name = match.group(1)
+        params = {m.group(1): m.group(2) for m in PARAM_RE.finditer(match.group(2))}
+        if len(params) == 1 and "input" in params:
+            input_val = params["input"]
+        else:
+            input_val = json.dumps(params)
+        return {"module": module_name, "input": input_val}
     return None
 
 
@@ -64,18 +58,18 @@ class AssistantModule(Module):
         cmd = parts[0].lower()
 
         if cmd == "/help":
-            print("\nCommands:")
+            print_info("\nCommands:")
             for name, desc in COMMANDS.items():
-                print(f"  {name} — {desc}")
-            print()
+                print_info(f"  {name} — {desc}")
+            print_info("")
             return True
 
         elif cmd == "/new":
             save_conversation(self.messages, path=f"{self.conversation_id}.json")
             self.conversation_id = new_conversation_id()
             self.messages = []
-            print(f"\nStarted new conversation {self.conversation_id}.\n")
-            first = input("User: ").strip()
+            print_state(f"\nStarted new conversation {self.conversation_id}.\n")
+            first = input(print_user()).strip()
             if first:
                 self._init_messages(first)
             return True
@@ -84,27 +78,27 @@ class AssistantModule(Module):
             os.makedirs(CONVERSATIONS_PATH, exist_ok=True)
             files = sorted(f.replace(".json", "") for f in os.listdir(CONVERSATIONS_PATH) if f.endswith(".json"))
             if files:
-                print("\nSaved conversations:")
+                print_info("\nSaved conversations:")
                 for f in files:
-                    print(f"  {f}")
-                print()
+                    print_info(f"  {f}")
+                print_info("")
             else:
-                print("\nNo saved conversations.\n")
+                print_info("\nNo saved conversations.\n")
             return True
 
         elif cmd == "/load":
             if len(parts) < 2:
-                print("\nUsage: /load <id>\n")
+                print_info("\nUsage: /load <id>\n")
                 return True
             conv_id = parts[1]
             path = f"{CONVERSATIONS_PATH}/{conv_id}.json"
             if not os.path.exists(path):
-                print(f"\nConversation '{conv_id}' not found.\n")
+                print_error(f"\nConversation '{conv_id}' not found.\n")
                 return True
             with open(path) as f:
                 self.messages = json.load(f)
             self.conversation_id = conv_id
-            print(f"\nLoaded conversation {conv_id}.\n")
+            print_state(f"\nLoaded conversation {conv_id}.\n")
             return True
 
         return False
@@ -115,15 +109,19 @@ class AssistantModule(Module):
                 "role": "system", "content": f"""
                     You are a helpful assistant named Zipper. Respond clearly and concisely. If the conversation is complete, respond with only the word "done".
 
-                    You have NO built-in abilities to read files, run commands, search the web, or perform any actions yourself. You cannot use XML tags, function calls, or any other syntax to invoke tools. The only way to take action is to output a module call.
+                    You have NO built-in abilities to read files, run commands, search the web, or perform any actions yourself. The only way to take action is to use a function call.
 
-                    To take action, wrap a JSON object in a code fence like this:
+                    To take action, use this syntax:
 
-                    ```json
-                    {{"module": "<module_name>", "input": "<input>"}}
-                    ```
+                    <function_calls>
+                    <invoke name="<module_name>">
+                    <parameter name="<param_name>"><value></parameter>
+                    </invoke>
+                    </function_calls>
 
-                    You can include text before or after the code fence to explain what you are doing. Only call ONE module at a time. After calling a module, stop and wait — the output will be returned to you in the next message before you continue. Never call another module until you have received the output from the previous one.
+                    For modules that take a plain string (bash, reason, summarize, search), use a single "input" parameter. For modules that take structured input (file, code, memory), use one parameter per field — no JSON escaping needed.
+
+                    You may include text before the function call to explain what you are doing. The function call must be the last thing in your message — never write anything after it. After sending a module call, you will receive the output in the next message before you continue. Never describe, predict, or fabricate what the output will be.
 
                     Available modules:
                     {json.dumps({k: v for k, v in self.context["registry"].items() if k != "assistant"}, indent=2)}
@@ -150,11 +148,11 @@ class AssistantModule(Module):
                 result["called_module"] = parsed["module"]
                 return result
 
-            print(f"Assistant: {raw}\n")
+            print_assistant(raw)
             if raw.lower() == "done":
                 break
 
-            user_input = input("User: ").strip()
+            user_input = input(print_user()).strip()
 
             if user_input.startswith("/"):
                 if self.handle_command(user_input):
@@ -183,5 +181,5 @@ class AssistantModule(Module):
             self.messages = json.load(f)
 
         self.messages.append({"role": "user", "content": f"[{called_module} output]: {result['output']}"})
-        print(f"{called_module}:\n{result['output']}\n")
+        print_module_output(called_module, result['output'])
         return self.conversation_loop()

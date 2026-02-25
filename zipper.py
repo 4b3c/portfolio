@@ -11,6 +11,7 @@ from modules.reason import ReasonModule
 from modules.failure import FailureModule
 from modules.restart import RestartModule
 from modules.code import CodeModule
+from utils.colors import print_error, print_module, print_state, print_user
 
 CONTEXT_PATH = "data/context.json"
 TRACE_PATH = "data/trace.json"
@@ -77,19 +78,19 @@ def main_loop(trace, stack, current_node, result):
             module_name = result["module"]
             if module_name not in MODULES:
                 error = f"Module '{module_name}' not found."
-                print(f"Error: {error}")
+                print_error("Error:", error)
                 result = {"module": "failure", "input": error}
                 continue
 
             try:
                 new_module = MODULES[module_name](CONTEXT_PATH)
-                print(f"Running module: {module_name}")
+                print_module("Running module:", module_name)
                 result = new_module.run(result)
                 module = new_module
                 stack.append((module, current_node))
             except Exception as e:
                 error = f"Module '{module_name}' raised an exception: {e}"
-                print(f"Error: {error}")
+                print_error("Error:", error)
                 result = {"module": "failure", "input": error}
 
         elif "output" in result:
@@ -102,7 +103,7 @@ def main_loop(trace, stack, current_node, result):
                 break
 
             caller_module, current_node = stack[-1]
-            print(f"Resuming module: {current_node['module']}")
+            print_module("Resuming module:", current_node['module'])
             result = caller_module.resume(result)
 
 
@@ -117,7 +118,7 @@ def run():
         "trace": trace,
     })
 
-    user_input = input("User: ")
+    user_input = input(print_user())
     module = AssistantModule(CONTEXT_PATH)
     result = module.run({"module": "assistant", "input": user_input})
     stack = [(module, root_node)]
@@ -126,7 +127,7 @@ def run():
 
 
 def restart_run():
-    print("[Zipper restarting — loading trace...]\n")
+    print_state("[Zipper restarting — loading trace...]\n")
 
     with open(TRACE_PATH) as f:
         trace = json.load(f)
@@ -139,7 +140,7 @@ def restart_run():
     active_path = find_active_path(trace[0])
 
     if not active_path or len(active_path) < 2:
-        print("No active session found in trace. Starting fresh.")
+        print_error("No active session found in trace. Starting fresh.")
         run()
         return
 
@@ -163,7 +164,7 @@ def restart_run():
     if "conversation_id" in restart_node:
         result["conversation_id"] = restart_node["conversation_id"]
 
-    print(f"Resuming module: {current_node['module']}\n")
+    print_state(f"Resuming module: {current_node['module']}\n")
     result = stack[-1][0].resume(result)
 
     main_loop(trace, stack, current_node, result)

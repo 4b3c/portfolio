@@ -2,6 +2,7 @@ import os
 import sys
 import time
 from modules.module import Module
+from utils.colors import print_state
 
 
 class RestartModule(Module):
@@ -11,7 +12,7 @@ class RestartModule(Module):
         script = os.path.abspath("zipper.py")
         python = sys.executable
 
-        print("\n[Restarting in 5 seconds with updated code...]\n")
+        print_state("\n[Restarting in 5 seconds with updated code...]\n")
         time.sleep(5)
 
         # Replace current process with the new one, reusing the same terminal

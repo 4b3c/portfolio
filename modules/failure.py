@@ -2,25 +2,21 @@ import json
 import os
 import re
 from modules.module import Module
+from utils.colors import print_error, print_failure, print_module_output
 
-CODE_FENCE_RE = re.compile(r"```(?:\w+)?\s*(\{.*?\})\s*```", re.DOTALL)
+FUNCTION_CALL_RE = re.compile(r"<function_calls>\s*<invoke name=\"(\w+)\">(.*?)</invoke>\s*</function_calls>", re.DOTALL)
+PARAM_RE = re.compile(r'<parameter name="(\w+)">(.*?)</parameter>', re.DOTALL)
 
 def extract_module_call(text: str):
-    for match in CODE_FENCE_RE.finditer(text):
-        try:
-            parsed = json.loads(match.group(1))
-            if "module" in parsed:
-                return parsed
-        except json.JSONDecodeError:
-            continue
-    stripped = text.strip()
-    if stripped.startswith("{") and stripped.endswith("}"):
-        try:
-            parsed = json.loads(stripped)
-            if "module" in parsed:
-                return parsed
-        except json.JSONDecodeError:
-            pass
+    match = FUNCTION_CALL_RE.search(text)
+    if match:
+        module_name = match.group(1)
+        params = {m.group(1): m.group(2) for m in PARAM_RE.finditer(match.group(2))}
+        if len(params) == 1 and "input" in params:
+            input_val = params["input"]
+        else:
+            input_val = json.dumps(params)
+        return {"module": module_name, "input": input_val}
     return None
 from utils.claude import call_claude, OPUS
 
@@ -50,11 +46,13 @@ Your job is to:
 3. Identify the root cause of the failure
 4. Fix the problem by writing corrected files
 
-To call a tool, wrap a JSON object in a code fence:
+To call a module, use this syntax:
 
-```json
-{"module": "<module_name>", "input": "<input>"}
-```
+<function_calls>
+<invoke name="<module_name>">
+<parameter name="<param_name>"><value></parameter>
+</invoke>
+</function_calls>
 
 When you are done and the issue is resolved, respond with only the word "done".
 """
@@ -94,9 +92,11 @@ class FailureModule(Module):
                 result["called_module"] = parsed["module"]
                 return result
 
-            print(f"Failure: {raw}\n")
+            print_failure(raw)
             if raw.lower() == "done":
                 break
+
+            self.messages.append({"role": "user", "content": "Continue your diagnosis."})
 
         return self.complete("Failure diagnosis complete.")
 
@@ -111,7 +111,7 @@ class FailureModule(Module):
             {"role": "user", "content": f"A failure occurred:\n{error}\n\nExecution trace:\n{json.dumps(trace, indent=2)}"}
         ]
 
-        print("\n[Failure module activated — diagnosing...]\n")
+        print_error("\n[Failure module activated — diagnosing...]\n")
         return self._loop()
 
     def resume(self, result) -> dict:
@@ -123,5 +123,5 @@ class FailureModule(Module):
 
         called_module = result.get("called_module", "module")
         self.messages.append({"role": "user", "content": f"[{called_module} output]: {result['output']}"})
-        print(f"{called_module}: {result['output']}\n")
+        print_module_output(called_module, result['output'])
         return self._loop()

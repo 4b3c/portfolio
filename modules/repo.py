@@ -31,9 +31,38 @@ SKIP_DIRS = {
     "data/sessions",
 }
 
+DOCS_ROOT = "documentation"
+DOC_TOPIC_ALIASES = {
+    "index": "README.md",
+    "readme": "README.md",
+    "architecture": "ARCHITECTURE.md",
+    "sessions": "SESSION_STORAGE.md",
+    "session": "SESSION_STORAGE.md",
+    "conversations": "CONVERSATION_AND_STREAMING.md",
+    "streaming": "CONVERSATION_AND_STREAMING.md",
+    "modules": "MODULES_REFERENCE.md",
+    "prompts": "PROMPTS_AND_ROUTING.md",
+    "routing": "PROMPTS_AND_ROUTING.md",
+    "failure": "FAILURE_AND_RECOVERY.md",
+    "recovery": "FAILURE_AND_RECOVERY.md",
+    "module_building": "MODULE_BUILDING.md",
+    "building": "MODULE_BUILDING.md",
+}
+
 
 class RepoModule(Module):
-    """Codebase intelligence for on-the-fly documentation and impact analysis. Input: JSON with 'action' in {'find','symbols','deps','impact'} plus action-specific params. 'find': query/regex/path/limit. 'symbols': optional path/language/name/limit. 'deps': required path. 'impact': required path plus optional limit. Returns structured JSON."""
+    """Codebase intelligence and documentation lookup.
+
+    Input: JSON with 'action' in
+    {'find','symbols','deps','impact','docs_list','docs_read','docs_find'}.
+    - find: query/regex/path/limit
+    - symbols: optional path/name/limit
+    - deps: required path
+    - impact: required path, optional limit
+    - docs_list: list files under documentation/
+    - docs_read: read one doc by 'doc' or 'topic'
+    - docs_find: search docs by 'query', optional limit
+    """
 
     def run(self, data) -> dict:
         raw = data["input"]
@@ -51,8 +80,14 @@ class RepoModule(Module):
             payload = self._deps(params)
         elif action == "impact":
             payload = self._impact(params)
+        elif action == "docs_list":
+            payload = self._docs_list(params)
+        elif action == "docs_read":
+            payload = self._docs_read(params)
+        elif action == "docs_find":
+            payload = self._docs_find(params)
         else:
-            return self.fail("Unknown action. Use one of: find, symbols, deps, impact.")
+            return self.fail("Unknown action. Use one of: find, symbols, deps, impact, docs_list, docs_read, docs_find.")
 
         if isinstance(payload, dict) and payload.get("_error"):
             return self.fail(payload["_error"])
@@ -288,3 +323,88 @@ class RepoModule(Module):
             "related_files": impact,
             "suggested_tests": suggested_tests,
         }
+
+    def _docs_dir(self) -> str:
+        return os.path.realpath(DOCS_ROOT)
+
+    def _docs_list(self, params: dict) -> dict:
+        docs_dir = self._docs_dir()
+        if not os.path.isdir(docs_dir):
+            return {"_error": "documentation/ directory not found."}
+        files = []
+        for name in sorted(os.listdir(docs_dir)):
+            full = os.path.join(docs_dir, name)
+            if os.path.isfile(full) and name.lower().endswith(".md"):
+                files.append(name)
+        return {"action": "docs_list", "count": len(files), "docs": files}
+
+    def _resolve_doc_name(self, params: dict) -> str | None:
+        raw_doc = (params.get("doc") or "").strip()
+        topic = (params.get("topic") or "").strip().lower()
+        if raw_doc:
+            candidate = raw_doc
+        elif topic:
+            candidate = DOC_TOPIC_ALIASES.get(topic, topic)
+        else:
+            return None
+        if "/" in candidate or "\\" in candidate or ".." in candidate:
+            return None
+        if not candidate.lower().endswith(".md"):
+            candidate = f"{candidate}.md"
+        return candidate
+
+    def _docs_read(self, params: dict) -> dict:
+        name = self._resolve_doc_name(params)
+        if not name:
+            return {"_error": "'doc' or 'topic' is required for action='docs_read'."}
+        full = os.path.join(self._docs_dir(), name)
+        if not os.path.isfile(full):
+            return {"_error": f"Documentation file not found: {name}"}
+        try:
+            with open(full, "r", encoding="utf-8", errors="replace") as f:
+                content = f.read()
+        except Exception as e:
+            return {"_error": f"Failed to read documentation file: {e}"}
+        return {
+            "action": "docs_read",
+            "doc": name,
+            "path": os.path.relpath(full, "."),
+            "content": content,
+        }
+
+    def _docs_find(self, params: dict) -> dict:
+        query = (params.get("query") or "").strip()
+        if not query:
+            return {"_error": "'query' is required for action='docs_find'."}
+        limit = int(params.get("limit", 20))
+        docs_dir = self._docs_dir()
+        if not os.path.isdir(docs_dir):
+            return {"_error": "documentation/ directory not found."}
+
+        args = ["rg", "-n", "--no-heading", "--color", "never", "-i", "-F", query, docs_dir]
+        try:
+            proc = subprocess.run(args, capture_output=True, text=True, timeout=10)
+            output = proc.stdout.strip()
+        except FileNotFoundError:
+            return {"_error": "ripgrep (rg) is required for repo.docs_find but was not found."}
+        except Exception as e:
+            return {"_error": f"Documentation search failed: {e}"}
+
+        hits = []
+        for line in output.splitlines():
+            parts = line.split(":", 2)
+            if len(parts) < 3:
+                continue
+            file_path, line_no, text = parts[0], parts[1], parts[2]
+            hits.append(
+                {
+                    "doc": os.path.basename(file_path),
+                    "path": os.path.relpath(file_path, "."),
+                    "line": int(line_no) if line_no.isdigit() else line_no,
+                    "text": text.strip(),
+                }
+            )
+            if len(hits) >= limit:
+                break
+
+        return {"action": "docs_find", "query": query, "count": len(hits), "results": hits}

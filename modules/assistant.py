@@ -19,6 +19,9 @@ COMMANDS = {
 AUTO_COMPACT_MIN_MESSAGES = 18
 AUTO_COMPACT_MAX_CHARS = 12000
 AUTO_COMPACT_COOLDOWN_USER_TURNS = 4
+AUTO_COMPACT_EXTEND_MESSAGES = 8
+AUTO_COMPACT_EXTEND_CHARS = 6000
+AUTO_COMPACT_MAX_EXTENSIONS = 6
 
 
 class AssistantModule(Module):
@@ -32,6 +35,7 @@ class AssistantModule(Module):
         self.current_model = HAIKU
         self.current_difficulty = 1
         self.last_compact_user_turn = 0
+        self.compact_extension_level = 0
 
     def _select_model(self, difficulty: int) -> str:
         if difficulty <= 2:
@@ -153,12 +157,24 @@ class AssistantModule(Module):
     def _should_auto_compact(self) -> bool:
         if not self.messages:
             return False
-        over_messages = len(self.messages) >= AUTO_COMPACT_MIN_MESSAGES
-        over_chars = self._message_chars() >= AUTO_COMPACT_MAX_CHARS
+        msg_limit = AUTO_COMPACT_MIN_MESSAGES + (self.compact_extension_level * AUTO_COMPACT_EXTEND_MESSAGES)
+        char_limit = AUTO_COMPACT_MAX_CHARS + (self.compact_extension_level * AUTO_COMPACT_EXTEND_CHARS)
+        over_messages = len(self.messages) >= msg_limit
+        over_chars = self._message_chars() >= char_limit
         if not (over_messages or over_chars):
             return False
         turns_since_compact = self._user_turn_count() - self.last_compact_user_turn
         return turns_since_compact >= AUTO_COMPACT_COOLDOWN_USER_TURNS
+
+    def _is_no_compact_response(self, compacted: str) -> bool:
+        text = (compacted or "").strip().lower()
+        if not text:
+            return False
+        if text.startswith("no_compact"):
+            return True
+        if "all content is important" in text:
+            return True
+        return False
 
     def _compact_conversation(self):
         if not self.messages:
@@ -204,6 +220,21 @@ class AssistantModule(Module):
         except Exception:
             return
 
+        if self._is_no_compact_response(compacted):
+            self.compact_extension_level = min(
+                self.compact_extension_level + 1,
+                AUTO_COMPACT_MAX_EXTENSIONS,
+            )
+            self.last_compact_user_turn = self._user_turn_count()
+            self._persist()
+            msg_limit = AUTO_COMPACT_MIN_MESSAGES + (self.compact_extension_level * AUTO_COMPACT_EXTEND_MESSAGES)
+            char_limit = AUTO_COMPACT_MAX_CHARS + (self.compact_extension_level * AUTO_COMPACT_EXTEND_CHARS)
+            print_state(
+                "Auto-compact deferred: all content marked important. "
+                f"New thresholds -> messages>={msg_limit}, chars>={char_limit}."
+            )
+            return
+
         self.conversation_id = self.store.next_branch_id(old_id)
         self.messages = [
             system_message,
@@ -216,6 +247,7 @@ class AssistantModule(Module):
                 ),
             },
         ]
+        self.compact_extension_level = 0
         self.last_compact_user_turn = self._user_turn_count()
         self._persist()
         print_state(f"Auto-compacted conversation {old_id} -> {self.conversation_id}")
@@ -241,6 +273,7 @@ class AssistantModule(Module):
             self.conversation_id = self.store.next_root_id()
             self.messages = []
             self.last_compact_user_turn = 0
+            self.compact_extension_level = 0
             print_state(f"\nStarted new conversation {self.conversation_id}.\n")
             first = input(print_user()).strip()
             if first:
@@ -271,6 +304,7 @@ class AssistantModule(Module):
                 self.messages = json.load(f)
             self.conversation_id = conv_id
             self.last_compact_user_turn = self._user_turn_count()
+            self.compact_extension_level = 0
             self._refresh_model_from_history()
             print_state(f"\nLoaded conversation {conv_id}.\n")
             return True

@@ -57,8 +57,8 @@ If your module is agent-like (multi-turn):
 ## 6) Logging and persistence conventions
 
 For nested agent modules:
-- Save message logs to `data/conversations/<module>_<id>.json` on each message append.
-- Save resumable state to `data/<module>_state.json`.
+- Save message logs to `data/sessions/<session_id>/conversations/<module><n>[.<m>].json` on each message append.
+- Save resumable state to `data/sessions/<session_id>/state/<module>_state.json`.
 - Return `<module>_conversation_id` in module-call results so trace nodes preserve linkage.
 
 ## 7) Validate

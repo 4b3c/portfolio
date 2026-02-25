@@ -2,7 +2,7 @@
 
 import re
 import sys
-from utils.function_calls import CLOSE_FUNCTION_CALL_TAG
+from utils.function_calls import CLOSE_FUNCTION_CALL_TAG, OPEN_FUNCTION_CALL_TAG
 
 # ANSI codes
 _R    = '\033[0m'    # full reset
@@ -61,10 +61,11 @@ class LineStream:
     are printed in that color with indentation instead of the base color.
     """
 
-    def __init__(self, base_color: str = _WHITE, fn_color: str = None):
+    def __init__(self, base_color: str = _WHITE, fn_color: str = None, hide_fn_calls: bool = False):
         self._buf = ""
         self._base = base_color
         self._fn_color = fn_color
+        self._hide_fn = hide_fn_calls
         self._in_fn = False
         self._cut_off = False
 
@@ -92,6 +93,50 @@ class LineStream:
         if self._cut_off:
             return
         self._buf += text
+
+        # Detect function-call block start immediately (even before newline).
+        if self._fn_color and not self._in_fn:
+            open_idx = self._buf.find(OPEN_FUNCTION_CALL_TAG)
+            if open_idx != -1:
+                prefix = self._buf[:open_idx]
+                if prefix:
+                    sys.stdout.write(self._base + _fmt(prefix))
+                self._buf = self._buf[open_idx + len(OPEN_FUNCTION_CALL_TAG):]
+                self._in_fn = True
+                if not self._hide_fn:
+                    sys.stdout.write(f"\n{self._fn_color}{_DIM}  {OPEN_FUNCTION_CALL_TAG}{_R}\n")
+                    sys.stdout.flush()
+
+        # While inside function-call block, stream lines/chunks immediately.
+        if self._fn_color and self._in_fn:
+            close_idx = self._buf.find(CLOSE_FUNCTION_CALL_TAG)
+            if close_idx != -1:
+                body = self._buf[:close_idx]
+                if not self._hide_fn:
+                    for line in body.split('\n'):
+                        stripped = line.strip()
+                        if stripped:
+                            sys.stdout.write(f"{self._fn_color}  {stripped}{_R}\n")
+                    sys.stdout.write(f"{self._fn_color}{_DIM}  {CLOSE_FUNCTION_CALL_TAG}{_R}\n\n")
+                    sys.stdout.flush()
+                self._buf = self._buf[close_idx + len(CLOSE_FUNCTION_CALL_TAG):]
+                self._in_fn = False
+                self._cut_off = True
+            else:
+                if self._hide_fn:
+                    # Keep buffering silently until the function-call block closes.
+                    return
+                while '\n' in self._buf:
+                    line, self._buf = self._buf.split('\n', 1)
+                    stripped = line.strip()
+                    if stripped:
+                        sys.stdout.write(f"{self._fn_color}  {stripped}{_R}\n")
+                if self._buf:
+                    sys.stdout.write(f"{self._fn_color}  {self._buf}{_R}")
+                    sys.stdout.flush()
+                    self._buf = ""
+                return
+
         idx = self._buf.find(CLOSE_FUNCTION_CALL_TAG)
         if idx != -1:
             self._buf = self._buf[: idx + len(CLOSE_FUNCTION_CALL_TAG)]

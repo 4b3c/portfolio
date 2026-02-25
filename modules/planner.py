@@ -2,13 +2,13 @@ import json
 import os
 import re
 from datetime import datetime
-from time import time
 from modules.module import Module
 from utils.claude import OPUS, call_claude
-from utils.colors import print_state, stream_label, stream_end, LineStream, _MAGENTA, _WHITE
-from utils.function_calls import maybe_dispatch_module_call
+from utils.colors import print_error, print_state, stream_label, stream_end, LineStream, _MAGENTA, _WHITE
+from utils.conversation import ConversationStore
+from utils.function_calls import contains_function_call_markup, maybe_dispatch_module_call
 from utils.prompts import load_system_prompt
-from utils.session import conversations_dir, state_path
+from utils.session import state_path
 
 PLANS_ROOT = "data/plans"
 MAX_PLANNER_MODULE_CALLS = 6
@@ -37,17 +37,6 @@ def _unique_plan_dir(base_slug: str) -> str:
         i += 1
 
 
-def new_conversation_id():
-    return (str(int(time())) + "0")[-12:-1]
-
-
-def save_conversation(messages, conversation_id: str):
-    path = os.path.join(conversations_dir(), f"planner_{conversation_id}.json")
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, "w") as f:
-        json.dump(messages, f, indent=2)
-
-
 def save_state(messages, pending_plan, planner_conversation_id):
     path = state_path("planner_state.json")
     os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -73,6 +62,7 @@ class PlannerModule(Module):
 
     def __init__(self, registry=None):
         super().__init__(registry)
+        self.store = ConversationStore("planner")
         self.messages = []
         self.pending_plan = None
         self.planner_conversation_id = None
@@ -135,7 +125,7 @@ class PlannerModule(Module):
             },
             {"role": "user", "content": user_prompt},
         ]
-        self.planner_conversation_id = new_conversation_id()
+        self.planner_conversation_id = self.store.next_root_id()
         self.pending_plan = {
             "objective": objective,
             "short_name": short_name,
@@ -164,7 +154,7 @@ class PlannerModule(Module):
 
                 print_state("[Planner] Reasoning over plan and context...")
                 stream_label("Planner:", _MAGENTA)
-                ls = LineStream(_WHITE)
+                ls = LineStream(_WHITE, hide_fn_calls=True)
                 assistant_entry = {"role": "assistant", "content": ""}
                 self.messages.append(assistant_entry)
                 self._persist()
@@ -214,6 +204,11 @@ class PlannerModule(Module):
                     module_result["planner_conversation_id"] = self.planner_conversation_id
                     self._persist()
                     return module_result
+                if contains_function_call_markup(raw):
+                    print_error(
+                        "Malformed function call:",
+                        "Ignored XML call markup because it was not a single valid top-level call.",
+                    )
 
                 print_state("[Planner] Finalizing plan document.")
                 return self._finalize_plan(raw)
@@ -261,7 +256,7 @@ class PlannerModule(Module):
             "plan_dir": plan_dir,
             "plan_file": plan_path,
             "planner_conversation_id": self.planner_conversation_id,
-            "planner_conversation_file": os.path.join(conversations_dir(), f"planner_{self.planner_conversation_id}.json"),
+            "planner_conversation_file": self.store.path(self.planner_conversation_id),
         }
         print_state(f"[Planner] Plan ready: {plan_path} (waiting for user input)")
         return self.complete(json.dumps(payload, indent=2))
@@ -269,7 +264,7 @@ class PlannerModule(Module):
     def _persist(self):
         save_state(self.messages, self.pending_plan, self.planner_conversation_id)
         if self.planner_conversation_id:
-            save_conversation(self.messages, self.planner_conversation_id)
+            self.store.save(self.planner_conversation_id, json.dumps(self.messages, indent=2))
 
     def _list_plans(self) -> dict:
         if not os.path.exists(PLANS_ROOT):

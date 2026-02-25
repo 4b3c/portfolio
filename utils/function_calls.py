@@ -3,9 +3,11 @@ import re
 
 CLOSE_FUNCTION_CALL_TAG = "</function_calls>"
 OPEN_FUNCTION_CALL_TAG = "<function_calls>"
+MODULE_NAME_RE = re.compile(r"^[A-Za-z_]\w*$")
+PARAM_NAME_RE = re.compile(r"^[A-Za-z_]\w*$")
 
 FUNCTION_CALL_BLOCK_RE = re.compile(
-    r"^\s*<function_calls>\s*<invoke name=\"(\w+)\">(.*?)</invoke>\s*</function_calls>\s*$",
+    r"^\s*<function_calls>\s*<invoke\s+name\s*=\s*\"([^\"]+)\"\s*>(.*?)</invoke\s*>\s*</function_calls\s*>\s*$",
     re.DOTALL,
 )
 
@@ -17,6 +19,10 @@ def _find_callable_block_at_end(text: str):
     Nested <function_calls> blocks are rejected.
     """
     if not text:
+        return None
+
+    # Require exactly one top-level function_calls block in the whole response.
+    if text.count(OPEN_FUNCTION_CALL_TAG) != 1 or text.count(CLOSE_FUNCTION_CALL_TAG) != 1:
         return None
 
     starts = [m.start() for m in re.finditer(re.escape(OPEN_FUNCTION_CALL_TAG), text)]
@@ -40,7 +46,10 @@ def _find_callable_block_at_end(text: str):
         match = FUNCTION_CALL_BLOCK_RE.match(block)
         if not match:
             continue
-        return (start, end, match.group(1), match.group(2))
+        module_name = match.group(1).strip()
+        if not MODULE_NAME_RE.match(module_name):
+            continue
+        return (start, end, module_name, match.group(2))
 
     return None
 
@@ -62,11 +71,13 @@ def _parse_top_level_parameters(invoke_body: str):
         if i >= len(s):
             break
 
-        open_match = re.match(r'<parameter name="(\w+)">', s[i:])
+        open_match = re.match(r'<parameter\s+name\s*=\s*"([^"]+)"\s*>', s[i:])
         if not open_match:
             return None
 
-        name = open_match.group(1)
+        name = open_match.group(1).strip()
+        if not PARAM_NAME_RE.match(name):
+            return None
         i += open_match.end()
 
         close_rel = s.find("</parameter>", i)
@@ -88,6 +99,11 @@ def _parse_top_level_parameters(invoke_body: str):
         i = close_rel + len("</parameter>")
 
     return params
+
+
+def contains_function_call_markup(text: str) -> bool:
+    t = text or ""
+    return OPEN_FUNCTION_CALL_TAG in t or CLOSE_FUNCTION_CALL_TAG in t
 
 
 def extract_module_call(text: str):

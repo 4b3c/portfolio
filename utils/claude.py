@@ -11,6 +11,23 @@ OPUS = "claude-opus-4-6"
 
 client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 
+def _extract_text_from_content(content) -> str:
+    """Safely extract text from Anthropic content blocks."""
+    if not content:
+        return ""
+
+    parts = []
+    for block in content:
+        text = getattr(block, "text", None)
+        if isinstance(text, str):
+            parts.append(text)
+            continue
+        if isinstance(block, dict):
+            value = block.get("text")
+            if isinstance(value, str):
+                parts.append(value)
+    return "".join(parts)
+
 
 def call_claude(
     messages: list[dict],
@@ -42,10 +59,13 @@ def call_claude(
             with client.messages.stream(**kwargs) as stream:
                 for text in stream.text_stream:
                     on_token(text)
-            return truncate_after_function_call(stream.get_final_message().content[0].text)
+            final_message = stream.get_final_message()
+            text = _extract_text_from_content(getattr(final_message, "content", None))
+            return truncate_after_function_call(text)
         else:
             response = client.messages.create(**kwargs)
-            return truncate_after_function_call(response.content[0].text)
+            text = _extract_text_from_content(getattr(response, "content", None))
+            return truncate_after_function_call(text)
     except anthropic.APIError as e:
         raise RuntimeError(f"[CLAUDE ERROR] {e}")
 

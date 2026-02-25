@@ -1,9 +1,10 @@
 import json
 import os
 from modules.module import Module
-from utils.claude import call_claude, OPUS
-from utils.colors import print_error, stream_label, stream_end, LineStream, _RED, _WHITE
-from utils.function_calls import maybe_dispatch_module_call
+from utils.claude import OPUS
+from utils.colors import print_error, _RED
+from utils.conversation import stream_response
+from utils.function_calls import contains_function_call_markup, maybe_dispatch_module_call
 from utils.prompts import load_system_prompt
 from utils.session import state_path, trace_path
 
@@ -32,17 +33,18 @@ class FailureModule(Module):
             self.messages.append({"role": "user", "content": "Continue your diagnosis."})
 
         while True:
-            stream_label("Failure:", _RED)
-            ls = LineStream(_WHITE)
-            raw = call_claude(self.messages, model=OPUS, on_token=ls.token).strip()
-            ls.flush()
-            stream_end()
+            raw = stream_response(self.messages, OPUS, "Failure:", _RED, hide_fn_calls=True)
             self.messages.append({"role": "assistant", "content": raw})
 
             module_result = maybe_dispatch_module_call(self, raw, include_called_module=True)
             if module_result:
                 save_state(self.messages)
                 return module_result
+            if contains_function_call_markup(raw):
+                print_error(
+                    "Malformed function call:",
+                    "Ignored XML call markup because it was not a single valid top-level call.",
+                )
 
             if raw.lower() == "done":
                 break

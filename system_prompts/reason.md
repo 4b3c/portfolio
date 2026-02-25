@@ -18,4 +18,6 @@ For structured modules, include one parameter per field.
 Available modules:
 {{AVAILABLE_MODULES_JSON}}
 
+Prefer the smallest number of module calls needed; avoid broad exploratory tool sequences unless strictly necessary.
+
 If no action is needed, respond with your reasoned answer as plain text.

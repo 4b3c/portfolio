@@ -1,23 +1,12 @@
 import json
 import os
-from time import time
 from modules.module import Module
-from utils.claude import call_claude, OPUS
-from utils.colors import print_error, print_state, stream_label, stream_end, LineStream, _MAGENTA, _WHITE
-from utils.function_calls import maybe_dispatch_module_call
+from utils.claude import OPUS
+from utils.colors import print_error, print_state, _MAGENTA
+from utils.conversation import ConversationStore, stream_response
+from utils.function_calls import contains_function_call_markup, maybe_dispatch_module_call
 from utils.prompts import load_system_prompt
-from utils.session import conversations_dir, state_path
-
-
-def new_reason_id():
-    return (str(int(time())) + "0")[-12:-1]
-
-
-def save_reason_conversation(messages, reason_conversation_id: str):
-    path = os.path.join(conversations_dir(), f"reason_{reason_conversation_id}.json")
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, "w") as f:
-        json.dump(messages, f, indent=2)
+from utils.session import state_path
 
 
 def save_reason_state(messages, reason_conversation_id: str):
@@ -50,6 +39,7 @@ class ReasonModule(Module):
 
     def __init__(self, registry=None):
         super().__init__(registry)
+        self.store = ConversationStore("reason")
         self.messages = []
         self.reason_conversation_id = None
 
@@ -58,7 +48,7 @@ class ReasonModule(Module):
         modules_info = json.dumps({k: v for k, v in self.registry.items() if k != "reason"}, indent=2)
         system = load_system_prompt("reason.md", {"AVAILABLE_MODULES_JSON": modules_info})
 
-        self.reason_conversation_id = new_reason_id()
+        self.reason_conversation_id = self.store.next_root_id()
         self.messages = [
             {"role": "system", "content": system},
             {"role": "user", "content": question}
@@ -84,16 +74,18 @@ class ReasonModule(Module):
         if not self.reason_conversation_id:
             return
         save_reason_state(self.messages, self.reason_conversation_id)
-        save_reason_conversation(self.messages, self.reason_conversation_id)
+        self.store.save(self.reason_conversation_id, json.dumps(self.messages, indent=2))
 
     def _loop(self) -> dict:
         try:
             print_state("[Reason] Running OPUS reasoning...")
-            stream_label("Reasoning:", _MAGENTA)
-            ls = LineStream(_WHITE)
-            answer = call_claude(self.messages, model=OPUS, on_token=ls.token).strip()
-            ls.flush()
-            stream_end()
+            answer = stream_response(
+                self.messages,
+                OPUS,
+                "Reasoning:",
+                _MAGENTA,
+                hide_fn_calls=True,
+            )
             self.messages.append({"role": "assistant", "content": answer})
             self._persist()
 
@@ -103,6 +95,11 @@ class ReasonModule(Module):
                 module_result["called_module"] = module_result["module"]
                 module_result["reason_conversation_id"] = self.reason_conversation_id
                 return module_result
+            if contains_function_call_markup(answer):
+                print_error(
+                    "Malformed function call:",
+                    "Ignored XML call markup because it was not a single valid top-level call.",
+                )
             print_state("[Reason] Returning direct answer.")
             clear_reason_state()
             return self.complete(answer)

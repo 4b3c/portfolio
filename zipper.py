@@ -3,6 +3,7 @@ import os
 import sys
 import uuid
 from modules.registry import MODULES, MODULE_DESCRIPTIONS
+from utils.conversation import ConversationStore
 from utils.colors import print_error, print_module, print_state, print_user
 from utils.session import create_session, create_session_version_snapshot, current_session_id, trace_path
 
@@ -37,6 +38,29 @@ def find_active_path(node):
             path.extend(child_path)
             break
     return path
+
+
+def _start_assistant_root(session_id: str, trace_file: str, user_input: str, conversation_id: str | None = None):
+    trace = []
+    root_node = {
+        "id": str(uuid.uuid4())[:12],
+        "module": "assistant",
+        "input": None,
+        "called": [],
+        "session_id": session_id,
+    }
+    if conversation_id:
+        root_node["conversation_id"] = conversation_id
+    trace.append(root_node)
+    save_trace(trace, trace_file)
+
+    module = MODULES["assistant"](MODULE_DESCRIPTIONS)
+    payload = {"module": "assistant", "input": user_input}
+    if conversation_id:
+        payload["conversation_id"] = conversation_id
+    result = module.run(payload)
+    stack = [(module, root_node)]
+    main_loop(trace, stack, root_node, result, trace_file)
 
 
 def main_loop(trace, stack, current_node, result, trace_file):
@@ -110,24 +134,8 @@ def run():
         print_state(f"[Session] Snapshot created: {snapshot_path}")
     except Exception as e:
         print_error("Snapshot error:", str(e))
-    trace = []
-    root_node = {
-        "id": str(uuid.uuid4())[:12],
-        "module": "assistant",
-        "input": None,
-        "called": [],
-        "session_id": session_id,
-    }
-    trace.append(root_node)
-
-    save_trace(trace, trace_file)
-
     user_input = input(print_user())
-    module = MODULES["assistant"](MODULE_DESCRIPTIONS)
-    result = module.run({"module": "assistant", "input": user_input})
-    stack = [(module, root_node)]
-
-    main_loop(trace, stack, root_node, result, trace_file)
+    _start_assistant_root(session_id, trace_file, user_input)
 
 
 def restart_run():
@@ -155,8 +163,14 @@ def restart_run():
     active_path = find_active_path(trace[0])
 
     if not active_path or len(active_path) < 2:
-        print_error("No active session found in trace. Starting fresh.")
-        run()
+        print_state("No active session found in trace. Loading latest conversation in current session.")
+        store = ConversationStore("assistant")
+        ids = store.list_ids()
+        last_conv = ids[-1] if ids else None
+        if last_conv:
+            print_state(f"[Session] Loaded conversation {last_conv}")
+        user_input = input(print_user())
+        _start_assistant_root(session_id, trace_file, user_input, conversation_id=last_conv)
         return
 
     # The deepest node is the restart call — mark it complete

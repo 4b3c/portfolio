@@ -10,6 +10,7 @@ from modules.repo import RepoModule
 from modules.reason import ReasonModule
 from modules.restart import RestartModule
 from modules.search import SearchModule
+from modules.stats import StatsModule
 from modules.summarize import SummarizeModule
 
 MODULES = {
@@ -19,6 +20,7 @@ MODULES = {
     "memory": MemoryModule,
     "planner": PlannerModule,
     "repo": RepoModule,
+    "stats": StatsModule,
     "summarize": SummarizeModule,
     "search": SearchModule,
     "reason": ReasonModule,

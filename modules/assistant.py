@@ -22,6 +22,23 @@ AUTO_COMPACT_COOLDOWN_USER_TURNS = 4
 AUTO_COMPACT_EXTEND_MESSAGES = 8
 AUTO_COMPACT_EXTEND_CHARS = 6000
 AUTO_COMPACT_MAX_EXTENSIONS = 6
+LOW_SIGNAL_USER_INPUTS = {
+    "yes",
+    "y",
+    "no",
+    "n",
+    "ok",
+    "okay",
+    "k",
+    "cool",
+    "nice",
+    "thanks",
+    "thank you",
+    "hmm",
+    "hm",
+    "continue",
+    "go ahead",
+}
 
 
 class AssistantModule(Module):
@@ -53,6 +70,9 @@ class AssistantModule(Module):
         if text.startswith("/"):
             return True
         return False
+
+    def _is_done_input(self, user_input: str) -> bool:
+        return (user_input or "").strip().lower() == "done"
 
     def _recent_context_for_classification(self) -> str:
         recent = []
@@ -126,8 +146,25 @@ class AssistantModule(Module):
     def _message_chars(self) -> int:
         return sum(len(m.get("content", "")) for m in self.messages)
 
+    def _is_low_signal_user_input(self, content: str) -> bool:
+        text = (content or "").strip().lower()
+        if not text:
+            return True
+        if text in LOW_SIGNAL_USER_INPUTS:
+            return True
+        if len(text) <= 2:
+            return True
+        return False
+
     def _user_turn_count(self) -> int:
-        return sum(1 for m in self.messages if m.get("role") == "user")
+        turns = 0
+        for m in self.messages:
+            if m.get("role") != "user":
+                continue
+            if self._is_synthetic_user_message(m.get("content", "")):
+                continue
+            turns += 1
+        return turns
 
     def _latest_real_user_input(self) -> str:
         for msg in reversed(self.messages):
@@ -138,6 +175,23 @@ class AssistantModule(Module):
                 continue
             return content
         return ""
+
+    def _latest_substantive_user_goal(self) -> str:
+        latest_real = ""
+        for msg in reversed(self.messages):
+            if msg.get("role") != "user":
+                continue
+            content = (msg.get("content", "") or "").strip()
+            if not content or self._is_synthetic_user_message(content):
+                continue
+            if not latest_real:
+                latest_real = content
+            if self._is_keyword_or_command(content):
+                continue
+            if self._is_low_signal_user_input(content):
+                continue
+            return content
+        return latest_real
 
     def _is_tool_output_user_message(self, content: str) -> bool:
         text = (content or "").strip()
@@ -176,6 +230,24 @@ class AssistantModule(Module):
             return True
         return False
 
+    def _is_bad_compaction(self, compacted: str, latest_goal: str) -> bool:
+        text = (compacted or "").strip().lower()
+        if not text:
+            return True
+        bad_markers = (
+            "no active task",
+            "task is complete",
+            "completed task",
+            "nothing to do",
+            "waiting for a new task",
+        )
+        if any(marker in text for marker in bad_markers):
+            return True
+        goal = (latest_goal or "").strip().lower()
+        if goal and len(goal) >= 8 and goal not in text:
+            return True
+        return False
+
     def _compact_conversation(self):
         if not self.messages:
             return
@@ -185,7 +257,7 @@ class AssistantModule(Module):
         if not system_message:
             return
 
-        latest_goal = self._latest_real_user_input()
+        latest_goal = self._latest_substantive_user_goal()
         lines = []
         for m in self.messages:
             role = m.get("role", "unknown")
@@ -220,7 +292,7 @@ class AssistantModule(Module):
         except Exception:
             return
 
-        if self._is_no_compact_response(compacted):
+        if self._is_no_compact_response(compacted) or self._is_bad_compaction(compacted, latest_goal):
             self.compact_extension_level = min(
                 self.compact_extension_level + 1,
                 AUTO_COMPACT_MAX_EXTENSIONS,
@@ -276,7 +348,7 @@ class AssistantModule(Module):
             self.compact_extension_level = 0
             print_state(f"\nStarted new conversation {self.conversation_id}.\n")
             first = input(print_user()).strip()
-            if first:
+            if first and not self._is_done_input(first):
                 self._init_messages(first)
             return True
 
@@ -354,15 +426,17 @@ class AssistantModule(Module):
             user_input = input(print_user()).strip()
             if not user_input:
                 continue
+            if self._is_done_input(user_input):
+                return False
             if user_input.startswith("/"):
                 if self.handle_command(user_input):
                     if not self.messages:
-                        return
+                        return False
                     continue
             self._update_model_for_user_input(user_input)
             self.messages.append({"role": "user", "content": user_input})
             self._persist()
-            return
+            return True
 
     def conversation_loop(self) -> dict:
         while True:
@@ -379,7 +453,8 @@ class AssistantModule(Module):
             except ClaudeRateLimitPause as e:
                 print_state(f"[Rate limit hit for {self.current_model}.]")
                 print_error("Claude pause:", str(e))
-                self._pause_for_user_input("Wait a few minutes, then tell me to continue.")
+                if not self._pause_for_user_input("Wait a few minutes, then tell me to continue."):
+                    break
                 continue
             self.messages.append({"role": "assistant", "content": raw})
             self._persist()
@@ -402,6 +477,8 @@ class AssistantModule(Module):
 
             if not user_input:
                 continue
+            if self._is_done_input(user_input):
+                break
 
             if user_input.startswith("/"):
                 if self.handle_command(user_input):
@@ -411,8 +488,6 @@ class AssistantModule(Module):
 
             self._update_model_for_user_input(user_input)
             self.messages.append({"role": "user", "content": user_input})
-            if user_input.lower() == "done":
-                break
 
             self._persist()
 
@@ -420,6 +495,27 @@ class AssistantModule(Module):
         return self.complete("Assistant session completed.")
 
     def run(self, data) -> dict:
+        initial_input = (data.get("input") or "").strip()
+        if self._is_done_input(initial_input):
+            return self.complete("Assistant session completed.")
+
+        requested_conversation_id = data.get("conversation_id")
+        if requested_conversation_id:
+            path = self.store.path(requested_conversation_id)
+            if os.path.exists(path):
+                with open(path) as f:
+                    self.messages = json.load(f)
+                self.conversation_id = requested_conversation_id
+                self.last_compact_user_turn = self._user_turn_count()
+                self.compact_extension_level = 0
+                self._refresh_model_from_history()
+                user_input = initial_input
+                if user_input:
+                    self._update_model_for_user_input(user_input)
+                    self.messages.append({"role": "user", "content": user_input})
+                    self._persist()
+                return self.conversation_loop()
+
         self._init_messages(data["input"])
         return self.conversation_loop()
 
@@ -449,5 +545,6 @@ class AssistantModule(Module):
         wait_payload = self._parse_wait_signal(result.get("output", ""))
         if wait_payload:
             self._persist()
-            self._pause_for_user_input(wait_payload.get("message", "Module requested user input before continuing."))
+            if not self._pause_for_user_input(wait_payload.get("message", "Module requested user input before continuing.")):
+                return self.complete("Assistant session completed.")
         return self.conversation_loop()

@@ -28,6 +28,8 @@ Do not combine a clarifying question and a tool call in the same response.
 Available tools:
 {{AVAILABLE_TOOLS_JSON}}
 
+Only core tools above include full docstrings in this prompt. For any non-core tool listed by name only, you must call `tool_docs` first with that tool name, read the returned documentation, and only then call that tool.
+
 Keep discovery targeted and cheap:
 - Prefer the `repo` tool (`find`, `symbols`, `deps`, `impact`) before `file` reads.
 - Never call `file` with action `list`.

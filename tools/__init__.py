@@ -1,5 +1,6 @@
 from tools.conversational.assistant import AssistantTool
 from tools.core.bash import BashTool
+from tools.core.tool_docs import ToolDocsTool
 from tools.coding.code import CodeTool
 from tools.conversational.failure import FailureTool
 from tools.coding.file import FileTool
@@ -13,11 +14,13 @@ from tools.other.search import SearchTool
 from tools.coding.stats import StatsTool
 from tools.other.summarize import SummarizeTool
 from tools.tool import Tool
+from utils.tool_docs import get_tool_doc
 
 
 TOOLS = {
     "assistant": AssistantTool,
     "bash": BashTool,
+    "tool_docs": ToolDocsTool,
     "file": FileTool,
     "memory": MemoryTool,
     "planner": PlannerTool,
@@ -32,6 +35,6 @@ TOOLS = {
     "http": HttpTool,
 }
 
-TOOL_DESCRIPTIONS = {name: cls.__doc__ for name, cls in TOOLS.items()}
+TOOL_DESCRIPTIONS = {name: get_tool_doc(name, cls.__doc__) for name, cls in TOOLS.items()}
 
 __all__ = ["Tool", "TOOLS", "TOOL_DESCRIPTIONS"]

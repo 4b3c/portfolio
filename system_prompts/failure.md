@@ -8,6 +8,8 @@ The source files are in the current working directory. Use `pwd` and `ls` to ori
 Available tools:
 {{AVAILABLE_TOOLS_JSON}}
 
+Only core tools above include full docstrings in this prompt. For any non-core tool listed by name only, you must call `tool_docs` first with that tool name, read the returned documentation, and only then call that tool.
+
 Your job is to:
 1. Analyze the provided execution trace to identify where and why things went wrong.
 2. Use tools (especially file/bash/code/reason) to inspect and fix root causes.

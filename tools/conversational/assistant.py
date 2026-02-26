@@ -11,6 +11,10 @@ from utils.conversation import (
     should_resume_paused_module,
 )
 from utils.prompts import load_system_prompt
+from utils.tool_docs import (
+    build_prompt_tool_context,
+    enforce_tool_docs_requirement,
+)
 
 
 COMMANDS = {
@@ -60,6 +64,7 @@ class AssistantTool(Tool):
         self.current_difficulty = 1
         self.last_compact_user_turn = 0
         self.compact_extension_level = 0
+        self.documented_tools = set()
 
     def _select_model(self, difficulty: int) -> str:
         if difficulty <= 2:
@@ -358,6 +363,7 @@ class AssistantTool(Tool):
             self.messages = []
             self.last_compact_user_turn = 0
             self.compact_extension_level = 0
+            self.documented_tools = set()
             print_state(f"\nStarted new conversation {self.conversation_id}.\n")
             first = input(print_user()).strip()
             if first and not self._is_done_input(first):
@@ -389,6 +395,7 @@ class AssistantTool(Tool):
             self.conversation_id = conv_id
             self.last_compact_user_turn = self._user_turn_count()
             self.compact_extension_level = 0
+            self.documented_tools = set()
             self._refresh_model_from_history()
             print_state(f"\nLoaded conversation {conv_id}.\n")
             return True
@@ -399,7 +406,8 @@ class AssistantTool(Tool):
         if not self.conversation_id:
             self.conversation_id = self.store.next_root_id()
         self._update_model_for_user_input(user_input)
-        tools_json = json.dumps({k: v for k, v in self.registry.items() if k != "assistant"}, indent=2)
+        tools_json = build_prompt_tool_context(self.registry, exclude={"assistant"})
+        self.documented_tools = set()
         self.messages = [
             {
                 "role": "system",
@@ -449,6 +457,13 @@ class AssistantTool(Tool):
         return "continue"
 
     def _attach_conversation_to_module_result(self, tool_result: dict) -> dict:
+        enforcement = enforce_tool_docs_requirement(
+            tool_result,
+            registry=self.registry,
+            documented_tools=self.documented_tools,
+        )
+        if enforcement is not None:
+            return enforcement
         tool_result["conversation_id"] = self.conversation_id
         return tool_result
 

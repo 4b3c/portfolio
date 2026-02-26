@@ -10,9 +10,13 @@ from utils.conversation import (
 )
 from utils.prompts import load_system_prompt
 from utils.session import state_path
+from utils.tool_docs import (
+    build_prompt_tool_context,
+    enforce_tool_docs_requirement,
+)
 
 
-def save_reason_state(messages, reason_conversation_id: str):
+def save_reason_state(messages, reason_conversation_id: str, documented_tools: list[str] | None = None):
     path = state_path("reason_state.json")
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w") as f:
@@ -20,6 +24,7 @@ def save_reason_state(messages, reason_conversation_id: str):
             {
                 "messages": messages,
                 "reason_conversation_id": reason_conversation_id,
+                "documented_tools": documented_tools or [],
             },
             f,
             indent=2,
@@ -51,11 +56,13 @@ class ReasonTool(Tool):
         self.store = ConversationStore("reason")
         self.messages = []
         self.reason_conversation_id = None
+        self.documented_tools = set()
 
     def run(self, data) -> dict:
         question = self.input_text(data)
-        tools_info = json.dumps({k: v for k, v in self.registry.items() if k != "reason"}, indent=2)
+        tools_info = build_prompt_tool_context(self.registry, exclude={"reason"})
         system = load_system_prompt("reason.md", {"AVAILABLE_TOOLS_JSON": tools_info})
+        self.documented_tools = set()
 
         self.reason_conversation_id = self.store.next_root_id()
         self.messages = [
@@ -71,6 +78,7 @@ class ReasonTool(Tool):
                 state = load_reason_state()
                 self.messages = state.get("messages", [])
                 self.reason_conversation_id = state.get("reason_conversation_id")
+                self.documented_tools = set(state.get("documented_tools", []))
             except FileNotFoundError:
                 return self.fail("Reason state not found; cannot resume.")
 
@@ -82,7 +90,11 @@ class ReasonTool(Tool):
     def _persist(self):
         if not self.reason_conversation_id:
             return
-        save_reason_state(self.messages, self.reason_conversation_id)
+        save_reason_state(
+            self.messages,
+            self.reason_conversation_id,
+            sorted(self.documented_tools),
+        )
         self.store.save(self.reason_conversation_id, json.dumps(self.messages, indent=2))
 
     def _loop(self) -> dict:
@@ -90,6 +102,13 @@ class ReasonTool(Tool):
         runtime = ConversationRuntime(self, self.messages, self._persist)
 
         def on_tool_result(tool_result: dict) -> dict:
+            enforcement = enforce_tool_docs_requirement(
+                tool_result,
+                registry=self.registry,
+                documented_tools=self.documented_tools,
+            )
+            if enforcement is not None:
+                return enforcement
             print_state(f"[Reason] Calling tool: {tool_result.get('tool')}")
             tool_result["called_tool"] = tool_result["tool"]
             tool_result["reason_conversation_id"] = self.reason_conversation_id

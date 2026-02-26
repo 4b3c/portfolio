@@ -17,8 +17,8 @@ XML validity is strict:
 - Never invent/alter tag names.
 
 Tool parameter rules (explicit):
-- Plain-text tools (`bash`, `reason`, `summarize`, `search`): use exactly one parameter named `input`.
-- Structured tools (`file`, `code`, `memory`, `repo`, `planner`, `http`): use one XML parameter per schema field (for example `action`, `path`, `full`).
+- Plain-text tools use exactly one parameter named `input`.
+- Structured tools use one XML parameter per schema field.
 - Do not wrap an entire structured payload as a single JSON string.
 - Only send JSON text in a parameter when that specific field is explicitly documented as JSON/text payload.
 When calling `code`, ensure `old` and `new` are different. Do not send no-op replacements.
@@ -30,6 +30,8 @@ After sending a tool call, you will receive the output in the next message befor
 
 Available tools:
 {{AVAILABLE_TOOLS_JSON}}
+
+Only core tools above include full docstrings in this prompt. For any non-core tool listed by name only, you must call `tool_docs` first with that tool name, read the returned documentation, and only then call that tool.
 
 If you need to read a file, run a command, search, or do anything beyond answering from knowledge — use a tool. Never fabricate results. Never claim you saw output you haven't received. If you don't know something, say so or call a tool to find out.
 Use `bash` for command execution and environment inspection, not file editing.

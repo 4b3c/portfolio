@@ -9,8 +9,12 @@ from utils.conversation import (
 )
 from utils.prompts import load_system_prompt
 from utils.session import state_path, trace_path
+from utils.tool_docs import (
+    build_prompt_tool_context,
+    enforce_tool_docs_requirement,
+)
 
-def save_state(messages, failure_conversation_id: str | None):
+def save_state(messages, failure_conversation_id: str | None, documented_tools: list[str] | None = None):
     path = state_path("failure_state.json")
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w") as f:
@@ -18,6 +22,7 @@ def save_state(messages, failure_conversation_id: str | None):
             {
                 "messages": messages,
                 "failure_conversation_id": failure_conversation_id,
+                "documented_tools": documented_tools or [],
             },
             f,
             indent=2,
@@ -51,9 +56,14 @@ class FailureTool(Tool):
         self.store = ConversationStore("failure")
         self.messages = []
         self.failure_conversation_id = None
+        self.documented_tools = set()
 
     def _persist(self):
-        save_state(self.messages, self.failure_conversation_id)
+        save_state(
+            self.messages,
+            self.failure_conversation_id,
+            sorted(self.documented_tools),
+        )
         if self.failure_conversation_id:
             self.store.save(self.failure_conversation_id, json.dumps(self.messages, indent=2))
 
@@ -61,6 +71,13 @@ class FailureTool(Tool):
         runtime = ConversationRuntime(self, self.messages, self._persist)
 
         def on_tool_result(tool_result: dict) -> dict:
+            enforcement = enforce_tool_docs_requirement(
+                tool_result,
+                registry=self.registry,
+                documented_tools=self.documented_tools,
+            )
+            if enforcement is not None:
+                return enforcement
             tool_result["failure_conversation_id"] = self.failure_conversation_id
             return tool_result
 
@@ -100,8 +117,9 @@ class FailureTool(Tool):
         except (FileNotFoundError, json.JSONDecodeError):
             trace_content = "(no trace available)"
 
-        tools_json = json.dumps(self.registry, indent=2)
+        tools_json = build_prompt_tool_context(self.registry)
         system_prompt = load_system_prompt("failure.md", {"AVAILABLE_TOOLS_JSON": tools_json})
+        self.documented_tools = set()
 
         if manual:
             user_message = (
@@ -136,6 +154,7 @@ class FailureTool(Tool):
                 or state.get("failure_conversation_id")
                 or self.failure_conversation_id
             )
+            self.documented_tools = set(state.get("documented_tools", []))
         except FileNotFoundError:
             pass
         if not self.failure_conversation_id:

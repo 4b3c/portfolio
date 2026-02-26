@@ -11,6 +11,10 @@ from utils.conversation import (
 )
 from utils.prompts import load_system_prompt
 from utils.session import state_path
+from utils.tool_docs import (
+    build_prompt_tool_context,
+    enforce_tool_docs_requirement,
+)
 
 PLANS_ROOT = "data/plans"
 MAX_PLANNER_MODULE_CALLS = 6
@@ -39,7 +43,7 @@ def _unique_plan_dir(base_slug: str) -> str:
         i += 1
 
 
-def save_state(messages, pending_plan, planner_conversation_id):
+def save_state(messages, pending_plan, planner_conversation_id, documented_tools: list[str] | None = None):
     path = state_path("planner_state.json")
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w") as f:
@@ -48,6 +52,7 @@ def save_state(messages, pending_plan, planner_conversation_id):
                 "messages": messages,
                 "pending_plan": pending_plan,
                 "planner_conversation_id": planner_conversation_id,
+                "documented_tools": documented_tools or [],
             },
             f,
             indent=2,
@@ -78,6 +83,7 @@ class PlannerTool(Tool):
         self.messages = []
         self.pending_plan = None
         self.planner_conversation_id = None
+        self.documented_tools = set()
 
     def run(self, data) -> dict:
         raw = self.input_text(data)
@@ -104,6 +110,7 @@ class PlannerTool(Tool):
                 self.messages = state.get("messages", [])
                 self.pending_plan = state.get("pending_plan")
                 self.planner_conversation_id = state.get("planner_conversation_id")
+                self.documented_tools = set(state.get("documented_tools", []))
             except FileNotFoundError:
                 return self.fail("Planner state not found; cannot resume.")
 
@@ -129,7 +136,8 @@ class PlannerTool(Tool):
         if context:
             user_prompt += f"\n\nContext:\n{context}"
 
-        tools_json = json.dumps({k: v for k, v in self.registry.items() if k != "planner"}, indent=2)
+        tools_json = build_prompt_tool_context(self.registry, exclude={"planner"})
+        self.documented_tools = set()
         self.messages = [
             {
                 "role": "system",
@@ -153,6 +161,13 @@ class PlannerTool(Tool):
         runtime = ConversationRuntime(self, self.messages, self._persist)
 
         def on_tool_result(tool_result: dict) -> dict:
+            enforcement = enforce_tool_docs_requirement(
+                tool_result,
+                registry=self.registry,
+                documented_tools=self.documented_tools,
+            )
+            if enforcement is not None:
+                return enforcement
             call_count = int(self.pending_plan.get("tool_calls", 0))
             if call_count >= MAX_PLANNER_MODULE_CALLS:
                 print_state("[Planner] Tool call budget reached; forcing plan finalization.")
@@ -243,7 +258,12 @@ class PlannerTool(Tool):
         return self.complete(json.dumps(payload, indent=2))
 
     def _persist(self):
-        save_state(self.messages, self.pending_plan, self.planner_conversation_id)
+        save_state(
+            self.messages,
+            self.pending_plan,
+            self.planner_conversation_id,
+            sorted(self.documented_tools),
+        )
         if self.planner_conversation_id:
             self.store.save(self.planner_conversation_id, json.dumps(self.messages, indent=2))
 

@@ -491,7 +491,15 @@ class ConversationRuntime:
 
             tool_result = turn.get("tool_result")
             if tool_result is not None:
-                return on_tool_result(tool_result) if on_tool_result else tool_result
+                if on_tool_result:
+                    decision = on_tool_result(tool_result)
+                    if isinstance(decision, dict) and decision.get("_continue_loop"):
+                        user_message = decision.get("user_message")
+                        if isinstance(user_message, str) and user_message.strip():
+                            self.append("user", user_message, persist=True)
+                        continue
+                    tool_result = decision
+                return tool_result
 
             raw = turn.get("raw", "")
             if is_done_response and is_done_response(raw):

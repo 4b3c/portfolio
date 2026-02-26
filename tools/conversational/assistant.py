@@ -11,7 +11,7 @@ from utils.conversation import (
     should_resume_paused_module,
 )
 from utils.prompts import load_system_prompt
-from utils.tool_docs import (
+from tools.core.tool_docs import (
     build_prompt_tool_context,
     enforce_tool_docs_requirement,
 )
@@ -461,6 +461,7 @@ class AssistantTool(Tool):
             tool_result,
             registry=self.registry,
             documented_tools=self.documented_tools,
+            latest_user_input=self._latest_substantive_user_goal(),
         )
         if enforcement is not None:
             return enforcement

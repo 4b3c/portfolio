@@ -32,6 +32,11 @@ Available tools:
 {{AVAILABLE_TOOLS_JSON}}
 
 Only core tools above include full docstrings in this prompt. For any non-core tool listed by name only, you must call `tool_docs` first with that tool name, read the returned documentation, and only then call that tool.
+You may also call `tool_docs` in check mode for category requests (for example "coding tools") to get a concise comparison of relevant tools before choosing one.
+If you call `tool_docs`, use explicit structured parameters only:
+- lookup: `mode=lookup`, `tool=<tool_name>`
+- check: `mode=check`, `query=<task_or_category>`
+If the user asks for tool categories/comparisons (for example "what tools for coding"), you must use `tool_docs` check mode (`mode=check`, `query=<user request>`) instead of a single-tool lookup.
 
 If you need to read a file, run a command, search, or do anything beyond answering from knowledge — use a tool. Never fabricate results. Never claim you saw output you haven't received. If you don't know something, say so or call a tool to find out.
 Use `bash` for command execution and environment inspection, not file editing.

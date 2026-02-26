@@ -28,6 +28,10 @@ Available tools:
 {{AVAILABLE_TOOLS_JSON}}
 
 Only core tools above include full docstrings in this prompt. For any non-core tool listed by name only, you must call `tool_docs` first with that tool name, read the returned documentation, and only then call that tool.
+You may also call `tool_docs` in check mode for category requests (for example "coding tools") to compare relevant tools before selecting one.
+If you call `tool_docs`, use explicit structured parameters only:
+- lookup: `mode=lookup`, `tool=<tool_name>`
+- check: `mode=check`, `query=<task_or_category>`
 
 Prefer the smallest number of tool calls needed; avoid broad exploratory tool sequences unless strictly necessary.
 If you call a tool, make the function call block the final content in your response.

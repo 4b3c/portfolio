@@ -9,7 +9,7 @@ from utils.conversation import (
 )
 from utils.prompts import load_system_prompt
 from utils.session import state_path, trace_path
-from utils.tool_docs import (
+from tools.core.tool_docs import (
     build_prompt_tool_context,
     enforce_tool_docs_requirement,
 )

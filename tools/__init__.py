@@ -14,7 +14,6 @@ from tools.other.search import SearchTool
 from tools.coding.stats import StatsTool
 from tools.other.summarize import SummarizeTool
 from tools.tool import Tool
-from utils.tool_docs import get_tool_doc
 
 
 TOOLS = {
@@ -35,6 +34,6 @@ TOOLS = {
     "http": HttpTool,
 }
 
-TOOL_DESCRIPTIONS = {name: get_tool_doc(name, cls.__doc__) for name, cls in TOOLS.items()}
+TOOL_DESCRIPTIONS = {name: (cls.__doc__ or "").strip() for name, cls in TOOLS.items()}
 
 __all__ = ["Tool", "TOOLS", "TOOL_DESCRIPTIONS"]

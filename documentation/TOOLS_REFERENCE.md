@@ -26,6 +26,9 @@ Current tool registry is defined in `tools/__init__.py`.
 
 - `memory`: Persistent key-value memory.
 - `summarize`: Condenses long text.
+- `tool_docs`: Tool documentation and suitability checks.
+  - lookup mode input: `{"mode":"lookup","tool":"repo"}`
+  - check mode input: `{"mode":"check","query":"what tools for coding"}`
 
 ## Tool Contract
 

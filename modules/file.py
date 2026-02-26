@@ -21,7 +21,7 @@ class FileModule(Module):
             raw = data["input"]
             params = json.loads(raw) if raw.strip().startswith("{") else {}
             action = params.get("action", "list")
-            path = os.path.realpath(params["path"]) if "path" in params else None
+            path = os.path.realpath(os.path.expanduser(params["path"])) if "path" in params else None
         except (json.JSONDecodeError, KeyError) as e:
             return self.fail(f"Invalid input: {e}")
 

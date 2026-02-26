@@ -2,10 +2,14 @@ import json
 import os
 import re
 from modules.module import Module
-from utils.claude import HAIKU, SONNET, OPUS, ClaudeRateLimitPause, call_claude
+from utils.claude import HAIKU, SONNET, OPUS, call_claude
 from utils.colors import print_user, print_error, print_state, print_info, _YELLOW, _CYAN
-from utils.conversation import ConversationStore, stream_response
-from utils.function_calls import contains_function_call_markup, maybe_dispatch_module_call
+from utils.conversation import (
+    ConversationRuntime,
+    ConversationStore,
+    parse_wait_signal,
+    should_resume_paused_module,
+)
 from utils.prompts import load_system_prompt
 
 
@@ -73,6 +77,9 @@ class AssistantModule(Module):
 
     def _is_done_input(self, user_input: str) -> bool:
         return (user_input or "").strip().lower() == "done"
+
+    def _is_conversation_key(self, key: str) -> bool:
+        return key == "conversation_id" or key.endswith("_conversation_id")
 
     def _recent_context_for_classification(self) -> str:
         recent = []
@@ -308,7 +315,7 @@ class AssistantModule(Module):
             return
 
         self.conversation_id = self.store.next_branch_id(old_id)
-        self.messages = [
+        compacted_messages = [
             system_message,
             {
                 "role": "user",
@@ -319,6 +326,8 @@ class AssistantModule(Module):
                 ),
             },
         ]
+        self.messages.clear()
+        self.messages.extend(compacted_messages)
         self.compact_extension_level = 0
         self.last_compact_user_turn = self._user_turn_count()
         self._persist()
@@ -405,21 +414,7 @@ class AssistantModule(Module):
             return
         self.store.save(self.conversation_id, json.dumps(self.messages, indent=2))
 
-    def _parse_wait_signal(self, text: str) -> dict | None:
-        if not isinstance(text, str):
-            return None
-        stripped = text.strip()
-        if not stripped.startswith("{"):
-            return None
-        try:
-            payload = json.loads(stripped)
-        except Exception:
-            return None
-        if payload.get("signal") == "WAIT_FOR_USER_INPUT" or payload.get("wait_for_user_input") is True:
-            return payload
-        return None
-
-    def _pause_for_user_input(self, message: str):
+    def _wait_for_user_input(self, message: str) -> str | None:
         if message:
             print_state(f"[Pause] {message}")
         while True:
@@ -427,72 +422,54 @@ class AssistantModule(Module):
             if not user_input:
                 continue
             if self._is_done_input(user_input):
-                return False
+                return None
             if user_input.startswith("/"):
                 if self.handle_command(user_input):
                     if not self.messages:
-                        return False
+                        return None
                     continue
-            self._update_model_for_user_input(user_input)
-            self.messages.append({"role": "user", "content": user_input})
-            self._persist()
-            return True
+            return user_input
+
+    def _pause_for_user_input(self, message: str):
+        user_input = self._wait_for_user_input(message)
+        if user_input is None:
+            return False
+        self._update_model_for_user_input(user_input)
+        self.messages.append({"role": "user", "content": user_input})
+        self._persist()
+        return True
+
+    def _ingest_user_input(self, user_input: str) -> str:
+        self._update_model_for_user_input(user_input)
+        self.messages.append({"role": "user", "content": user_input})
+        self._persist()
+        return "continue"
+
+    def _attach_conversation_to_module_result(self, module_result: dict) -> dict:
+        module_result["conversation_id"] = self.conversation_id
+        return module_result
 
     def conversation_loop(self) -> dict:
-        while True:
-            self._maybe_auto_compact()
-            try:
-                raw = stream_response(
-                    self.messages,
-                    self.current_model,
-                    "Assistant:",
-                    _YELLOW,
-                    fn_color=_CYAN,
-                    hide_fn_calls=True,
-                )
-            except ClaudeRateLimitPause as e:
-                print_state(f"[Rate limit hit for {self.current_model}.]")
-                print_error("Claude pause:", str(e))
-                if not self._pause_for_user_input("Wait a few minutes, then tell me to continue."):
-                    break
-                continue
-            self.messages.append({"role": "assistant", "content": raw})
-            self._persist()
-
-            # Check if the assistant wants to call another module
-            module_result = maybe_dispatch_module_call(self, raw, include_called_module=True)
-            if module_result:
-                module_result["conversation_id"] = self.conversation_id
-                return module_result
-            if contains_function_call_markup(raw):
-                print_error(
-                    "Malformed function call:",
-                    "Ignored XML call markup because it was not a single valid top-level call.",
-                )
-
-            if raw.lower() == "done":
-                break
-
-            user_input = input(print_user()).strip()
-
-            if not user_input:
-                continue
-            if self._is_done_input(user_input):
-                break
-
-            if user_input.startswith("/"):
-                if self.handle_command(user_input):
-                    if not self.messages:
-                        break
-                    continue
-
-            self._update_model_for_user_input(user_input)
-            self.messages.append({"role": "user", "content": user_input})
-
-            self._persist()
-
+        runtime = ConversationRuntime(self, self.messages, self._persist)
+        result = runtime.run_interactive_loop(
+            model_getter=lambda: self.current_model,
+            label="Assistant:",
+            label_color=_YELLOW,
+            fn_color=_CYAN,
+            hide_fn_calls=True,
+            include_called_module=True,
+            on_before_turn=self._maybe_auto_compact,
+            on_user_input=self._ingest_user_input,
+            on_module_result=self._attach_conversation_to_module_result,
+            command_handler=self.handle_command,
+            is_done_input=self._is_done_input,
+            is_done_response=lambda raw: raw.lower() == "done",
+            rate_limit_pause_message="Wait a few minutes, then tell me to continue.",
+            interrupt_pause_message="Output interrupted (ESC). What should I do next?",
+            completion_output="Assistant session completed.",
+        )
         self._persist()
-        return self.complete("Assistant session completed.")
+        return result
 
     def run(self, data) -> dict:
         initial_input = (data.get("input") or "").strip()
@@ -542,9 +519,27 @@ class AssistantModule(Module):
                 ),
             }
         )
-        wait_payload = self._parse_wait_signal(result.get("output", ""))
+        wait_payload = parse_wait_signal(result.get("output", ""))
         if wait_payload:
             self._persist()
-            if not self._pause_for_user_input(wait_payload.get("message", "Module requested user input before continuing.")):
+            user_input = self._wait_for_user_input(
+                wait_payload.get("message", "Module requested user input before continuing.")
+            )
+            if user_input is None:
                 return self.complete("Assistant session completed.")
+            if should_resume_paused_module(user_input, wait_payload):
+                resume_payload = {
+                    "module": called_module,
+                    "_resume": True,
+                    "resume_input": user_input,
+                    "called_module": called_module,
+                }
+                for source in (result, wait_payload):
+                    for key, value in source.items():
+                        if self._is_conversation_key(key) and isinstance(value, str):
+                            resume_payload[key] = value
+                return resume_payload
+            self._update_model_for_user_input(user_input)
+            self.messages.append({"role": "user", "content": user_input})
+            self._persist()
         return self.conversation_loop()

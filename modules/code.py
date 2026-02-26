@@ -14,7 +14,7 @@ class CodeModule(Module):
         except (json.JSONDecodeError, KeyError) as e:
             return self.fail(f"Invalid input: {e}. Expected JSON with 'path', 'old', and 'new'.")
 
-        full_path = os.path.realpath(path)
+        full_path = os.path.realpath(os.path.expanduser(path))
 
         try:
             with open(full_path) as f:

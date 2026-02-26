@@ -1,10 +1,13 @@
 import json
 import os
 from modules.module import Module
-from utils.claude import OPUS, ClaudeRateLimitPause
+from utils.claude import OPUS
 from utils.colors import print_error, print_state, _MAGENTA
-from utils.conversation import ConversationStore, stream_response
-from utils.function_calls import contains_function_call_markup, maybe_dispatch_module_call
+from utils.conversation import (
+    ConversationRuntime,
+    ConversationStore,
+    WAIT_SIGNAL,
+)
 from utils.prompts import load_system_prompt
 from utils.session import state_path
 
@@ -82,40 +85,44 @@ class ReasonModule(Module):
         self.store.save(self.reason_conversation_id, json.dumps(self.messages, indent=2))
 
     def _loop(self) -> dict:
-        try:
-            print_state("[Reason] Running OPUS reasoning...")
-            answer = stream_response(
-                self.messages,
-                OPUS,
-                "Reasoning:",
-                _MAGENTA,
-                hide_fn_calls=True,
-            )
-            self.messages.append({"role": "assistant", "content": answer})
-            self._persist()
+        print_state("[Reason] Running OPUS reasoning...")
+        runtime = ConversationRuntime(self, self.messages, self._persist)
 
-            module_result = maybe_dispatch_module_call(self, answer)
-            if module_result:
-                print_state(f"[Reason] Calling module: {module_result.get('module')}")
-                module_result["called_module"] = module_result["module"]
-                module_result["reason_conversation_id"] = self.reason_conversation_id
-                return module_result
-            if contains_function_call_markup(answer):
-                print_error(
-                    "Malformed function call:",
-                    "Ignored XML call markup because it was not a single valid top-level call.",
-                )
-            print_state("[Reason] Returning direct answer.")
-            clear_reason_state()
-            return self.complete(answer)
-        except Exception as e:
-            if isinstance(e, ClaudeRateLimitPause):
-                payload = {
-                    "signal": "WAIT_FOR_USER_INPUT",
-                    "wait_for_user_input": True,
-                    "message": "Claude rate limit hit in reason module. Wait a few minutes, then tell me to continue.",
-                    "reason_conversation_id": self.reason_conversation_id,
-                }
-                return self.complete(json.dumps(payload, indent=2))
-            print_error("Reasoning error:", str(e))
-            return self.fail(str(e))
+        def on_module_result(module_result: dict) -> dict:
+            print_state(f"[Reason] Calling module: {module_result.get('module')}")
+            module_result["called_module"] = module_result["module"]
+            module_result["reason_conversation_id"] = self.reason_conversation_id
+            return module_result
+
+        result = runtime.run_autonomous_loop(
+            model=OPUS,
+            label="Reasoning:",
+            label_color=_MAGENTA,
+            hide_fn_calls=True,
+            include_called_module=False,
+            continue_user_text=None,
+            on_module_result=on_module_result,
+            pause_module_name="reason",
+            pause_conversation_key="reason_conversation_id",
+            pause_conversation_id=self.reason_conversation_id,
+        )
+
+        if "module" in result:
+            return result
+        if "error" in result:
+            print_error("Reasoning error:", result["error"])
+            return self.fail(result["error"])
+
+        wait_payload = {}
+        output = result.get("output", "")
+        if isinstance(output, str) and output.strip().startswith("{"):
+            try:
+                wait_payload = json.loads(output)
+            except Exception:
+                wait_payload = {}
+        if wait_payload.get("signal") == WAIT_SIGNAL:
+            return self.complete(json.dumps(wait_payload, indent=2))
+
+        print_state("[Reason] Returning direct answer.")
+        clear_reason_state()
+        return self.complete(result.get("output", ""))

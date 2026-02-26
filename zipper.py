@@ -67,10 +67,14 @@ def main_loop(trace, stack, current_node, result, trace_file):
     while True:
         try:
             if "module" in result:
+                resume_existing = bool(result.get("_resume"))
+                node_input = result.get("input")
+                if resume_existing and result.get("resume_input"):
+                    node_input = result.get("resume_input")
                 child_node = {
                     "id": str(uuid.uuid4())[:12],
                     "module": result["module"],
-                    "input": result["input"],
+                    "input": node_input,
                     "called": [],
                 }
                 # Preserve conversation identifiers for nested module sessions.
@@ -87,12 +91,16 @@ def main_loop(trace, stack, current_node, result, trace_file):
                 if module_name not in MODULES:
                     error = f"Module '{module_name}' not found."
                     print_error("Error:", error)
-                    result = {"module": "failure", "input": error}
+                    result = {"module": "failure", "input": error, "manual": False}
                     continue
 
                 new_module = MODULES[module_name](MODULE_DESCRIPTIONS)
-                print_module("Running module:", module_name, result.get("input", "") or "")
-                result = new_module.run(result)
+                if resume_existing:
+                    print_module("Resuming module:", module_name, result.get("resume_input", "") or "")
+                    result = new_module.resume(result)
+                else:
+                    print_module("Running module:", module_name, result.get("input", "") or "")
+                    result = new_module.run(result)
                 module = new_module
                 stack.append((module, current_node))
 
@@ -112,7 +120,7 @@ def main_loop(trace, stack, current_node, result, trace_file):
             else:
                 error = f"Invalid result payload: expected 'module' or 'output', got keys {list(result.keys())}"
                 print_error("Error:", error)
-                result = {"module": "failure", "input": error}
+                result = {"module": "failure", "input": error, "manual": False}
 
         except Exception as e:
             error = f"Main loop exception: {e}"
@@ -122,7 +130,7 @@ def main_loop(trace, stack, current_node, result, trace_file):
                 current_node["output"] = f"Error: {error}"
                 save_trace(trace, trace_file)
                 break
-            result = {"module": "failure", "input": error}
+            result = {"module": "failure", "input": error, "manual": False}
 
 
 def run():

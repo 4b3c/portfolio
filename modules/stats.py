@@ -1,5 +1,7 @@
 import subprocess
 import os
+import ast
+import re
 from pathlib import Path
 from collections import defaultdict
 from modules.module import Module
@@ -33,6 +35,9 @@ class StatsModule(Module):
         code_stats = self._get_code_stats()
         sections.append(self._format_code_stats(code_stats))
         
+        # Function analysis
+        sections.append(self._format_function_stats(code_stats))
+        
         # Git statistics
         git_stats = self._get_git_stats()
         sections.append(self._format_git_stats(git_stats))
@@ -51,7 +56,10 @@ class StatsModule(Module):
             'total_comment_lines': 0,
             'total_blank_lines': 0,
             'by_language': defaultdict(lambda: {'files': 0, 'lines': 0, 'code': 0, 'comments': 0, 'blank': 0}),
-            'file_list': []
+            'file_list': [],
+            'functions': {},  # function_name -> {'file': path, 'calls': count}
+            'total_functions': 0,
+            'total_function_calls': 0
         }
         
         # File extensions to analyze
@@ -123,11 +131,57 @@ class StatsModule(Module):
                             'language': language,
                             'lines': total
                         })
+                        
+                        # Analyze functions for Python files
+                        if ext == '.py':
+                            self._analyze_python_functions(filepath, lines, stats)
+                        
                     except Exception:
                         pass
         
+        # Calculate function statistics
+        if stats['total_functions'] > 0:
+            stats['avg_calls_per_function'] = stats['total_function_calls'] / stats['total_functions']
+        else:
+            stats['avg_calls_per_function'] = 0
+        
         return stats
 
+    def _analyze_python_functions(self, filepath: str, lines: list, stats: dict):
+        """Analyze Python file for function definitions and calls."""
+        try:
+            source = ''.join(lines)
+            tree = ast.parse(source, filename=filepath)
+            
+            # Find all function definitions
+            for node in ast.walk(tree):
+                if isinstance(node, ast.FunctionDef):
+                    func_name = node.name
+                    # Skip private/magic methods
+                    if not func_name.startswith('_'):
+                        if func_name not in stats['functions']:
+                            stats['functions'][func_name] = {'file': filepath, 'calls': 0}
+                            stats['total_functions'] += 1
+            
+            # Find all function calls
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Call):
+                    # Handle simple function calls
+                    if isinstance(node.func, ast.Name):
+                        func_name = node.func.id
+                        if func_name in stats['functions']:
+                            stats['functions'][func_name]['calls'] += 1
+                            stats['total_function_calls'] += 1
+                    # Handle method calls (obj.method())
+                    elif isinstance(node.func, ast.Attribute):
+                        func_name = node.func.attr
+                        if func_name in stats['functions']:
+                            stats['functions'][func_name]['calls'] += 1
+                            stats['total_function_calls'] += 1
+        except Exception:
+            # If parsing fails, skip this file
+            pass
+    
     def _count_line_types(self, lines: list, ext: str) -> tuple:
         """Count code, comment, and blank lines. Returns (code, comments, blank)."""
         code = 0
@@ -237,6 +291,70 @@ class StatsModule(Module):
         if stats['total_files'] > 0:
             avg_lines = stats['total_lines'] / stats['total_files']
             lines.append(f"- **Average File Size:** {avg_lines:.0f} lines")
+        
+        lines.append("")
+        return "\n".join(lines)
+    
+    def _format_function_stats(self, stats: dict) -> str:
+        """Format function statistics as markdown."""
+        lines = ["## Function Analysis (Python)\n"]
+        
+        if stats['total_functions'] == 0:
+            lines.append("No public functions found in Python files.\n")
+            return "\n".join(lines)
+        
+        lines.append(f"- **Total Functions:** {stats['total_functions']}")
+        lines.append(f"- **Total Function Calls:** {stats['total_function_calls']}")
+        lines.append(f"- **Average Calls per Function:** {stats['avg_calls_per_function']:.2f}")
+        
+        # Calculate reuse score
+        # Higher score = better reuse (more calls per function)
+        # Score interpretation:
+        # < 1.0: Poor reuse (functions called less than once on average)
+        # 1.0-2.0: Low reuse
+        # 2.0-5.0: Moderate reuse
+        # 5.0+: Good reuse
+        reuse_score = stats['avg_calls_per_function']
+        if reuse_score < 1.0:
+            reuse_rating = "Poor"
+            reuse_color = "🔴"
+        elif reuse_score < 2.0:
+            reuse_rating = "Low"
+            reuse_color = "🟠"
+        elif reuse_score < 5.0:
+            reuse_rating = "Moderate"
+            reuse_color = "🟡"
+        else:
+            reuse_rating = "Good"
+            reuse_color = "🟢"
+        
+        lines.append(f"- **Code Reuse Score:** {reuse_score:.2f} {reuse_color} ({reuse_rating})")
+        lines.append("")
+        lines.append("*Higher scores indicate better code reuse. Many functions with few calls suggests code duplication.*")
+        
+        # Show top called functions
+        sorted_funcs = sorted(stats['functions'].items(), 
+                            key=lambda x: x[1]['calls'], reverse=True)
+        
+        if sorted_funcs:
+            lines.append("\n### Most Called Functions\n")
+            lines.append("| Function | Calls | File |")
+            lines.append("|----------|-------|------|")
+            
+            for func_name, data in sorted_funcs[:10]:
+                file_short = data['file'].replace('./', '')
+                lines.append(f"| `{func_name}` | {data['calls']} | {file_short} |")
+        
+        # Show unused functions
+        unused = [name for name, data in stats['functions'].items() if data['calls'] == 0]
+        if unused:
+            lines.append(f"\n### Unused Functions ({len(unused)})\n")
+            lines.append("These functions are defined but never called:\n")
+            for func_name in sorted(unused)[:20]:
+                file_short = stats['functions'][func_name]['file'].replace('./', '')
+                lines.append(f"- `{func_name}` in {file_short}")
+            if len(unused) > 20:
+                lines.append(f"\n*...and {len(unused) - 20} more*")
         
         lines.append("")
         return "\n".join(lines)

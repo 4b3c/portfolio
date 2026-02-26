@@ -3,10 +3,12 @@ import os
 import re
 from datetime import datetime
 from modules.module import Module
-from utils.claude import OPUS, ClaudeRateLimitPause, call_claude
-from utils.colors import print_error, print_state, stream_label, stream_end, LineStream, _MAGENTA, _WHITE
-from utils.conversation import ConversationStore
-from utils.function_calls import contains_function_call_markup, maybe_dispatch_module_call
+from utils.claude import OPUS
+from utils.colors import print_state, _MAGENTA
+from utils.conversation import (
+    ConversationRuntime,
+    ConversationStore,
+)
 from utils.prompts import load_system_prompt
 from utils.session import state_path
 
@@ -147,92 +149,51 @@ class PlannerModule(Module):
         return self._create_loop()
 
     def _create_loop(self) -> dict:
-        if self.messages and self.messages[-1]["role"] == "assistant":
-            self.messages.append({"role": "user", "content": "Continue planning."})
+        runtime = ConversationRuntime(self, self.messages, self._persist)
+
+        def on_module_result(module_result: dict) -> dict:
+            call_count = int(self.pending_plan.get("module_calls", 0))
+            if call_count >= MAX_PLANNER_MODULE_CALLS:
+                print_state("[Planner] Module call budget reached; forcing plan finalization.")
+                return {
+                    "_continue_loop": True,
+                    "user_message": (
+                        "Stop calling modules. Use the context already gathered and output the final "
+                        "plan markdown now."
+                    ),
+                }
+            self.pending_plan["module_calls"] = call_count + 1
+            print_state(f"[Planner] Gathering context via module: {module_result.get('module')}")
+            module_result["planner_conversation_id"] = self.planner_conversation_id
             self._persist()
+            return module_result
 
-        try:
-            turns = 0
-            while True:
-                turns += 1
-                if turns > PLANNER_MAX_TURNS:
-                    return self.fail(
-                        f"Planner exceeded max turns ({PLANNER_MAX_TURNS}). "
-                        "Try a narrower objective."
-                    )
+        def on_assistant_text(raw: str) -> dict:
+            print_state("[Planner] Finalizing plan document.")
+            return self._finalize_plan(raw)
 
-                print_state("[Planner] Reasoning over plan and context...")
-                stream_label("Planner:", _MAGENTA)
-                ls = LineStream(_WHITE, hide_fn_calls=True)
-                assistant_entry = {"role": "assistant", "content": ""}
-                self.messages.append(assistant_entry)
-                self._persist()
-
-                chars_since_persist = 0
-
-                def on_token(tok: str):
-                    nonlocal chars_since_persist
-                    assistant_entry["content"] += tok
-                    ls.token(tok)
-                    chars_since_persist += len(tok)
-                    if "\n" in tok or chars_since_persist >= 240:
-                        self._persist()
-                        chars_since_persist = 0
-
-                raw = call_claude(
-                    self.messages[:-1],
-                    model=OPUS,
-                    temperature=0.2,
-                    timeout=PLANNER_MODEL_TIMEOUT_SECONDS,
-                    max_tokens=PLANNER_MAX_TOKENS_PER_CALL,
-                    on_token=on_token,
-                ).strip()
-                ls.flush()
-                stream_end()
-                assistant_entry["content"] = raw
-                self._persist()
-
-                module_result = maybe_dispatch_module_call(self, raw, include_called_module=True)
-                if module_result:
-                    call_count = int(self.pending_plan.get("module_calls", 0))
-                    if call_count >= MAX_PLANNER_MODULE_CALLS:
-                        print_state("[Planner] Module call budget reached; forcing plan finalization.")
-                        self.messages.append(
-                            {
-                                "role": "user",
-                                "content": (
-                                    "Stop calling modules. Use the context already gathered and output the final "
-                                    "plan markdown now."
-                                ),
-                            }
-                        )
-                        self._persist()
-                        continue
-                    self.pending_plan["module_calls"] = call_count + 1
-                    print_state(f"[Planner] Gathering context via module: {module_result.get('module')}")
-                    module_result["planner_conversation_id"] = self.planner_conversation_id
-                    self._persist()
-                    return module_result
-                if contains_function_call_markup(raw):
-                    print_error(
-                        "Malformed function call:",
-                        "Ignored XML call markup because it was not a single valid top-level call.",
-                    )
-
-                print_state("[Planner] Finalizing plan document.")
-                return self._finalize_plan(raw)
-        except ClaudeRateLimitPause as e:
-            payload = {
-                "signal": "WAIT_FOR_USER_INPUT",
-                "wait_for_user_input": True,
-                "message": "Claude rate limit hit in planner module. Wait a few minutes, then tell me to continue.",
-                "planner_conversation_id": self.planner_conversation_id,
-                "error": str(e),
-            }
-            self._persist()
-            return self.complete(json.dumps(payload, indent=2))
-        except Exception as e:
-            return self.fail(f"Plan generation failed: {e}")
+        result = runtime.run_autonomous_loop(
+            model=OPUS,
+            label="Planner:",
+            label_color=_MAGENTA,
+            hide_fn_calls=True,
+            timeout=PLANNER_MODEL_TIMEOUT_SECONDS,
+            max_tokens=PLANNER_MAX_TOKENS_PER_CALL,
+            include_called_module=True,
+            max_turns=PLANNER_MAX_TURNS,
+            ensure_user_turn_if_needed="Continue planning.",
+            continue_user_text=None,
+            on_module_result=on_module_result,
+            on_assistant_text=on_assistant_text,
+            pause_module_name="planner",
+            pause_conversation_key="planner_conversation_id",
+            pause_conversation_id=self.planner_conversation_id,
+        )
+        if "error" in result:
+            return self.fail(
+                f"Planner exceeded max turns ({PLANNER_MAX_TURNS}). Try a narrower objective."
+            )
+        return result
 
     def _finalize_plan(self, plan_markdown: str) -> dict:
         if not self.pending_plan:

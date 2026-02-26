@@ -1,10 +1,12 @@
 import json
 import os
 from modules.module import Module
-from utils.claude import OPUS, ClaudeRateLimitPause
+from utils.claude import OPUS
 from utils.colors import print_error, _RED
-from utils.conversation import ConversationStore, stream_response
-from utils.function_calls import contains_function_call_markup, maybe_dispatch_module_call
+from utils.conversation import (
+    ConversationRuntime,
+    ConversationStore,
+)
 from utils.prompts import load_system_prompt
 from utils.session import state_path, trace_path
 
@@ -36,6 +38,12 @@ class FailureModule(Module):
 
     Runs an OPUS-guided loop with persisted conversation/state under the current
     session so diagnosis can resume after nested module calls or restarts.
+
+    Can be invoked manually with a description of what to diagnose or fix,
+    or auto-triggered with an error message from a failed module.
+
+    Input: a description of the failure or issue to diagnose. Can be auto-triggered by errors
+    or called manually with a custom problem description.
     """
 
     def __init__(self, registry=None):
@@ -50,64 +58,72 @@ class FailureModule(Module):
             self.store.save(self.failure_conversation_id, json.dumps(self.messages, indent=2))
 
     def _loop(self) -> dict:
-        try:
-            # Defensive: ensure messages end with user before calling Claude
-            if self.messages and self.messages[-1]["role"] == "assistant":
-                self.messages.append({"role": "user", "content": "Continue your diagnosis."})
-                self._persist()
+        runtime = ConversationRuntime(self, self.messages, self._persist)
 
-            while True:
-                raw = stream_response(self.messages, OPUS, "Failure:", _RED, hide_fn_calls=True)
-                self.messages.append({"role": "assistant", "content": raw})
-                self._persist()
+        def on_module_result(module_result: dict) -> dict:
+            module_result["failure_conversation_id"] = self.failure_conversation_id
+            return module_result
 
-                module_result = maybe_dispatch_module_call(self, raw, include_called_module=True)
-                if module_result:
-                    module_result["failure_conversation_id"] = self.failure_conversation_id
-                    self._persist()
-                    return module_result
-                if contains_function_call_markup(raw):
-                    print_error(
-                        "Malformed function call:",
-                        "Ignored XML call markup because it was not a single valid top-level call.",
-                    )
+        def on_assistant_text(raw: str) -> dict | str:
+            if raw.lower() == "done":
+                return {"output": "Failure diagnosis complete."}
+            return "Continue your diagnosis."
 
-                if raw.lower() == "done":
-                    break
+        result = runtime.run_autonomous_loop(
+            model=OPUS,
+            label="Failure:",
+            label_color=_RED,
+            hide_fn_calls=True,
+            include_called_module=True,
+            ensure_user_turn_if_needed="Continue your diagnosis.",
+            continue_user_text=None,
+            on_module_result=on_module_result,
+            on_assistant_text=on_assistant_text,
+            pause_module_name="failure",
+            pause_conversation_key="failure_conversation_id",
+            pause_conversation_id=self.failure_conversation_id,
+        )
 
-                self.messages.append({"role": "user", "content": "Continue your diagnosis."})
-                self._persist()
-
-            return self.complete("Failure diagnosis complete.")
-        except ClaudeRateLimitPause as e:
-            payload = {
-                "signal": "WAIT_FOR_USER_INPUT",
-                "wait_for_user_input": True,
-                "message": "Claude rate limit hit in failure module. Wait a few minutes, then tell me to continue.",
-                "failure_conversation_id": self.failure_conversation_id,
-                "error": str(e),
-            }
-            self._persist()
-            return self.complete(json.dumps(payload, indent=2))
-        except Exception as e:
-            return self.fail(f"Failure module error: {e}")
+        if "error" in result:
+            return self.fail(f"Failure module error: {result['error']}")
+        return result
 
     def run(self, data) -> dict:
-        error = data["input"]
+        user_input = data["input"]
+        manual = data.get("manual", False)
 
-        with open(trace_path()) as f:
-            trace = json.load(f)
+        trace_content = ""
+        try:
+            with open(trace_path()) as f:
+                trace = json.load(f)
+            trace_content = json.dumps(trace, indent=2)
+        except (FileNotFoundError, json.JSONDecodeError):
+            trace_content = "(no trace available)"
+
         modules_json = json.dumps(self.registry, indent=2)
         system_prompt = load_system_prompt("failure.md", {"AVAILABLE_MODULES_JSON": modules_json})
 
+        if manual:
+            user_message = (
+                f"I need help diagnosing/fixing the following:\n{user_input}"
+                f"\n\nExecution trace for context:\n{trace_content}"
+            )
+            label = "\n[Failure module activated — analyzing request...]\n"
+        else:
+            user_message = (
+                f"A failure occurred:\n{user_input}"
+                f"\n\nExecution trace:\n{trace_content}"
+            )
+            label = "\n[Failure module activated — diagnosing...]\n"
+
         self.messages = [
             {"role": "system", "content": system_prompt},
-            {"role": "user", "content": f"A failure occurred:\n{error}\n\nExecution trace:\n{json.dumps(trace, indent=2)}"}
+            {"role": "user", "content": user_message}
         ]
         self.failure_conversation_id = self.store.next_root_id()
         self._persist()
 
-        print_error("\n[Failure module activated — diagnosing...]\n")
+        print_error(label)
         return self._loop()
 
     def resume(self, result) -> dict:
@@ -126,6 +142,12 @@ class FailureModule(Module):
             ids = self.store.list_ids()
             if ids:
                 self.failure_conversation_id = ids[-1]
+
+        if result.get("_resume"):
+            user_input = (result.get("resume_input") or "").strip() or "Continue your diagnosis."
+            self.messages.append({"role": "user", "content": user_input})
+            self._persist()
+            return self._loop()
 
         called_module = result.get("called_module", "module")
         self.messages.append(

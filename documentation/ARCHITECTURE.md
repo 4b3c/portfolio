@@ -1,40 +1,57 @@
 # Architecture
 
-Zipper is a modular runtime that executes agent tools in a tree-shaped trace.
+Zipper executes tools in a tree-shaped trace and resumes parent tools as children complete.
 
-## Core Runtime
+## Entry Points
 
-- Entry point: `zipper.py`
-- Tool registry: `tools/__init__.py`
-- Base tool contract: `tools/tool.py`
+- `zipper.py run()`: starts a new session and assistant root.
+- `zipper.py restart_run()`: resumes an active incomplete trace after process restart.
 
-`zipper.py` runs a loop with two result shapes:
+## Core Runtime Objects
+
+- Tool registry: `tools/__init__.py` (`TOOLS`, `TOOL_DESCRIPTIONS`)
+- Base contract: `tools/tool.py` (`run`, optional `resume`)
+- Main loop: `zipper.py::main_loop(...)`
+
+## Main Loop Protocol
+
+Each tool result must be one of:
 
 - Tool call: `{"tool": "<name>", "input": ...}`
 - Completion: `{"output": ...}`
 
-When a tool call is returned:
+Behavior:
 
-1. A child trace node is created under the current node.
-2. The target tool is instantiated from the registry.
-3. The tool `run(...)` method is invoked.
+1. Tool call creates a child trace node under current node.
+2. Runtime instantiates target tool and invokes `run(...)`.
+3. Completion writes `output` to current node.
+4. Runtime pops stack and calls parent tool `resume(...)`.
 
-When output is returned:
-
-1. Output is written to the current trace node.
-2. Control returns to the parent tool via `resume(...)`.
-
-If an exception occurs, runtime routes to the `failure` tool unless already in failure handling.
+If payload is invalid or a tool is missing, runtime routes to `failure`.
 
 ## Trace Model
 
-Each trace node includes:
+Trace is stored as JSON tree at `data/sessions/<session_id>/trace.json`.
+
+Node fields:
 
 - `id`
 - `tool`
 - `input`
-- `called` (children)
-- optional conversation IDs (for tool-scoped transcripts)
+- `called` (child nodes)
 - optional `output`
+- optional conversation identifiers (`conversation_id`, `*_conversation_id`)
 
-Trace is persisted under the current session after each step.
+The runtime persists trace after each step.
+
+## Restart Resume Model
+
+`restart_run()`:
+
+1. Loads current session and trace.
+2. Finds deepest active path (nodes without `output`).
+3. Marks deepest node (restart call) complete.
+4. Rebuilds tool stack for ancestors.
+5. Resumes parent tool with `{"output": "Process restarted successfully.", "called_tool": "restart"}` plus collected conversation IDs.
+
+If no active path exists, it loads the latest assistant conversation ID (if available) and starts a fresh assistant root within the same session.

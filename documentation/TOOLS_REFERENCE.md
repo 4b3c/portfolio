@@ -1,51 +1,54 @@
 # Tools Reference
 
-Current tool registry is defined in `tools/__init__.py`.
+Tool registry is defined in `tools/__init__.py`.
 
-## Core Orchestration
+## Conversational Tools
 
-- `assistant`: Primary user-facing agent loop.
-- `planner`: Creates and updates implementation plans.
-- `reason`: Deep reasoning loop before action.
-- `failure`: Diagnoses and recovers from runtime failures.
-- `restart`: Restarts process and resumes active trace.
+- `assistant`: primary interactive user loop, model routing, command handling, tool dispatch.
+- `planner`: create/list/view/update plans under `data/plans/` with persisted planner context.
+- `reason`: OPUS reasoning loop that can call tools before answering.
+- `failure`: OPUS diagnosis/recovery loop for runtime failures.
 
-## File and Code Operations
+## Core Tools
 
-- `file`: List/read/new/write file operations.
-- `code`: Targeted single-location search/replace edits.
-- `repo`: Code intelligence (`find`, `symbols`, `deps`, `impact`, docs actions).
+- `bash`: run shell command (`input` plain text, 30s timeout).
+- `file`: list/read/new/write file operations.
+- `code`: single-location exact search/replace edit (`path`, `old`, `new`).
+- `memory`: persistent key-value store (`get`, `set`, `delete`, `list`).
+- `tool_docs`: tool doc lookup/check mode for tool selection guardrails.
+- `restart`: process restart via `os.execv` and `zipper.py restart`.
 
-## Execution and External Access
+## Coding Tools
 
-- `bash`: Shell command execution with timeout.
-- `http`: HTTP requests with structured response payload.
-- `search`: Web search utility.
+- `repo`: code intelligence and documentation helpers.
+  - `find`, `symbols`, `deps`, `impact`
+  - `docs_list`, `docs_read`, `docs_find`
+- `stats`: markdown code statistics report (also saved to `state/stats.md`).
 
-## Utility Tools
+## Other Tools
 
-- `memory`: Persistent key-value memory.
-- `summarize`: Condenses long text.
-- `tool_docs`: Tool documentation and suitability checks.
-  - lookup mode input: `{"mode":"lookup","tool":"repo"}`
-  - check mode input: `{"mode":"check","query":"what tools for coding"}`
+- `search`: Brave Search API query (`BRAVE_API_KEY` required).
+- `http`: HTTP client tool with structured request/response payload.
+- `summarize`: summarize long text using summarizer prompt.
 
-## Tool Contract
+## Tool Input/Output Contract
 
-All tools inherit from `Tool` and implement:
+Base helpers live in `tools/tool.py`.
 
-- `run(data) -> dict`
-- optional `resume(result) -> dict`
+Input conventions:
 
-### Standard Input Format
+- text tools read `data["input"]` via `input_text(...)`
+- structured tools parse `data["input"]` via `input_json(...)`
 
-- Runtime always passes tool input through `data["input"]`.
-- Tools should read input using base helpers in `tools/tool.py`:
-  - `input_text(data)` for plain string inputs.
-  - `input_json(data, fallback=...)` for structured inputs.
-- Function-call XML parameters are converted to a JSON string before tool execution.
+Output conventions:
 
-Tool results must return either:
+- call another tool: `{"tool": "<name>", "input": ...}`
+- return result: `{"output": ...}`
 
-- `{"tool": "...", "input": ...}` to call another tool
-- `{"output": ...}` to complete
+## Tool-Docs Enforcement
+
+`assistant`, `planner`, `reason`, and `failure` enforce non-core tool documentation requirements via `enforce_tool_docs_requirement(...)`:
+
+- Core tools (`bash`, `file`, `code`, `memory`, `tool_docs`, `restart`) can be called directly.
+- Non-core tools require a prior `tool_docs` lookup for that tool.
+- Category/comparison requests are expected to use `tool_docs` check mode.

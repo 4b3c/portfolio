@@ -1,14 +1,14 @@
 # Conversation and Streaming
 
-This document covers how assistant-like tools run model loops and call tools.
+Zipper uses a shared conversation runtime for assistant-like tools.
 
-## Conversation Stores
+## Conversation Storage
 
-`utils/conversation.py` provides `ConversationStore(kind)` to:
+`utils/conversation.py::ConversationStore(kind)` manages IDs and files under:
 
-- list IDs for a tool kind
-- choose next root and branch IDs
-- save/load transcript files in the current session
+- `data/sessions/<session_id>/conversations/<conversation_id>.json`
+
+Conversation IDs are tool-prefixed (for example `assistant1`, `planner2.1`).
 
 Tools using conversation stores:
 
@@ -17,39 +17,47 @@ Tools using conversation stores:
 - `reason`
 - `failure`
 
-## Tool Calls
+## Shared Runtime
 
-Tool invocation uses XML blocks:
+`ConversationRuntime` provides:
 
-```xml
-<function_calls>
-<invoke name="tool_name">
-<parameter name="param">value</parameter>
-</invoke>
-</function_calls>
-```
+- `run_turn(...)`: one streamed model turn + optional tool dispatch.
+- `run_interactive_loop(...)`: assistant-style user-interactive loop.
+- `run_autonomous_loop(...)`: planner/reason/failure autonomous loops.
 
-Parsing and dispatch is centralized in `utils/function_calls.py`.
+## Function-Call Parsing
+
+Function calls are XML blocks parsed by `utils/function_calls.py`.
+
+Rules enforced by parser/runtime:
+
+- Exactly one top-level `<invoke ...>` inside `<function_calls>`.
+- Block must be final non-whitespace content.
+- Malformed call markup is ignored as a tool call (and surfaced in terminal).
+- Only first completed function-call block is kept when returned by model output.
 
 ## Streaming Behavior
 
-`utils/colors.LineStream` handles token streaming and terminal formatting.
+`utils/colors.LineStream` handles token streaming.
 
-Important behavior:
+- Function-call XML can be hidden while streaming.
+- Streaming may stop after first completed call block.
+- ESC interrupt support is provided by `InterruptibleStream`.
 
-- Function call XML can be hidden from terminal output.
-- Streaming stops after the first completed function call block.
-- Malformed XML remains visible as an error path.
+## Pause/Wait Signals
 
-`utils/claude.call_claude(...)` returns text truncated to the first valid completed call when present.
+Conversation runtime returns structured wait payloads when:
 
-## Auto Compaction
+- Anthropic rate limit/overload occurs.
+- User interrupts streaming with ESC.
 
-Assistant compacts long conversations using `assistant_compact.md`.
+Format includes:
 
-Compaction:
+- `signal: "WAIT_FOR_USER_INPUT"`
+- `wait_for_user_input: true`
+- message text and optional conversation key/id
 
-1. Summarizes relevant context.
-2. Drops stale/off-track details.
-3. Creates a new branch conversation ID.
-4. Continues from compacted context.
+Assistant resume behavior:
+
+- If user replies with continue-style input (`continue`, `resume`, etc.) and payload indicates rate limit, assistant resumes the paused module with `_resume` and preserved conversation IDs.
+- Otherwise assistant treats user input as a normal new turn.

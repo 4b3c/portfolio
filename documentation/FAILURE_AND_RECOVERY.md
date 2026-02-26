@@ -1,48 +1,41 @@
 # Failure and Recovery
 
-Failure handling is designed to keep the runtime alive and resumable.
+Zipper has two recovery paths: runtime exception routing and explicit process restart.
 
 ## Failure Tool
 
-`tools/failure.py` runs an OPUS-guided diagnosis loop and can call other tools.
+Implementation: `tools/conversational/failure.py`
 
-It persists:
+Behavior:
 
-- conversation transcript (`conversations/failure*.json`)
-- resume state (`state/failure_state.json`)
+- Runs an OPUS autonomous diagnosis loop.
+- Includes current trace JSON in initial user context.
+- Persists state to `state/failure_state.json`.
+- Persists transcript to `conversations/failure*.json`.
+- Can be invoked automatically (`manual=False`) or manually (`manual=True`).
 
-## Main Loop Error Routing
+## Runtime Exception Routing
 
-`zipper.py` catches runtime exceptions in `main_loop(...)` and routes to:
+`zipper.py::main_loop(...)` wraps each step in try/except.
 
-- `{"tool": "failure", "input": "<error>"}`.
+On exception:
 
-If failure itself errors repeatedly, runtime writes an error output and exits the loop safely.
+- Routes to `{"tool": "failure", "input": "Main loop exception: ...", "manual": False}`.
+- If already in failure handling and another exception occurs, runtime writes error output on current node and exits loop to avoid recursion.
 
-## Restart Flow
+## Restart Tool and Resume
 
-`restart` tool performs `os.execv(...)` and process restarts with `zipper.py restart`.
+`tools/core/restart.py` calls `os.execv(...)` to replace the running process with:
 
-`restart_run()`:
+- `python zipper.py restart`
 
-1. Loads active session trace.
-2. Finds deepest active path.
-3. Marks restart node complete.
-4. Rebuilds tool stack.
-5. Resumes parent tool with restart output.
+`restart_run()` then resumes the active trace path instead of starting from scratch.
 
-Conversation IDs on the active path are rehydrated into resume payload so tools can reload the correct transcript.
+## Wait-For-User Control Signals
 
-## Rate Limit Pause Behavior
+`reason`, `planner`, and `failure` can return wait payload JSON via conversation runtime.
 
-`utils/claude.py` raises a pause signal for Anthropic rate-limit/overload errors.
+Assistant detects these payloads in `resume(...)` and pauses for user input before deciding whether to:
 
-Assistant behavior:
-
-- prints a pause message
-- waits for user input before continuing
-
-Reason/planner/failure behavior:
-
-- return `WAIT_FOR_USER_INPUT` payload to assistant
-- assistant pauses and waits for user direction
+- resume paused tool (`_resume` path), or
+- continue normal assistant conversation.

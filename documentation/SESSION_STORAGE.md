@@ -1,33 +1,32 @@
 # Session Storage
 
-Zipper stores runtime data by session under `data/sessions/<session_id>/`.
+Session data is rooted at `data/sessions/<session_id>/`.
 
-## Layout
+## Session Layout
 
-- `trace.json`: Full execution tree for the session.
-- `conversations/`: Agent conversation logs (`assistant*`, `planner*`, `reason*`, `failure*`).
-- `state/`: Per-tool resume state files.
-- `versions/`: Zip snapshots created on start and restart.
+- `trace.json`: execution tree for the runtime loop.
+- `conversations/`: per-tool transcripts (`assistant*`, `planner*`, `reason*`, `failure*`).
+- `state/`: resumable tool state (`planner_state.json`, `reason_state.json`, `failure_state.json`, `stats.md`, etc.).
+- `versions/`: zip snapshots created at start/restart.
 
-Global helper file:
+Global files:
 
-- `data/current_session.json`: active session ID.
+- `data/current_session.json`: active session pointer.
+- `data/memory.json`: cross-session key-value memory store.
 
-## Conversation Naming
+## Conversation IDs
 
-Conversation IDs are tool-prefixed:
+`ConversationStore` naming pattern:
 
-- `assistant1`, `assistant1.1`, ...
-- `planner1`, `planner1.1`, ...
-- `reason1`, ...
-- `failure1`, ...
+- roots: `<kind><n>` (for example `assistant1`)
+- branches: `<kind><n>.<m>` (for example `assistant1.2`)
 
-Suffixes like `.1`, `.2` are compacted branches.
+Branch IDs are used by assistant compaction and can also appear in resumed flows.
 
-## Snapshots
+## Snapshot Behavior
 
-On `run()` and `restart_run()`, Zipper creates a snapshot zip in:
+`create_session_version_snapshot(reason, session_id)` creates zip archives under:
 
-- `data/sessions/<session_id>/versions/`
+- `data/sessions/<session_id>/versions/<timestamp>_<reason>.zip`
 
-This captures project state for rollback/debugging context while excluding heavy runtime folders.
+Snapshot excludes heavy/runtime directories including `.venv`, `node_modules`, hidden directories, and `data/sessions` to avoid recursive archive growth.

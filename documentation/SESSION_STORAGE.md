@@ -6,7 +6,7 @@ Zipper stores runtime data by session under `data/sessions/<session_id>/`.
 
 - `trace.json`: Full execution tree for the session.
 - `conversations/`: Agent conversation logs (`assistant*`, `planner*`, `reason*`, `failure*`).
-- `state/`: Per-module resume state files.
+- `state/`: Per-tool resume state files.
 - `versions/`: Zip snapshots created on start and restart.
 
 Global helper file:
@@ -15,7 +15,7 @@ Global helper file:
 
 ## Conversation Naming
 
-Conversation IDs are module-prefixed:
+Conversation IDs are tool-prefixed:
 
 - `assistant1`, `assistant1.1`, ...
 - `planner1`, `planner1.1`, ...

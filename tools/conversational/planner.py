@@ -2,7 +2,7 @@ import json
 import os
 import re
 from datetime import datetime
-from modules.module import Module
+from tools.tool import Tool
 from utils.claude import OPUS
 from utils.colors import print_state, _MAGENTA
 from utils.conversation import (
@@ -59,13 +59,13 @@ def load_state():
         return json.load(f)
 
 
-class PlannerModule(Module):
+class PlannerTool(Tool):
     """Create and manage plans with persisted planner conversations.
 
     Input contract: `data["input"]` is a JSON object/string with `action`
     in {'create','view','list','update'}.
     - create: requires 'objective', optional 'name'/'context'; may gather focused
-      context via module calls, writes `data/plans/<short-name>/PLAN.md`, then
+      context via tool calls, writes `data/plans/<short-name>/PLAN.md`, then
       returns WAIT_FOR_USER_INPUT.
     - view: requires 'plan'.
     - update: requires 'plan', supports status/notes.
@@ -107,8 +107,8 @@ class PlannerModule(Module):
             except FileNotFoundError:
                 return self.fail("Planner state not found; cannot resume.")
 
-        called_module = result.get("called_module", "module")
-        self.messages.append({"role": "user", "content": f"[{called_module} output]: {result['output']}"})
+        called_tool = result.get("called_tool", "tool")
+        self.messages.append({"role": "user", "content": f"[{called_tool} output]: {result['output']}"})
         self._persist()
         return self._create_loop()
 
@@ -129,11 +129,11 @@ class PlannerModule(Module):
         if context:
             user_prompt += f"\n\nContext:\n{context}"
 
-        modules_json = json.dumps({k: v for k, v in self.registry.items() if k != "planner"}, indent=2)
+        tools_json = json.dumps({k: v for k, v in self.registry.items() if k != "planner"}, indent=2)
         self.messages = [
             {
                 "role": "system",
-                "content": load_system_prompt("planner_create.md", {"AVAILABLE_MODULES_JSON": modules_json}),
+                "content": load_system_prompt("planner_create.md", {"AVAILABLE_TOOLS_JSON": tools_json}),
             },
             {"role": "user", "content": user_prompt},
         ]
@@ -142,7 +142,7 @@ class PlannerModule(Module):
             "objective": objective,
             "short_name": short_name,
             "plan_dir": plan_dir,
-            "module_calls": 0,
+            "tool_calls": 0,
             "planner_conversation_id": self.planner_conversation_id,
         }
         self._persist()
@@ -152,22 +152,22 @@ class PlannerModule(Module):
     def _create_loop(self) -> dict:
         runtime = ConversationRuntime(self, self.messages, self._persist)
 
-        def on_module_result(module_result: dict) -> dict:
-            call_count = int(self.pending_plan.get("module_calls", 0))
+        def on_tool_result(tool_result: dict) -> dict:
+            call_count = int(self.pending_plan.get("tool_calls", 0))
             if call_count >= MAX_PLANNER_MODULE_CALLS:
-                print_state("[Planner] Module call budget reached; forcing plan finalization.")
+                print_state("[Planner] Tool call budget reached; forcing plan finalization.")
                 return {
                     "_continue_loop": True,
                     "user_message": (
-                        "Stop calling modules. Use the context already gathered and output the final "
+                        "Stop calling tools. Use the context already gathered and output the final "
                         "plan markdown now."
                     ),
                 }
-            self.pending_plan["module_calls"] = call_count + 1
-            print_state(f"[Planner] Gathering context via module: {module_result.get('module')}")
-            module_result["planner_conversation_id"] = self.planner_conversation_id
+            self.pending_plan["tool_calls"] = call_count + 1
+            print_state(f"[Planner] Gathering context via tool: {tool_result.get('tool')}")
+            tool_result["planner_conversation_id"] = self.planner_conversation_id
             self._persist()
-            return module_result
+            return tool_result
 
         def on_assistant_text(raw: str) -> dict:
             print_state("[Planner] Finalizing plan document.")
@@ -180,13 +180,13 @@ class PlannerModule(Module):
             hide_fn_calls=True,
             timeout=PLANNER_MODEL_TIMEOUT_SECONDS,
             max_tokens=PLANNER_MAX_TOKENS_PER_CALL,
-            include_called_module=True,
+            include_called_tool=True,
             max_turns=PLANNER_MAX_TURNS,
             ensure_user_turn_if_needed="Continue planning.",
             continue_user_text=None,
-            on_module_result=on_module_result,
+            on_tool_result=on_tool_result,
             on_assistant_text=on_assistant_text,
-            pause_module_name="planner",
+            pause_tool_name="planner",
             pause_conversation_key="planner_conversation_id",
             pause_conversation_id=self.planner_conversation_id,
         )

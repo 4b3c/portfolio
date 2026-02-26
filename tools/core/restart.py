@@ -1,11 +1,11 @@
 import os
 import sys
 import time
-from modules.module import Module
+from tools.tool import Tool
 from utils.colors import print_state
 
 
-class RestartModule(Module):
+class RestartTool(Tool):
     """Restart the Zipper process so code changes take effect.
 
     Input contract: ignores `data["input"]` (no input required).

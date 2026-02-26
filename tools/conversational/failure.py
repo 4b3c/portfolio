@@ -1,6 +1,6 @@
 import json
 import os
-from modules.module import Module
+from tools.tool import Tool
 from utils.claude import OPUS
 from utils.colors import print_error, _RED
 from utils.conversation import (
@@ -33,14 +33,14 @@ def load_state():
     return payload
 
 
-class FailureModule(Module):
-    """Diagnose runtime failures from the active session trace and recover via module calls.
+class FailureTool(Tool):
+    """Diagnose runtime failures from the active session trace and recover via tool calls.
 
     Runs an OPUS-guided loop with persisted conversation/state under the current
-    session so diagnosis can resume after nested module calls or restarts.
+    session so diagnosis can resume after nested tool calls or restarts.
 
     Can be invoked manually with a description of what to diagnose or fix,
-    or auto-triggered with an error message from a failed module.
+    or auto-triggered with an error message from a failed tool.
 
     Input contract: `data["input"]` is a plain text string describing the issue.
     Can be auto-triggered by runtime errors or called manually.
@@ -60,9 +60,9 @@ class FailureModule(Module):
     def _loop(self) -> dict:
         runtime = ConversationRuntime(self, self.messages, self._persist)
 
-        def on_module_result(module_result: dict) -> dict:
-            module_result["failure_conversation_id"] = self.failure_conversation_id
-            return module_result
+        def on_tool_result(tool_result: dict) -> dict:
+            tool_result["failure_conversation_id"] = self.failure_conversation_id
+            return tool_result
 
         def on_assistant_text(raw: str) -> dict | str:
             if raw.lower() == "done":
@@ -74,18 +74,18 @@ class FailureModule(Module):
             label="Failure:",
             label_color=_RED,
             hide_fn_calls=True,
-            include_called_module=True,
+            include_called_tool=True,
             ensure_user_turn_if_needed="Continue your diagnosis.",
             continue_user_text=None,
-            on_module_result=on_module_result,
+            on_tool_result=on_tool_result,
             on_assistant_text=on_assistant_text,
-            pause_module_name="failure",
+            pause_tool_name="failure",
             pause_conversation_key="failure_conversation_id",
             pause_conversation_id=self.failure_conversation_id,
         )
 
         if "error" in result:
-            return self.fail(f"Failure module error: {result['error']}")
+            return self.fail(f"Failure tool error: {result['error']}")
         return result
 
     def run(self, data) -> dict:
@@ -100,21 +100,21 @@ class FailureModule(Module):
         except (FileNotFoundError, json.JSONDecodeError):
             trace_content = "(no trace available)"
 
-        modules_json = json.dumps(self.registry, indent=2)
-        system_prompt = load_system_prompt("failure.md", {"AVAILABLE_MODULES_JSON": modules_json})
+        tools_json = json.dumps(self.registry, indent=2)
+        system_prompt = load_system_prompt("failure.md", {"AVAILABLE_TOOLS_JSON": tools_json})
 
         if manual:
             user_message = (
                 f"I need help diagnosing/fixing the following:\n{user_input}"
                 f"\n\nExecution trace for context:\n{trace_content}"
             )
-            label = "\n[Failure module activated — analyzing request...]\n"
+            label = "\n[Failure tool activated — analyzing request...]\n"
         else:
             user_message = (
                 f"A failure occurred:\n{user_input}"
                 f"\n\nExecution trace:\n{trace_content}"
             )
-            label = "\n[Failure module activated — diagnosing...]\n"
+            label = "\n[Failure tool activated — diagnosing...]\n"
 
         self.messages = [
             {"role": "system", "content": system_prompt},
@@ -149,12 +149,12 @@ class FailureModule(Module):
             self._persist()
             return self._loop()
 
-        called_module = result.get("called_module", "module")
+        called_tool = result.get("called_tool", "tool")
         self.messages.append(
             {
                 "role": "user",
                 "content": (
-                    f"[TOOL OUTPUT - failure ran {called_module}]\n"
+                    f"[TOOL OUTPUT - failure ran {called_tool}]\n"
                     f"{result['output']}"
                 ),
             }

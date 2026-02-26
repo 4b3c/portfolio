@@ -1,8 +1,8 @@
-from modules.module import Module
+from tools.tool import Tool
 from utils.claude import call_claude
 from utils.prompts import load_system_prompt
 
-class SummarizeModule(Module):
+class SummarizeTool(Tool):
     """Condense long text into a concise summary.
 
     Input contract: `data["input"]` is a plain text string to summarize.

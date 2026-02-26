@@ -2,9 +2,9 @@
 
 Failure handling is designed to keep the runtime alive and resumable.
 
-## Failure Module
+## Failure Tool
 
-`modules/failure.py` runs an OPUS-guided diagnosis loop and can call other modules.
+`tools/failure.py` runs an OPUS-guided diagnosis loop and can call other tools.
 
 It persists:
 
@@ -15,23 +15,23 @@ It persists:
 
 `zipper.py` catches runtime exceptions in `main_loop(...)` and routes to:
 
-- `{"module": "failure", "input": "<error>"}`.
+- `{"tool": "failure", "input": "<error>"}`.
 
 If failure itself errors repeatedly, runtime writes an error output and exits the loop safely.
 
 ## Restart Flow
 
-`restart` module performs `os.execv(...)` and process restarts with `zipper.py restart`.
+`restart` tool performs `os.execv(...)` and process restarts with `zipper.py restart`.
 
 `restart_run()`:
 
 1. Loads active session trace.
 2. Finds deepest active path.
 3. Marks restart node complete.
-4. Rebuilds module stack.
-5. Resumes parent module with restart output.
+4. Rebuilds tool stack.
+5. Resumes parent tool with restart output.
 
-Conversation IDs on the active path are rehydrated into resume payload so modules can reload the correct transcript.
+Conversation IDs on the active path are rehydrated into resume payload so tools can reload the correct transcript.
 
 ## Rate Limit Pause Behavior
 

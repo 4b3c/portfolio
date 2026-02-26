@@ -3,7 +3,7 @@ import re
 
 CLOSE_FUNCTION_CALL_TAG = "</function_calls>"
 OPEN_FUNCTION_CALL_TAG = "<function_calls>"
-MODULE_NAME_RE = re.compile(r"^[A-Za-z_]\w*$")
+TOOL_NAME_RE = re.compile(r"^[A-Za-z_]\w*$")
 PARAM_NAME_RE = re.compile(r"^[A-Za-z_]\w*$")
 
 FUNCTION_CALL_BLOCK_RE = re.compile(
@@ -25,7 +25,7 @@ def _find_tag_tokens(text: str, tag_name: str):
 
 def _find_callable_block_at_end(text: str):
     """
-    Return (start, end, module_name, invoke_body) for a valid top-level function call
+    Return (start, end, tool_name, invoke_body) for a valid top-level function call
     block that is the final non-whitespace content in text.
     Nested tags inside the block are allowed as content as long as the outer
     block is balanced and valid.
@@ -58,10 +58,10 @@ def _find_callable_block_at_end(text: str):
         match = FUNCTION_CALL_BLOCK_RE.match(block)
         if not match:
             continue
-        module_name = match.group(1).strip()
-        if not MODULE_NAME_RE.match(module_name):
+        tool_name = match.group(1).strip()
+        if not TOOL_NAME_RE.match(tool_name):
             continue
-        return (start, end, module_name, match.group(2))
+        return (start, end, tool_name, match.group(2))
 
     return None
 
@@ -144,13 +144,13 @@ def first_completed_function_call_prefix(text: str) -> str | None:
     return None
 
 
-def extract_module_call(text: str):
-    """Extract an XML-style module call from assistant text."""
+def extract_tool_call(text: str):
+    """Extract an XML-style tool call from assistant text."""
     block = _find_callable_block_at_end(text or "")
     if not block:
         return None
 
-    _, _, module_name, invoke_body = block
+    _, _, tool_name, invoke_body = block
     params = _parse_top_level_parameters(invoke_body)
     if params is None:
         return None
@@ -158,21 +158,21 @@ def extract_module_call(text: str):
         input_val = params["input"]
     else:
         input_val = json.dumps(params)
-    return {"module": module_name, "input": input_val}
+    return {"tool": tool_name, "input": input_val}
 
 
-def maybe_dispatch_module_call(caller, text: str, include_called_module: bool = False):
+def maybe_dispatch_tool_call(caller, text: str, include_called_tool: bool = False):
     """
-    Parse text for a module call and convert it to the standard module result payload.
-    Returns None if no module call is present.
+    Parse text for a tool call and convert it to the standard tool result payload.
+    Returns None if no tool call is present.
     """
-    parsed = extract_module_call(text)
+    parsed = extract_tool_call(text)
     if not parsed:
         return None
 
-    result = caller.call(parsed["module"], parsed.get("input", ""))
-    if include_called_module:
-        result["called_module"] = parsed["module"]
+    result = caller.call(parsed["tool"], parsed.get("input", ""))
+    if include_called_tool:
+        result["called_tool"] = parsed["tool"]
     return result
 
 

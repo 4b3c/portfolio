@@ -1,6 +1,6 @@
 import json
 import os
-from modules.module import Module
+from tools.tool import Tool
 
 MEMORY_PATH = "data/memory.json"
 
@@ -18,7 +18,7 @@ def save_memory(memory: dict):
         json.dump(memory, f, indent=2)
 
 
-class MemoryModule(Module):
+class MemoryTool(Tool):
     """Read or write persistent key-value memory across sessions.
 
     Input contract: `data["input"]` is a JSON object/string with `action`

@@ -2,9 +2,9 @@ import json
 import os
 import sys
 import uuid
-from modules.registry import MODULES, MODULE_DESCRIPTIONS
+from tools import TOOLS, TOOL_DESCRIPTIONS
 from utils.conversation import ConversationStore
-from utils.colors import print_error, print_module, print_state, print_user
+from utils.colors import print_error, print_tool, print_state, print_user
 from utils.session import create_session, create_session_version_snapshot, current_session_id, trace_path
 
 def save_trace(trace, path):
@@ -44,7 +44,7 @@ def _start_assistant_root(session_id: str, trace_file: str, user_input: str, con
     trace = []
     root_node = {
         "id": str(uuid.uuid4())[:12],
-        "module": "assistant",
+        "tool": "assistant",
         "input": None,
         "called": [],
         "session_id": session_id,
@@ -54,30 +54,30 @@ def _start_assistant_root(session_id: str, trace_file: str, user_input: str, con
     trace.append(root_node)
     save_trace(trace, trace_file)
 
-    module = MODULES["assistant"](MODULE_DESCRIPTIONS)
-    payload = {"module": "assistant", "input": user_input}
+    tool = TOOLS["assistant"](TOOL_DESCRIPTIONS)
+    payload = {"tool": "assistant", "input": user_input}
     if conversation_id:
         payload["conversation_id"] = conversation_id
-    result = module.run(payload)
-    stack = [(module, root_node)]
+    result = tool.run(payload)
+    stack = [(tool, root_node)]
     main_loop(trace, stack, root_node, result, trace_file)
 
 
 def main_loop(trace, stack, current_node, result, trace_file):
     while True:
         try:
-            if "module" in result:
+            if "tool" in result:
                 resume_existing = bool(result.get("_resume"))
                 node_input = result.get("input")
                 if resume_existing and result.get("resume_input"):
                     node_input = result.get("resume_input")
                 child_node = {
                     "id": str(uuid.uuid4())[:12],
-                    "module": result["module"],
+                    "tool": result["tool"],
                     "input": node_input,
                     "called": [],
                 }
-                # Preserve conversation identifiers for nested module sessions.
+                # Preserve conversation identifiers for nested tool sessions.
                 for key, value in result.items():
                     if _is_conversation_key(key) and isinstance(value, str):
                         child_node[key] = value
@@ -87,22 +87,22 @@ def main_loop(trace, stack, current_node, result, trace_file):
 
                 save_trace(trace, trace_file)
 
-                module_name = result["module"]
-                if module_name not in MODULES:
-                    error = f"Module '{module_name}' not found."
+                tool_name = result["tool"]
+                if tool_name not in TOOLS:
+                    error = f"Tool '{tool_name}' not found."
                     print_error("Error:", error)
-                    result = {"module": "failure", "input": error, "manual": False}
+                    result = {"tool": "failure", "input": error, "manual": False}
                     continue
 
-                new_module = MODULES[module_name](MODULE_DESCRIPTIONS)
+                new_tool = TOOLS[tool_name](TOOL_DESCRIPTIONS)
                 if resume_existing:
-                    print_module("Resuming module:", module_name, result.get("resume_input", "") or "")
-                    result = new_module.resume(result)
+                    print_tool("Resuming tool:", tool_name, result.get("resume_input", "") or "")
+                    result = new_tool.resume(result)
                 else:
-                    print_module("Running module:", module_name, result.get("input", "") or "")
-                    result = new_module.run(result)
-                module = new_module
-                stack.append((module, current_node))
+                    print_tool("Running tool:", tool_name, result.get("input", "") or "")
+                    result = new_tool.run(result)
+                tool = new_tool
+                stack.append((tool, current_node))
 
             elif "output" in result:
                 current_node["output"] = result["output"]
@@ -113,24 +113,24 @@ def main_loop(trace, stack, current_node, result, trace_file):
                 if not stack:
                     break
 
-                caller_module, current_node = stack[-1]
+                caller_tool, current_node = stack[-1]
                 output_preview = (result.get("output", "") or "").strip().split('\n')[0]
-                print_module("Resuming module:", current_node["module"], output_preview)
-                result = caller_module.resume(result)
+                print_tool("Resuming tool:", current_node["tool"], output_preview)
+                result = caller_tool.resume(result)
             else:
-                error = f"Invalid result payload: expected 'module' or 'output', got keys {list(result.keys())}"
+                error = f"Invalid result payload: expected 'tool' or 'output', got keys {list(result.keys())}"
                 print_error("Error:", error)
-                result = {"module": "failure", "input": error, "manual": False}
+                result = {"tool": "failure", "input": error, "manual": False}
 
         except Exception as e:
             error = f"Main loop exception: {e}"
             print_error("Error:", error)
             # Avoid recursive failure loop if failure itself crashes.
-            if result.get("module") == "failure" or current_node.get("module") == "failure":
+            if result.get("tool") == "failure" or current_node.get("tool") == "failure":
                 current_node["output"] = f"Error: {error}"
                 save_trace(trace, trace_file)
                 break
-            result = {"module": "failure", "input": error, "manual": False}
+            result = {"tool": "failure", "input": error, "manual": False}
 
 
 def run():
@@ -189,18 +189,18 @@ def restart_run():
     # Rebuild the stack for all ancestor nodes (everything above restart)
     stack = []
     for node in active_path[:-1]:
-        m = MODULES[node["module"]](MODULE_DESCRIPTIONS)
+        m = TOOLS[node["tool"]](TOOL_DESCRIPTIONS)
         stack.append((m, node))
 
-    # Resume the parent module with the restart output
+    # Resume the parent tool with the restart output
     current_node = active_path[-2]
     result = {
         "output": "Process restarted successfully.",
-        "called_module": "restart",
+        "called_tool": "restart",
     }
     result.update(_collect_conversation_ids(active_path))
 
-    print_module("Resuming module:", current_node['module'])
+    print_tool("Resuming tool:", current_node['tool'])
     result = stack[-1][0].resume(result)
 
     main_loop(trace, stack, current_node, result, trace_file)

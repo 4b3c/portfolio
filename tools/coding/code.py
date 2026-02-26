@@ -1,8 +1,8 @@
 import json
 import os
-from modules.module import Module
+from tools.tool import Tool
 
-class CodeModule(Module):
+class CodeTool(Tool):
     """Make targeted single-location edits using search/replace.
 
     Input contract: `data["input"]` is a JSON object/string with:

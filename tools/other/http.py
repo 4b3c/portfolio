@@ -1,8 +1,8 @@
 import json
 import requests
-from modules.module import Module
+from tools.tool import Tool
 
-class HttpModule(Module):
+class HttpTool(Tool):
     """Make HTTP requests and interact with APIs.
 
     Input contract: `data["input"]` is a JSON object/string with `method`, `url`,

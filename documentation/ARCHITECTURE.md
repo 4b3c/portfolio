@@ -1,40 +1,40 @@
 # Architecture
 
-Zipper is a modular runtime that executes agent modules in a tree-shaped trace.
+Zipper is a modular runtime that executes agent tools in a tree-shaped trace.
 
 ## Core Runtime
 
 - Entry point: `zipper.py`
-- Module registry: `modules/registry.py`
-- Base module contract: `modules/module.py`
+- Tool registry: `tools/__init__.py`
+- Base tool contract: `tools/tool.py`
 
 `zipper.py` runs a loop with two result shapes:
 
-- Module call: `{"module": "<name>", "input": ...}`
+- Tool call: `{"tool": "<name>", "input": ...}`
 - Completion: `{"output": ...}`
 
-When a module call is returned:
+When a tool call is returned:
 
 1. A child trace node is created under the current node.
-2. The target module is instantiated from the registry.
-3. The module `run(...)` method is invoked.
+2. The target tool is instantiated from the registry.
+3. The tool `run(...)` method is invoked.
 
 When output is returned:
 
 1. Output is written to the current trace node.
-2. Control returns to the parent module via `resume(...)`.
+2. Control returns to the parent tool via `resume(...)`.
 
-If an exception occurs, runtime routes to the `failure` module unless already in failure handling.
+If an exception occurs, runtime routes to the `failure` tool unless already in failure handling.
 
 ## Trace Model
 
 Each trace node includes:
 
 - `id`
-- `module`
+- `tool`
 - `input`
 - `called` (children)
-- optional conversation IDs (for module-scoped transcripts)
+- optional conversation IDs (for tool-scoped transcripts)
 - optional `output`
 
 Trace is persisted under the current session after each step.

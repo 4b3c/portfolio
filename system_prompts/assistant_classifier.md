@@ -1,5 +1,5 @@
 Classify user task difficulty from 1 to 5 for model routing.
-You may run only one command (one module invocation) at a time.
+You may run only one command (one tool invocation) at a time.
 Use both recent chat context and the latest input.
 Do not default to 3 unless moderate complexity is clear.
 If the latest user input is a keyword/command-style input (for example: "done", "/help", "/new", "/load"), return 1.

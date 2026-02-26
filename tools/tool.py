@@ -1,12 +1,12 @@
 import json
 
-class Module:
-    """Base class for all modules.
+class Tool:
+    """Base class for all tools.
 
-    Standard module input contract:
+    Standard tool input contract:
     - Runtime always passes payload as `data["input"]`.
-    - Use `input_text(...)` for plain-text modules.
-    - Use `input_json(...)` for structured modules.
+    - Use `input_text(...)` for plain-text tools.
+    - Use `input_json(...)` for structured tools.
     """
 
     def __init__(self, registry=None):
@@ -18,10 +18,10 @@ class Module:
     def resume(self, result) -> dict:
         return self.complete(result["output"])
     
-    def call(self, module, data):
+    def call(self, tool, data):
         if isinstance(data, dict):
             data = json.dumps(data)
-        return {"module": module, "input": data}
+        return {"tool": tool, "input": data}
 
     def input_text(self, data, *, default: str = "") -> str:
         raw = data.get("input", default)

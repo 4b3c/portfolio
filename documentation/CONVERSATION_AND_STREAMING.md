@@ -1,16 +1,16 @@
 # Conversation and Streaming
 
-This document covers how assistant-like modules run model loops and call tools.
+This document covers how assistant-like tools run model loops and call tools.
 
 ## Conversation Stores
 
 `utils/conversation.py` provides `ConversationStore(kind)` to:
 
-- list IDs for a module kind
+- list IDs for a tool kind
 - choose next root and branch IDs
 - save/load transcript files in the current session
 
-Modules using conversation stores:
+Tools using conversation stores:
 
 - `assistant`
 - `planner`
@@ -23,7 +23,7 @@ Tool invocation uses XML blocks:
 
 ```xml
 <function_calls>
-<invoke name="module_name">
+<invoke name="tool_name">
 <parameter name="param">value</parameter>
 </invoke>
 </function_calls>

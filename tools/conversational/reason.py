@@ -1,6 +1,6 @@
 import json
 import os
-from modules.module import Module
+from tools.tool import Tool
 from utils.claude import OPUS
 from utils.colors import print_error, print_state, _MAGENTA
 from utils.conversation import (
@@ -37,13 +37,13 @@ def clear_reason_state():
         os.remove(path)
 
 
-class ReasonModule(Module):
+class ReasonTool(Tool):
     """Reason deeply with OPUS before acting on complex tasks.
 
     Input contract: `data["input"]` is a plain text string (question/task).
     Maintains a session-scoped reason conversation
-    log so intermediate reasoning context is saved across module calls. Returns
-    either a direct answer or a single module-call payload for the main loop.
+    log so intermediate reasoning context is saved across tool calls. Returns
+    either a direct answer or a single tool-call payload for the main loop.
     """
 
     def __init__(self, registry=None):
@@ -54,8 +54,8 @@ class ReasonModule(Module):
 
     def run(self, data) -> dict:
         question = self.input_text(data)
-        modules_info = json.dumps({k: v for k, v in self.registry.items() if k != "reason"}, indent=2)
-        system = load_system_prompt("reason.md", {"AVAILABLE_MODULES_JSON": modules_info})
+        tools_info = json.dumps({k: v for k, v in self.registry.items() if k != "reason"}, indent=2)
+        system = load_system_prompt("reason.md", {"AVAILABLE_TOOLS_JSON": tools_info})
 
         self.reason_conversation_id = self.store.next_root_id()
         self.messages = [
@@ -74,8 +74,8 @@ class ReasonModule(Module):
             except FileNotFoundError:
                 return self.fail("Reason state not found; cannot resume.")
 
-        called_module = result.get("called_module", "module")
-        self.messages.append({"role": "user", "content": f"[{called_module} output]: {result['output']}"})
+        called_tool = result.get("called_tool", "tool")
+        self.messages.append({"role": "user", "content": f"[{called_tool} output]: {result['output']}"})
         self._persist()
         return self._loop()
 
@@ -89,26 +89,26 @@ class ReasonModule(Module):
         print_state("[Reason] Running OPUS reasoning...")
         runtime = ConversationRuntime(self, self.messages, self._persist)
 
-        def on_module_result(module_result: dict) -> dict:
-            print_state(f"[Reason] Calling module: {module_result.get('module')}")
-            module_result["called_module"] = module_result["module"]
-            module_result["reason_conversation_id"] = self.reason_conversation_id
-            return module_result
+        def on_tool_result(tool_result: dict) -> dict:
+            print_state(f"[Reason] Calling tool: {tool_result.get('tool')}")
+            tool_result["called_tool"] = tool_result["tool"]
+            tool_result["reason_conversation_id"] = self.reason_conversation_id
+            return tool_result
 
         result = runtime.run_autonomous_loop(
             model=OPUS,
             label="Reasoning:",
             label_color=_MAGENTA,
             hide_fn_calls=True,
-            include_called_module=False,
+            include_called_tool=False,
             continue_user_text=None,
-            on_module_result=on_module_result,
-            pause_module_name="reason",
+            on_tool_result=on_tool_result,
+            pause_tool_name="reason",
             pause_conversation_key="reason_conversation_id",
             pause_conversation_id=self.reason_conversation_id,
         )
 
-        if "module" in result:
+        if "tool" in result:
             return result
         if "error" in result:
             print_error("Reasoning error:", result["error"])

@@ -1,7 +1,7 @@
 import json
 import os
 import re
-from modules.module import Module
+from tools.tool import Tool
 from utils.claude import HAIKU, SONNET, OPUS, call_claude
 from utils.colors import print_user, print_error, print_state, print_info, _YELLOW, _CYAN
 from utils.conversation import (
@@ -45,7 +45,7 @@ LOW_SIGNAL_USER_INPUTS = {
 }
 
 
-class AssistantModule(Module):
+class AssistantTool(Tool):
     """Handles open-ended conversation and general task routing.
 
     Input contract: `data["input"]` is a plain text string (natural language).
@@ -399,13 +399,13 @@ class AssistantModule(Module):
         if not self.conversation_id:
             self.conversation_id = self.store.next_root_id()
         self._update_model_for_user_input(user_input)
-        modules_json = json.dumps({k: v for k, v in self.registry.items() if k != "assistant"}, indent=2)
+        tools_json = json.dumps({k: v for k, v in self.registry.items() if k != "assistant"}, indent=2)
         self.messages = [
             {
                 "role": "system",
                 "content": load_system_prompt(
                     "assistant.md",
-                    {"AVAILABLE_MODULES_JSON": modules_json},
+                    {"AVAILABLE_TOOLS_JSON": tools_json},
                 ),
             },
             {"role": "user", "content": user_input}
@@ -448,9 +448,9 @@ class AssistantModule(Module):
         self._persist()
         return "continue"
 
-    def _attach_conversation_to_module_result(self, module_result: dict) -> dict:
-        module_result["conversation_id"] = self.conversation_id
-        return module_result
+    def _attach_conversation_to_module_result(self, tool_result: dict) -> dict:
+        tool_result["conversation_id"] = self.conversation_id
+        return tool_result
 
     def conversation_loop(self) -> dict:
         runtime = ConversationRuntime(self, self.messages, self._persist)
@@ -460,10 +460,10 @@ class AssistantModule(Module):
             label_color=_YELLOW,
             fn_color=_CYAN,
             hide_fn_calls=True,
-            include_called_module=True,
+            include_called_tool=True,
             on_before_turn=self._maybe_auto_compact,
             on_user_input=self._ingest_user_input,
-            on_module_result=self._attach_conversation_to_module_result,
+            on_tool_result=self._attach_conversation_to_module_result,
             command_handler=self.handle_command,
             is_done_input=self._is_done_input,
             is_done_response=lambda raw: raw.lower() == "done",
@@ -501,7 +501,7 @@ class AssistantModule(Module):
 
     def resume(self, result) -> dict:
         self.conversation_id = result.get("conversation_id", self.conversation_id)
-        called_module = result.get("called_module", "module")
+        called_tool = result.get("called_tool", "tool")
         if not self.conversation_id:
             ids = self.store.list_ids()
             if ids:
@@ -517,7 +517,7 @@ class AssistantModule(Module):
             {
                 "role": "user",
                 "content": (
-                    f"[TOOL OUTPUT - assistant ran {called_module}]\n"
+                    f"[TOOL OUTPUT - assistant ran {called_tool}]\n"
                     f"{result['output']}"
                 ),
             }
@@ -526,16 +526,16 @@ class AssistantModule(Module):
         if wait_payload:
             self._persist()
             user_input = self._wait_for_user_input(
-                wait_payload.get("message", "Module requested user input before continuing.")
+                wait_payload.get("message", "Tool requested user input before continuing.")
             )
             if user_input is None:
                 return self.complete("Assistant session completed.")
             if should_resume_paused_module(user_input, wait_payload):
                 resume_payload = {
-                    "module": called_module,
+                    "tool": called_tool,
                     "_resume": True,
                     "resume_input": user_input,
-                    "called_module": called_module,
+                    "called_tool": called_tool,
                 }
                 for source in (result, wait_payload):
                     for key, value in source.items():

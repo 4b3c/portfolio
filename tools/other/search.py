@@ -2,10 +2,10 @@ import json
 import os
 import urllib.request
 import urllib.parse
-from modules.module import Module
+from tools.tool import Tool
 
 
-class SearchModule(Module):
+class SearchTool(Tool):
     """Search the web using Brave Search and return top results.
 
     Input contract:

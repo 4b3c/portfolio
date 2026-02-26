@@ -1,7 +1,7 @@
 import subprocess
-from modules.module import Module
+from tools.tool import Tool
 
-class BashModule(Module):
+class BashTool(Tool):
     """Run a shell command and return its output.
 
     Input contract: `data["input"]` is a plain text string (shell command).

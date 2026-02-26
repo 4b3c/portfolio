@@ -28,6 +28,6 @@ Keyword/command-style inputs (for example `done` or `/...`) bypass complex routi
 
 `utils/prompts.py` loads prompt files and applies replacement tokens like:
 
-- `{{AVAILABLE_MODULES_JSON}}`
+- `{{AVAILABLE_TOOLS_JSON}}`
 
-The runtime injects current module descriptions into prompts at load time.
+The runtime injects current tool descriptions into prompts at load time.

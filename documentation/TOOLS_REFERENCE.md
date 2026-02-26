@@ -1,6 +1,6 @@
-# Modules Reference
+# Tools Reference
 
-Current module registry is defined in `modules/registry.py`.
+Current tool registry is defined in `tools/__init__.py`.
 
 ## Core Orchestration
 
@@ -22,27 +22,27 @@ Current module registry is defined in `modules/registry.py`.
 - `http`: HTTP requests with structured response payload.
 - `search`: Web search utility.
 
-## Utility Modules
+## Utility Tools
 
 - `memory`: Persistent key-value memory.
 - `summarize`: Condenses long text.
 
-## Module Contract
+## Tool Contract
 
-All modules inherit from `Module` and implement:
+All tools inherit from `Tool` and implement:
 
 - `run(data) -> dict`
 - optional `resume(result) -> dict`
 
 ### Standard Input Format
 
-- Runtime always passes module input through `data["input"]`.
-- Modules should read input using base helpers in `modules/module.py`:
+- Runtime always passes tool input through `data["input"]`.
+- Tools should read input using base helpers in `tools/tool.py`:
   - `input_text(data)` for plain string inputs.
   - `input_json(data, fallback=...)` for structured inputs.
-- Function-call XML parameters are converted to a JSON string before module execution.
+- Function-call XML parameters are converted to a JSON string before tool execution.
 
-Module results must return either:
+Tool results must return either:
 
-- `{"module": "...", "input": ...}` to call another module
+- `{"tool": "...", "input": ...}` to call another tool
 - `{"output": ...}` to complete

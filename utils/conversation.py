@@ -8,7 +8,7 @@ import tty
 from typing import Callable
 from utils.claude import ClaudeRateLimitPause, call_claude
 from utils.colors import LineStream, stream_end, stream_label, print_error, print_state, print_user, _WHITE
-from utils.function_calls import contains_function_call_markup, maybe_dispatch_module_call
+from utils.function_calls import contains_function_call_markup, maybe_dispatch_tool_call
 from utils.session import conversations_dir
 
 WAIT_SIGNAL = "WAIT_FOR_USER_INPUT"
@@ -175,7 +175,7 @@ def should_resume_paused_module(user_input: str, wait_payload: dict | None) -> b
 
 
 def rate_limit_wait_payload(
-    module_name: str,
+    tool_name: str,
     *,
     conversation_key: str | None = None,
     conversation_id: str | None = None,
@@ -184,7 +184,7 @@ def rate_limit_wait_payload(
     payload = {
         "signal": WAIT_SIGNAL,
         "wait_for_user_input": True,
-        "message": f"Claude rate limit hit in {module_name} module. Wait a few minutes, then tell me to continue.",
+        "message": f"Claude rate limit hit in {tool_name} tool. Wait a few minutes, then tell me to continue.",
     }
     if conversation_key and conversation_id:
         payload[conversation_key] = conversation_id
@@ -194,7 +194,7 @@ def rate_limit_wait_payload(
 
 
 def user_interrupt_wait_payload(
-    module_name: str,
+    tool_name: str,
     *,
     conversation_key: str | None = None,
     conversation_id: str | None = None,
@@ -202,7 +202,7 @@ def user_interrupt_wait_payload(
     payload = {
         "signal": WAIT_SIGNAL,
         "wait_for_user_input": True,
-        "message": f"{module_name.capitalize()} output interrupted by user (ESC). Waiting for your next input.",
+        "message": f"{tool_name.capitalize()} output interrupted by user (ESC). Waiting for your next input.",
     }
     if conversation_key and conversation_id:
         payload[conversation_key] = conversation_id
@@ -241,7 +241,7 @@ def stream_response(
 
 
 class ConversationRuntime:
-    """Generalized conversation loop runtime for module-driven agents."""
+    """Generalized conversation loop runtime for tool-driven agents."""
 
     def __init__(
         self,
@@ -302,7 +302,7 @@ class ConversationRuntime:
         temperature: float = 0.2,
         timeout: float | None = None,
         max_tokens: int = 8096,
-        include_called_module: bool = False,
+        include_called_tool: bool = False,
     ) -> dict:
         self._sync_messages_from_caller()
         try:
@@ -323,9 +323,9 @@ class ConversationRuntime:
             return {"pause": "interrupt"}
 
         self.append("assistant", raw, persist=True)
-        module_result = maybe_dispatch_module_call(self.caller, raw, include_called_module=include_called_module)
-        if module_result:
-            return {"raw": raw, "module_result": module_result}
+        tool_result = maybe_dispatch_tool_call(self.caller, raw, include_called_tool=include_called_tool)
+        if tool_result:
+            return {"raw": raw, "tool_result": tool_result}
         if contains_function_call_markup(raw):
             print_error(
                 "Malformed function call:",
@@ -344,15 +344,15 @@ class ConversationRuntime:
         temperature: float = 0.2,
         timeout: float | None = None,
         max_tokens: int = 8096,
-        include_called_module: bool = False,
+        include_called_tool: bool = False,
         max_turns: int | None = None,
         ensure_user_turn_if_needed: str | None = None,
         continue_user_text: str | Callable[[str], str | None] | None = None,
-        on_module_result: Callable[[dict], dict | str | None] | None = None,
+        on_tool_result: Callable[[dict], dict | str | None] | None = None,
         on_assistant_text: Callable[[str], dict | str | None] | None = None,
         done_check: Callable[[str], bool] | None = None,
         done_output: str | None = None,
-        pause_module_name: str | None = None,
+        pause_tool_name: str | None = None,
         pause_conversation_key: str | None = None,
         pause_conversation_id: str | None = None,
     ) -> dict:
@@ -374,12 +374,12 @@ class ConversationRuntime:
                 temperature=temperature,
                 timeout=timeout,
                 max_tokens=max_tokens,
-                include_called_module=include_called_module,
+                include_called_tool=include_called_tool,
             )
 
             if turn.get("pause") == "rate_limit":
                 payload = rate_limit_wait_payload(
-                    pause_module_name or "module",
+                    pause_tool_name or "tool",
                     conversation_key=pause_conversation_key,
                     conversation_id=pause_conversation_id,
                     error=turn.get("error"),
@@ -388,16 +388,16 @@ class ConversationRuntime:
 
             if turn.get("pause") == "interrupt":
                 payload = user_interrupt_wait_payload(
-                    pause_module_name or "module",
+                    pause_tool_name or "tool",
                     conversation_key=pause_conversation_key,
                     conversation_id=pause_conversation_id,
                 )
                 return {"output": json.dumps(payload, indent=2)}
 
-            module_result = turn.get("module_result")
-            if module_result is not None:
-                if on_module_result:
-                    decision = on_module_result(module_result)
+            tool_result = turn.get("tool_result")
+            if tool_result is not None:
+                if on_tool_result:
+                    decision = on_tool_result(tool_result)
                     if isinstance(decision, dict) and decision.get("_continue_loop"):
                         user_message = decision.get("user_message")
                         if isinstance(user_message, str) and user_message.strip():
@@ -408,7 +408,7 @@ class ConversationRuntime:
                     if isinstance(decision, str):
                         self.append("user", decision, persist=True)
                         continue
-                return module_result
+                return tool_result
 
             raw = turn.get("raw", "")
             if on_assistant_text:
@@ -445,10 +445,10 @@ class ConversationRuntime:
         temperature: float = 0.2,
         timeout: float | None = None,
         max_tokens: int = 8096,
-        include_called_module: bool = True,
+        include_called_tool: bool = True,
         on_before_turn: Callable[[], None] | None = None,
         on_user_input: Callable[[str], str] | None = None,
-        on_module_result: Callable[[dict], dict] | None = None,
+        on_tool_result: Callable[[dict], dict] | None = None,
         command_handler: Callable[[str], bool] | None = None,
         is_done_input: Callable[[str], bool] | None = None,
         is_done_response: Callable[[str], bool] | None = None,
@@ -469,7 +469,7 @@ class ConversationRuntime:
                 temperature=temperature,
                 timeout=timeout,
                 max_tokens=max_tokens,
-                include_called_module=include_called_module,
+                include_called_tool=include_called_tool,
             )
 
             pause_type = turn.get("pause")
@@ -489,9 +489,9 @@ class ConversationRuntime:
                         return {"output": completion_output}
                 continue
 
-            module_result = turn.get("module_result")
-            if module_result is not None:
-                return on_module_result(module_result) if on_module_result else module_result
+            tool_result = turn.get("tool_result")
+            if tool_result is not None:
+                return on_tool_result(tool_result) if on_tool_result else tool_result
 
             raw = turn.get("raw", "")
             if is_done_response and is_done_response(raw):

@@ -206,8 +206,8 @@ def print_error(label: str, text: str = ""):
         print(f"{_RED}{_B}{label}{_R}")
 
 
-def print_module(action: str, name: str, detail: str = ""):
-    """Blue action label + bold module name + optional dim detail."""
+def print_tool(action: str, name: str, detail: str = ""):
+    """Blue action label + bold tool name + optional dim detail."""
     detail_str = f"{_R}{_DIM} {detail[:120]}{_R}" if detail else ""
     print(f"{_BLUE}{action} {_B}{name}{detail_str}{_R}")
 

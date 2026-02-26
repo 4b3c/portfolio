@@ -4,10 +4,10 @@ import ast
 import re
 from pathlib import Path
 from collections import defaultdict
-from modules.module import Module
+from tools.tool import Tool
 from utils.session import state_path
 
-class StatsModule(Module):
+class StatsTool(Tool):
     """Generate comprehensive code statistics for the current project.
 
     Input contract: ignores `data["input"]` (no input required).

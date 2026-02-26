@@ -2,7 +2,7 @@ import json
 import os
 import re
 import subprocess
-from modules.module import Module
+from tools.tool import Tool
 
 SOURCE_EXTENSIONS = {
     ".py",
@@ -40,17 +40,17 @@ DOC_TOPIC_ALIASES = {
     "session": "SESSION_STORAGE.md",
     "conversations": "CONVERSATION_AND_STREAMING.md",
     "streaming": "CONVERSATION_AND_STREAMING.md",
-    "modules": "MODULES_REFERENCE.md",
+    "tools": "TOOLS_REFERENCE.md",
     "prompts": "PROMPTS_AND_ROUTING.md",
     "routing": "PROMPTS_AND_ROUTING.md",
     "failure": "FAILURE_AND_RECOVERY.md",
     "recovery": "FAILURE_AND_RECOVERY.md",
-    "module_building": "MODULE_BUILDING.md",
-    "building": "MODULE_BUILDING.md",
+    "module_building": "TOOL_BUILDING.md",
+    "building": "TOOL_BUILDING.md",
 }
 
 
-class RepoModule(Module):
+class RepoTool(Tool):
     """Codebase intelligence and documentation lookup.
 
     Input contract: `data["input"]` is a JSON object/string with `action` in

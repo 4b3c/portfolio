@@ -3,18 +3,20 @@ import requests
 from modules.module import Module
 
 class HttpModule(Module):
-    """Make HTTP requests and interact with APIs. Input: JSON with 'method' (GET/POST/PUT/DELETE/PATCH), 'url', optional 'headers', 'body', 'params', 'auth', 'timeout'. Returns structured response with status, headers, and body."""
+    """Make HTTP requests and interact with APIs.
+
+    Input contract: `data["input"]` is a JSON object/string with `method`, `url`,
+    and optional `headers`, `body`, `params`, `auth`, `timeout`, `allow_redirects`.
+    Returns structured JSON with status, headers, URL, and body.
+    """
 
     def run(self, data) -> dict:
         try:
             # Parse input
-            if isinstance(data["input"], str):
-                try:
-                    request_data = json.loads(data["input"])
-                except json.JSONDecodeError:
-                    return self.fail("Input must be valid JSON with 'method' and 'url' fields")
-            else:
-                request_data = data["input"]
+            try:
+                request_data = self.input_json(data)
+            except json.JSONDecodeError:
+                return self.fail("Input must be valid JSON with 'method' and 'url' fields")
             
             # Validate required fields
             if "method" not in request_data or "url" not in request_data:

@@ -6,13 +6,18 @@ from modules.module import Module
 
 
 class SearchModule(Module):
-    """Searches the web using Brave Search and returns the top results. Input: a search query string or JSON with 'query' and optional 'limit' (default 5)."""
+    """Search the web using Brave Search and return top results.
+
+    Input contract:
+    - text mode: `data["input"]` is a plain query string
+    - JSON mode: `data["input"]` includes `query` and optional `limit` (default 5)
+    """
 
     def run(self, data) -> dict:
-        raw_input = data["input"]
+        raw_input = self.input_text(data)
 
         try:
-            params = json.loads(raw_input) if raw_input.strip().startswith("{") else {}
+            params = self.input_json(data, fallback={})
         except json.JSONDecodeError as e:
             return self.fail(f"Invalid JSON input: {e}")
 

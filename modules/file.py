@@ -10,18 +10,20 @@ SUMMARY_THRESHOLD = 1000
 class FileModule(Module):
     """Read, write, create, or list files on disk.
 
-    Input: JSON with 'action' in {'list','read','new','write'}, plus 'path' and
-    optional 'content'/'full'. 'list' walks the project tree (excluding hidden
-    dirs, __pycache__, and versions). 'read' summarizes large files unless
-    full=true. 'new' fails if the target exists. 'write' overwrites the target.
+    Input contract: `data["input"]` is a JSON object/string with `action` in
+    {'list','read','new','write'}, plus `path` and optional `content`/`full`.
+    In function-call XML, pass one parameter per field; runtime converts it to JSON.
+    'list' walks the project tree (excluding hidden dirs, __pycache__, and
+    versions). 'read' summarizes large files unless full=true. 'new' fails if
+    the target exists. 'write' overwrites the target.
     """
 
     def run(self, data) -> dict:
         try:
-            raw = data["input"]
-            params = json.loads(raw) if raw.strip().startswith("{") else {}
+            params = self.input_json(data, fallback={})
             action = params.get("action", "list")
-            path = os.path.realpath(os.path.expanduser(params["path"])) if "path" in params else None
+            raw_path = params.get("path")
+            path = os.path.realpath(os.path.expanduser(str(raw_path).strip())) if raw_path is not None else None
         except (json.JSONDecodeError, KeyError) as e:
             return self.fail(f"Invalid input: {e}")
 

@@ -8,7 +8,11 @@ from modules.module import Module
 from utils.session import state_path
 
 class StatsModule(Module):
-    """Generate comprehensive code statistics for the current project including lines of code, file counts, language breakdown, and git statistics. Returns a markdown report."""
+    """Generate comprehensive code statistics for the current project.
+
+    Input contract: ignores `data["input"]` (no input required).
+    Returns a markdown report with LOC, language, function, and git metrics.
+    """
 
     def run(self, data) -> dict:
         try:
@@ -157,8 +161,8 @@ class StatsModule(Module):
             for node in ast.walk(tree):
                 if isinstance(node, ast.FunctionDef):
                     func_name = node.name
-                    # Skip private/magic methods
-                    if not func_name.startswith('_'):
+                    # Skip magic methods (dunder methods like __init__)
+                    if not func_name.startswith('__'):
                         if func_name not in stats['functions']:
                             stats['functions'][func_name] = {'file': filepath, 'calls': 0}
                             stats['total_functions'] += 1

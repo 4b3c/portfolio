@@ -19,11 +19,15 @@ def save_memory(memory: dict):
 
 
 class MemoryModule(Module):
-    """Read or write persistent key-value memory across sessions. Input: JSON with 'action' (get/set/delete/list) and 'key'/'value' as needed."""
+    """Read or write persistent key-value memory across sessions.
+
+    Input contract: `data["input"]` is a JSON object/string with `action`
+    in {'get','set','delete','list'} and `key`/`value` fields as needed.
+    """
 
     def run(self, data) -> dict:
         try:
-            params = json.loads(data["input"])
+            params = self.input_json(data)
             action = params["action"]
         except (json.JSONDecodeError, KeyError) as e:
             return self.fail(f"Invalid input: {e}")

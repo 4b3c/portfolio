@@ -1,7 +1,13 @@
 import json
 
 class Module:
-    """Base class for all modules. Do not use directly."""
+    """Base class for all modules.
+
+    Standard module input contract:
+    - Runtime always passes payload as `data["input"]`.
+    - Use `input_text(...)` for plain-text modules.
+    - Use `input_json(...)` for structured modules.
+    """
 
     def __init__(self, registry=None):
         self.registry = registry or {}
@@ -16,6 +22,25 @@ class Module:
         if isinstance(data, dict):
             data = json.dumps(data)
         return {"module": module, "input": data}
+
+    def input_text(self, data, *, default: str = "") -> str:
+        raw = data.get("input", default)
+        if raw is None:
+            return default
+        return str(raw)
+
+    def input_json(self, data, *, fallback: dict | None = None) -> dict:
+        raw = data.get("input")
+        if isinstance(raw, dict):
+            return raw
+        if raw is None:
+            return fallback if fallback is not None else {}
+        text = str(raw).strip()
+        if not text:
+            return fallback if fallback is not None else {}
+        if text.startswith("{"):
+            return json.loads(text)
+        return fallback if fallback is not None else {}
     
     def fail(self, error):
         return {"output": f"Error: {error}"}

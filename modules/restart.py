@@ -6,7 +6,11 @@ from utils.colors import print_state
 
 
 class RestartModule(Module):
-    """Restart the Zipper process so that code changes take effect. Use this after editing any source file — the process will reload with the updated code and resume from the current trace. No input required."""
+    """Restart the Zipper process so code changes take effect.
+
+    Input contract: ignores `data["input"]` (no input required).
+    Use after editing source so runtime reloads and resumes from current trace.
+    """
 
     def run(self, data) -> dict:
         script = os.path.abspath("zipper.py")

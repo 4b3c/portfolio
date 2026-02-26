@@ -62,7 +62,8 @@ def load_state():
 class PlannerModule(Module):
     """Create and manage plans with persisted planner conversations.
 
-    Input: JSON with action in {'create','view','list','update'}.
+    Input contract: `data["input"]` is a JSON object/string with `action`
+    in {'create','view','list','update'}.
     - create: requires 'objective', optional 'name'/'context'; may gather focused
       context via module calls, writes `data/plans/<short-name>/PLAN.md`, then
       returns WAIT_FOR_USER_INPUT.
@@ -79,9 +80,9 @@ class PlannerModule(Module):
         self.planner_conversation_id = None
 
     def run(self, data) -> dict:
-        raw = data["input"]
+        raw = self.input_text(data)
         try:
-            params = json.loads(raw) if isinstance(raw, str) and raw.strip().startswith("{") else {"action": "create", "objective": raw}
+            params = self.input_json(data, fallback={"action": "create", "objective": raw})
         except json.JSONDecodeError as e:
             return self.fail(f"Invalid JSON input: {e}")
 

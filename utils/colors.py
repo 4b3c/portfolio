@@ -212,12 +212,6 @@ def print_module(action: str, name: str, detail: str = ""):
     print(f"{_BLUE}{action} {_B}{name}{detail_str}{_R}")
 
 
-def print_module_output(module_name: str, output: str):
-    """Cyan bold module name, output truncated to 3 lines."""
-    truncated = _truncate(output.strip())
-    print(f"{_CYAN}{_B}{module_name}:{_R} {_CYAN}{truncated}{_R}\n")
-
-
 def print_state(text: str):
     """Magenta status/persistence message."""
     print(f"{_MAGENTA}{text}{_R}")

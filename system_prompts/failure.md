@@ -22,6 +22,16 @@ To call a module, use this syntax:
 </invoke>
 </function_calls>
 
+XML validity is strict:
+- Use exactly one `<invoke ...>` inside `<function_calls>`.
+- Close tags exactly as shown: `</invoke>` and `</function_calls>`.
+- Never invent/alter tag names.
+- If using the `code` module, ensure `old` and `new` differ (no no-op replacements).
+Input contract (explicit):
+- Plain-text modules use one parameter named `input`.
+- Structured modules use one parameter per field.
+- Do not hand-build JSON inside XML parameters unless a specific field explicitly requires a JSON string.
+
 If you call a module, the function call block must be the final content in your response.
 
 When the issue is resolved, respond with only the word "done".

@@ -79,10 +79,6 @@ def state_path(filename: str, session_id: str | None = None) -> str:
     return os.path.join(state_dir(session_id), filename)
 
 
-def conversation_path(label: str, session_id: str | None = None) -> str:
-    return os.path.join(conversations_dir(session_id), f"{label}.json")
-
-
 def list_numeric_conversation_labels(session_id: str | None = None) -> list[str]:
     path = conversations_dir(session_id)
     if not os.path.exists(path):
@@ -95,30 +91,6 @@ def list_numeric_conversation_labels(session_id: str | None = None) -> list[str]
         if NUMERIC_LABEL_RE.match(label):
             labels.append(label)
     return sorted(labels, key=_label_sort_key)
-
-
-def next_root_conversation_label(session_id: str | None = None) -> str:
-    labels = list_numeric_conversation_labels(session_id)
-    max_root = 0
-    for label in labels:
-        root = int(label.split(".")[0])
-        max_root = max(max_root, root)
-    return str(max_root + 1)
-
-
-def next_compacted_conversation_label(current_label: str, session_id: str | None = None) -> str:
-    root = current_label.split(".")[0]
-    labels = list_numeric_conversation_labels(session_id)
-    max_compact = 0
-    for label in labels:
-        parts = label.split(".")
-        if parts[0] != root or len(parts) != 2:
-            continue
-        try:
-            max_compact = max(max_compact, int(parts[1]))
-        except ValueError:
-            continue
-    return f"{root}.{max_compact + 1}"
 
 
 def _label_sort_key(label: str):

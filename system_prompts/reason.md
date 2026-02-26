@@ -12,8 +12,16 @@ If action is required, use this syntax:
 </invoke>
 </function_calls>
 
-For plain-string modules (bash, summarize, search, reason), use one parameter named "input".
-For structured modules, include one parameter per field.
+XML validity is strict:
+- Use exactly one `<invoke ...>` inside `<function_calls>`.
+- Close tags exactly as shown: `</invoke>` and `</function_calls>`.
+- Never invent/alter tag names.
+
+Module parameter rules (explicit):
+- Plain-text modules (`bash`, `summarize`, `search`, `reason`): use one parameter named `input`.
+- Structured modules: use one parameter per field.
+- Do not hand-build JSON inside XML parameters unless a specific field explicitly requires a JSON string.
+When calling `code`, ensure `old` and `new` are different. Do not send no-op replacements.
 
 Available modules:
 {{AVAILABLE_MODULES_JSON}}

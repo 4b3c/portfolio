@@ -40,7 +40,8 @@ def clear_reason_state():
 class ReasonModule(Module):
     """Reason deeply with OPUS before acting on complex tasks.
 
-    Input: a question/task string. Maintains a session-scoped reason conversation
+    Input contract: `data["input"]` is a plain text string (question/task).
+    Maintains a session-scoped reason conversation
     log so intermediate reasoning context is saved across module calls. Returns
     either a direct answer or a single module-call payload for the main loop.
     """
@@ -52,7 +53,7 @@ class ReasonModule(Module):
         self.reason_conversation_id = None
 
     def run(self, data) -> dict:
-        question = data["input"]
+        question = self.input_text(data)
         modules_info = json.dumps({k: v for k, v in self.registry.items() if k != "reason"}, indent=2)
         system = load_system_prompt("reason.md", {"AVAILABLE_MODULES_JSON": modules_info})
 

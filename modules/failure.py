@@ -42,8 +42,8 @@ class FailureModule(Module):
     Can be invoked manually with a description of what to diagnose or fix,
     or auto-triggered with an error message from a failed module.
 
-    Input: a description of the failure or issue to diagnose. Can be auto-triggered by errors
-    or called manually with a custom problem description.
+    Input contract: `data["input"]` is a plain text string describing the issue.
+    Can be auto-triggered by runtime errors or called manually.
     """
 
     def __init__(self, registry=None):
@@ -89,7 +89,7 @@ class FailureModule(Module):
         return result
 
     def run(self, data) -> dict:
-        user_input = data["input"]
+        user_input = self.input_text(data)
         manual = data.get("manual", False)
 
         trace_content = ""

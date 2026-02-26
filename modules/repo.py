@@ -53,7 +53,7 @@ DOC_TOPIC_ALIASES = {
 class RepoModule(Module):
     """Codebase intelligence and documentation lookup.
 
-    Input: JSON with 'action' in
+    Input contract: `data["input"]` is a JSON object/string with `action` in
     {'find','symbols','deps','impact','docs_list','docs_read','docs_find'}.
     - find: query/regex/path/limit
     - symbols: optional path/name/limit
@@ -65,9 +65,9 @@ class RepoModule(Module):
     """
 
     def run(self, data) -> dict:
-        raw = data["input"]
+        raw = self.input_text(data)
         try:
-            params = json.loads(raw) if isinstance(raw, str) and raw.strip().startswith("{") else {"action": "find", "query": raw}
+            params = self.input_json(data, fallback={"action": "find", "query": raw})
         except json.JSONDecodeError as e:
             return self.fail(f"Invalid JSON input: {e}")
 

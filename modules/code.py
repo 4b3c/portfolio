@@ -3,15 +3,22 @@ import os
 from modules.module import Module
 
 class CodeModule(Module):
-    """Make targeted edits to existing files using search/replace. Use this to modify any file — prefer this over rewriting the whole file. Input: JSON with 'path' (file to edit), 'old' (exact string to find — must match whitespace and indentation precisely), and 'new' (replacement string). Fails if 'old' is not found or matches more than once — make it more specific if needed."""
+    """Make targeted single-location edits using search/replace.
+
+    Input contract: `data["input"]` is a JSON object/string with:
+    - `path`: file to edit
+    - `old`: exact text to find (whitespace-sensitive)
+    - `new`: replacement text
+    Fails if `old` is missing, not found, or matches multiple locations.
+    """
 
     def run(self, data) -> dict:
         try:
-            params = json.loads(data["input"])
+            params = self.input_json(data)
             path = params["path"]
             old = params["old"]
             new = params["new"]
-        except (json.JSONDecodeError, KeyError) as e:
+        except (json.JSONDecodeError, KeyError, TypeError) as e:
             return self.fail(f"Invalid input: {e}. Expected JSON with 'path', 'old', and 'new'.")
 
         full_path = os.path.realpath(os.path.expanduser(path))

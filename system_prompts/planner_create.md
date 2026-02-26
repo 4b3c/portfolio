@@ -11,8 +11,16 @@ To call a module, use this syntax:
 </invoke>
 </function_calls>
 
-For plain-string modules, use one parameter named "input".
-For structured modules, provide one parameter per field.
+XML validity is strict:
+- Use exactly one `<invoke ...>` inside `<function_calls>`.
+- Close tags exactly as shown: `</invoke>` and `</function_calls>`.
+- Never invent/alter tag names.
+
+Module parameter rules (explicit):
+- Plain-text modules: use one parameter named `input`.
+- Structured modules: use one parameter per field.
+- Do not hand-build JSON inside XML parameters unless a specific field explicitly requires a JSON string.
+When calling `code`, ensure `old` and `new` are different. Do not send no-op replacements.
 If you call a module, the `<function_calls>...</function_calls>` block must be the final content in your response.
 
 Available modules:

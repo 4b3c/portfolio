@@ -2,10 +2,15 @@ import subprocess
 from modules.module import Module
 
 class BashModule(Module):
-    """Run a shell command and return its output. Input: a shell command string. Use this for running scripts, checking system state, installing packages, or any operation that requires a terminal. Do NOT use this to edit files — use the code module for targeted edits or the file module for full rewrites."""
+    """Run a shell command and return its output.
+
+    Input contract: `data["input"]` is a plain text string (shell command).
+    Use this for running scripts, checking system state, and terminal operations.
+    Do NOT use this to edit files; use `code` or `file` instead.
+    """
 
     def run(self, data) -> dict:
-        command = data["input"]
+        command = self.input_text(data)
 
         try:
             result = subprocess.run(

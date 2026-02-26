@@ -46,7 +46,10 @@ LOW_SIGNAL_USER_INPUTS = {
 
 
 class AssistantModule(Module):
-    """Handles open-ended conversation, questions, and tasks that don't fit other modules. Input: a natural language string."""
+    """Handles open-ended conversation and general task routing.
+
+    Input contract: `data["input"]` is a plain text string (natural language).
+    """
 
     def __init__(self, registry=None):
         super().__init__(registry)
@@ -493,7 +496,7 @@ class AssistantModule(Module):
                     self._persist()
                 return self.conversation_loop()
 
-        self._init_messages(data["input"])
+        self._init_messages(self.input_text(data))
         return self.conversation_loop()
 
     def resume(self, result) -> dict:

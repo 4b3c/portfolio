@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block content %}
+<canvas id="cube-sand-glow" class="fixed inset-0 -z-10"></canvas>
+
+<a href="{{ url_for('main.home') }}" class="fixed top-4 left-4 text-xs text-slate-500 hover:text-sky-300">
+  ← home
+</a>
+
+<script src="{{ url_for('static', filename='src/cube-sand.js') }}" defer></script>
+{% endblock %}

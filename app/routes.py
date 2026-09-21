@@ -17,3 +17,7 @@ def fall():
 @main.route("/liquid")
 def liquid():
     return render_template("liquid.html")
+
+@main.route("/cube-sand")
+def cube_sand():
+    return render_template("cube_sand.html")

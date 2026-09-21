@@ -10,6 +10,9 @@
 
 </head>
 <body class="bg-slate-900 text-slate-100">
+  <canvas id="grid-bg" class="fixed inset-0 -z-10"></canvas>
+  <script src="{{ url_for('static', filename='src/grid-bg.js') }}" defer></script>
+
   <main class="max-w-4xl mx-auto px-4 py-8">
     {% block content %}{% endblock %}
   </main>

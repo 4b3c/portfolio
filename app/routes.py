@@ -9,3 +9,11 @@ def home():
 @main.route("/grid")
 def grid():
     return render_template("grid.html")
+
+@main.route("/fall")
+def fall():
+    return render_template("fall.html")
+
+@main.route("/liquid")
+def liquid():
+    return render_template("liquid.html")

@@ -21,3 +21,11 @@ def liquid():
 @main.route("/cube-sand")
 def cube_sand():
     return render_template("cube_sand.html")
+
+@main.route("/learn")
+def learn():
+    return render_template("learn.html")
+
+@main.route("/life")
+def life():
+    return render_template("life.html")

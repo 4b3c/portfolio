@@ -100,14 +100,17 @@
 </div>
 
 <!-- the "just show me a list" view -->
-<div id="list" hidden class="fixed inset-0 z-30 overflow-y-auto bg-slate-900 px-4 py-8">
+<!-- see-through, so the forest stays behind the cards -->
+<div id="list" hidden class="fixed inset-0 z-30 overflow-y-auto px-4 py-8">
   <div class="mx-auto max-w-3xl">
-    <div class="flex flex-wrap items-center justify-between gap-3">
-      <h1 class="text-2xl font-bold text-slate-100">Abram's projects</h1>
-      <button type="button" data-forest class="rounded border-4 border-[#28201e] bg-[#f4ead2] px-4 py-1.5 font-bold shadow-[4px_4px_0_rgba(0,0,0,0.25)] hover:bg-white text-[#28201e]">← take me to the forest</button>
+    <div class="flex flex-wrap items-center justify-between gap-3 rounded border-4 border-[#28201e] bg-[#f4ead2] p-4 text-[#28201e] shadow-[6px_6px_0_rgba(0,0,0,0.25)]">
+      <div>
+        <h1 class="text-2xl font-bold">Abram's projects</h1>
+        <p class="text-sm opacity-60">Newest first.</p>
+      </div>
+      <button type="button" data-forest class="rounded border-4 border-[#28201e] bg-[#28201e] px-4 py-1.5 font-bold text-[#f4ead2] shadow-[4px_4px_0_rgba(0,0,0,0.25)] hover:bg-[#4a3a34]">← take me to the forest</button>
     </div>
-    <p class="mt-2 text-slate-400">Newest first.</p>
-    <div id="list-items" class="mt-6 space-y-4"></div>
+    <div id="list-items" class="mt-4 space-y-4"></div>
   </div>
 </div>
 

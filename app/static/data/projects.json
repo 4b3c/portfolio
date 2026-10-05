@@ -109,26 +109,6 @@
     }
   },
   {
-    "id": "valton",
-    "title": "Valton",
-    "start": "2023-07",
-    "date": "2023",
-    "size": "tiny",
-    "images": [],
-    "description": "A two-day browser game experiment: a welcome screen, profiles for two players, player locations, and a map maker and viewer. An early try at multiplayer game state.",
-    "linkText": "",
-    "linkUrl": "",
-    "status": "abandoned",
-    "paths": [
-      "coding"
-    ],
-    "sign": "VALTON",
-    "tree": {
-      "seed": 1093744986,
-      "maxAge": 144
-    }
-  },
-  {
     "id": "waves",
     "title": "Abstract Wave Art",
     "images": [
@@ -244,6 +224,11 @@
     "id": "charlotte",
     "title": "Mini CHARLOTTE",
     "images": [
+      "/static/img/projects/charlotte/render-color.png",
+      "/static/img/projects/charlotte/render-iso.png",
+      "/static/img/projects/charlotte/render-top.png",
+      "/static/img/projects/charlotte/leg.png",
+      "/static/img/projects/charlotte/leg-extended.png",
       "media/mini-charlotte/main.jpeg",
       "media/mini-charlotte/cad.jpeg",
       "media/mini-charlotte/building.jpeg",
@@ -313,10 +298,13 @@
     "start": "2025-06",
     "date": "2025 – 2026",
     "size": "huge",
-    "images": [],
+    "images": [
+      "/static/img/projects/pantry/landing.png",
+      "/static/img/projects/pantry/my-pantry.png"
+    ],
     "description": "An iOS macro-tracking app, live on the App Store. Barcode scanning, receipt scanning through an LLM + Open Food Facts pipeline, RevenueCat subscriptions and a Supabase backend. Built from a web app all the way to its App Store debut.",
-    "linkText": "",
-    "linkUrl": "",
+    "linkText": "Check out the app!",
+    "linkUrl": "https://getpantry.app",
     "status": "parked",
     "paths": [
       "coding"
@@ -333,10 +321,13 @@
     "start": "2025-08",
     "date": "2025 – now",
     "size": "large",
-    "images": [],
+    "images": [
+      "/static/img/projects/orbitscape/landing.png",
+      "/static/img/projects/orbitscape/app.png"
+    ],
     "description": "A browser-native orbit visualization platform from the Luminosity Lab, now launched as a startup with a twelve-person team. I’m building the mission-planning frontend that generates scripts for the simulation engine.",
-    "linkText": "",
-    "linkUrl": "",
+    "linkText": "Check out Orbitscape!",
+    "linkUrl": "https://orbitscape.space",
     "status": "active",
     "paths": [
       "coding",
@@ -354,7 +345,9 @@
     "start": "2025-09",
     "date": "2025",
     "size": "medium",
-    "images": [],
+    "images": [
+      "/static/img/projects/particle/device.png"
+    ],
     "description": "A Luminosity Lab device that charges particles and then detects them, measuring their size and other properties. I did the CAD, which taught me to design parts for machining in metal instead of 3D printing.",
     "linkText": "",
     "linkUrl": "",
@@ -375,7 +368,9 @@
     "start": "2025-10",
     "date": "2025 – now",
     "size": "small",
-    "images": [],
+    "images": [
+      "/static/img/projects/jude/cad.png"
+    ],
     "description": "A lifesaving submarine device at the Luminosity Lab. I did the CAD for the first version and now advise the team building the next one.",
     "linkText": "",
     "linkUrl": "",
@@ -394,6 +389,7 @@
     "id": "zipper",
     "title": "Zipper: Discord/Terminal AI Assistant",
     "images": [
+      "/static/img/projects/zipper/brain.png",
       "media/zipper/discord.png",
       "media/zipper/terminal.png"
     ],
@@ -411,26 +407,6 @@
     "tree": {
       "seed": 1215764771,
       "maxAge": 698
-    }
-  },
-  {
-    "id": "pergola",
-    "title": "Pergola",
-    "start": "2026-06",
-    "date": "2026",
-    "size": "tiny",
-    "images": [],
-    "description": "A self-hosted, browser-based app builder: an attempt at something as powerful as FileMaker without the baggage. Design an app in develop, deploy it with serve, and the output is a portable folder either tool can read.",
-    "linkText": "",
-    "linkUrl": "",
-    "status": "parked",
-    "paths": [
-      "coding"
-    ],
-    "sign": "PERGOLA",
-    "tree": {
-      "seed": 2930939157,
-      "maxAge": 146
     }
   },
   {
@@ -459,7 +435,11 @@
     "start": "2026-08",
     "date": "2026",
     "size": "medium",
-    "images": [],
+    "images": [
+      "/static/img/projects/ironman/render-front.png",
+      "/static/img/projects/ironman/render-side.png",
+      "/static/img/projects/ironman/lines.png"
+    ],
     "description": "A multi-piece helmet surface-modeled in Onshape and printed on a Bambu P1S, with heat-set inserts joining the panels. A deliberate step outside my usual parametric CAD.",
     "linkText": "",
     "linkUrl": "",
@@ -479,7 +459,9 @@
     "start": "2026-08",
     "date": "2026",
     "size": "medium",
-    "images": [],
+    "images": [
+      "/static/img/projects/gifs/landing.png"
+    ],
     "description": "A party game where the answers are GIFs. Everyone plays on their own phone, with an optional TV as the shared screen. No accounts or downloads: open the site, type a four-letter code, pick a nickname. Flask backend, 100 curated prompts.",
     "linkText": "Play it!",
     "linkUrl": "https://gifs-against-humanity.com",
@@ -533,6 +515,7 @@
     "tree": {
       "seed": 1976045064,
       "maxAge": 270
-    }
+    },
+    "hidden": true
   }
 ]

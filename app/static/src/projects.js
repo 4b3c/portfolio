@@ -135,6 +135,11 @@ import { FONT } from './font.js';
   const grass = new Image();
   grass.src = canvas.dataset.grass;
 
+  // Image paths in projects.json are either our own (/static/...) or relative
+  // to the digitalQuiver site.
+  const imageUrl = (path) =>
+    path.startsWith('/') || /^https?:/.test(path) ? path : canvas.dataset.imageBase + path;
+
   // --- map key -------------------------------------------------------------
   // Swatches are drawn with the same pixel art as the world, so they match.
   for (const el of document.querySelectorAll('[data-swatch]')) {
@@ -257,19 +262,65 @@ import { FONT } from './font.js';
     if (text) node.textContent = text;
     return node;
   };
+  // Sizes a list image to its card, always showing the whole image. Side by
+  // side, the frame is as tall as the text and as wide as the image's shape
+  // needs. The frame's width changes how the text wraps, which changes its
+  // height, so it measures a few times until the two agree. If a wide image
+  // would need more than MAX_SIDE of the card, there's no width where both fit,
+  // so that card puts the image on top at full width instead.
+  const MAX_SIDE = 0.55;
+  const sideBySide = window.matchMedia('(min-width: 640px)');
+  let fitted = [];
+  function stack(item, frame, ratio, on) {
+    item.style.display = on ? 'block' : '';
+    frame.style.width = on ? '100%' : '';
+    frame.style.aspectRatio = on ? String(ratio) : 'auto';
+    frame.style.borderRightWidth = on ? '0' : '';
+    frame.style.borderBottomWidth = on ? '4px' : '';
+  }
+  function fitImage(item, frame, body, img) {
+    if (!img.naturalWidth) return;
+    const ratio = img.naturalWidth / img.naturalHeight;
+    if (!sideBySide.matches) {
+      stack(item, frame, ratio, true);
+      return;
+    }
+    stack(item, frame, ratio, false);
+    let width = 0;
+    for (let i = 0; i < 6; i++) {
+      width = body.offsetHeight * ratio;
+      if (width > item.clientWidth * MAX_SIDE) break;
+      if (Math.abs(width - frame.offsetWidth) < 1) return;
+      frame.style.width = width + 'px';
+    }
+    if (width > item.clientWidth * MAX_SIDE) stack(item, frame, ratio, true);
+  }
+  window.addEventListener('resize', () => {
+    for (const args of fitted) fitImage(...args);
+  });
+
   function renderList(projects) {
     listItems.replaceChildren();
+    fitted = [];
     const newest = [...projects].sort((a, b) => b.start.localeCompare(a.start));
     for (const p of newest) {
       const item = el('article', 'overflow-hidden rounded border-4 border-[#28201e] bg-[#f4ead2] text-[#28201e] shadow-[6px_6px_0_rgba(0,0,0,0.25)] sm:flex');
+      const body = el('div', 'min-w-0 flex-1 p-4');
       if (p.images?.length) {
-        const img = el('img', 'block h-40 w-full object-cover border-b-4 border-[#28201e] sm:h-auto sm:w-48 sm:border-b-0 sm:border-r-4');
-        img.src = canvas.dataset.imageBase + p.images[0];
+        // The whole image, never cropped. Side by side, the frame is as tall as
+        // the text and as wide as the image's shape needs (up to half the card);
+        // on narrow screens it sits on top at full width. See fitImage().
+        const frame = el('div', 'relative w-full shrink-0 border-b-4 border-[#28201e] sm:w-48 sm:border-b-0 sm:border-r-4');
+        frame.style.aspectRatio = '16 / 9';     // until the image loads and says its real shape
+        const img = el('img', 'absolute inset-0 h-full w-full object-contain');
+        img.addEventListener('load', () => fitImage(item, frame, body, img));
+        img.src = imageUrl(p.images[0]);
         img.alt = p.title;
         img.loading = 'lazy';
-        item.append(img);
+        frame.append(img);
+        item.append(frame);
+        fitted.push([item, frame, body, img]);
       }
-      const body = el('div', 'p-4');
       body.append(
         el('p', 'text-xs uppercase tracking-wide opacity-60', `${p.date} · ${p.status}`),
         el('h2', 'mt-0.5 font-bold leading-snug', p.title),
@@ -344,7 +395,10 @@ import { FONT } from './font.js';
       return top;
     }
   }
-  const loaded = fetch(canvas.dataset.projects).then((r) => r.json());
+  // projects marked "hidden": true in projects.json are left out of the forest and the list
+  const loaded = fetch(canvas.dataset.projects)
+    .then((r) => r.json())
+    .then((list) => list.filter((p) => !p.hidden));
   loaded.then(start);
 
   function start(projects) {
@@ -650,7 +704,6 @@ import { FONT } from './font.js';
     // --- project card ---------------------------------------------------------
     const card = document.getElementById('card');
     const field = (name) => card.querySelector(`[data-${name}]`);
-    const imageBase = canvas.dataset.imageBase;
     let nearest = null;
     let shown = null;
 
@@ -680,7 +733,7 @@ import { FONT } from './font.js';
       const hasImage = p.images?.length > 0;
       img.style.display = hasImage ? '' : 'none';
       if (hasImage) {
-        img.src = imageBase + p.images[0];
+        img.src = imageUrl(p.images[0]);
         img.alt = p.title;
       } else {
         img.removeAttribute('src');

@@ -53,8 +53,7 @@ import { FONT } from './font.js';
   const CAMERA_EASE = 8;
 
   // --- trails -------------------------------------------------------------
-  // Each kind of work gets its own material, and every tree stands in a pale
-  // clearing that its trails run into.
+  // Each kind of work gets its own material.
   const MATERIALS = {
     mechanical: { style: 'dirt', label: 'CAD & hardware',
       base: [200, 165, 105], edge: [176, 140, 84], dark: [170, 134, 80], light: [224, 194, 136] },
@@ -64,8 +63,6 @@ import { FONT } from './font.js';
       edge: [128, 120, 102] },  // earthy, like the soil between the stones, not a grey shadow
     work: { style: 'gravel', label: 'work',
       base: [176, 168, 150], edge: [154, 146, 130], dark: [160, 152, 136], light: [192, 186, 170], darker: [140, 132, 118] },
-    clearing: { style: 'dirt', label: 'a project',
-      base: [222, 206, 160], edge: [198, 180, 132], dark: [200, 182, 136], light: [236, 224, 186] },
   };
   const KINDS = ['work', 'mechanical', 'coding'];  // routed in this order; earlier ones keep shared tiles
   const MAT_INDEX = Object.fromEntries(Object.keys(MATERIALS).map((k, i) => [k, i]));
@@ -428,111 +425,131 @@ import { FONT } from './font.js';
       if (spots.size === projects.length) break;
     }
 
-    // Every tree stands in a clearing: the tiles beside and below its trunk.
-    // Trunks and sign posts block trails; a trail ends when it reaches its
-    // tree's clearing, and never cuts through another kind of tree's clearing.
+    // Trunks and sign posts block trails. Trails pass beside trees rather than
+    // ending at them: each kind a tree belongs to gets its own side of the trunk
+    // to pass on, so a tree with two kinds stands where two trails meet, and one
+    // with three has trails running around it. `near` marks the ring of tiles
+    // around each trunk, so a trail can keep its distance from trees that aren't
+    // its kind (otherwise it looks like it belongs to them too).
     const material = new Int8Array(COLS * ROWS).fill(-1);
     const blocked = new Uint8Array(COLS * ROWS);
-    const owner = new Int16Array(COLS * ROWS).fill(-1);  // which tree's clearing a tile is in
-    const door = new Map();
+    const near = new Int16Array(COLS * ROWS).fill(-1);
+    const SIDES = [[-1, 0], [0, 1], [1, 1]];  // left of the trunk, below it, below-right
+    const passBy = new Map();                  // project -> { kind: tile the trail passes through }
     projects.forEach((p, k) => {
       const [c, r] = spots.get(p);
-      for (const [dc, dr] of [[-1, 0], [0, 0], [1, 0], [-1, 1], [0, 1], [1, 1]]) {
-        if (!inWorld(c + dc, r + dr)) continue;
-        material[at(c + dc, r + dr)] = MAT_INDEX.clearing;
-        owner[at(c + dc, r + dr)] = k;
+      for (let dr = -1; dr <= 1; dr++) {
+        for (let dc = -1; dc <= 1; dc++) if (inWorld(c + dc, r + dr)) near[at(c + dc, r + dr)] = k;
       }
       blocked[at(c, r)] = 1;
       blocked[at(c + 2, r)] = 1;          // sign post
-      door.set(p, [c, r + 1]);
+      const turn = randint(0, SIDES.length - 1);
+      passBy.set(p, Object.fromEntries(p.paths.map((kind, i) => {
+        const [dc, dr] = SIDES[(turn + i) % SIDES.length];
+        return [kind, [c + dc, r + dr]];
+      })));
     });
 
     // --- trails -------------------------------------------------------------
-    // Each tile keeps the material of the first trail laid on it, but remembers
-    // every kind that passes through (one bit per kind).
-    const kinds = new Uint8Array(COLS * ROWS);
+    // A little random cost on every tile, so two loads don't route identically.
+    // Kept small: most of a trail's character comes from TURN below.
+    const wander = new Float32Array(COLS * ROWS).map(() => Math.random() * 0.3);
+    // Turning costs as much as a few extra tiles, so trails run in long straight
+    // stretches with a few deliberate corners instead of staircasing.
+    const TURN = 3;
+    const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 
-    // A little random cost on every tile makes trails wander instead of running
-    // in straight lines. It's re-rolled on every load, like the tree layout.
-    const wander = new Float32Array(COLS * ROWS).map(() => Math.random() * 1.2);
-
-    // Cheapest 4-way route from tree a's clearing to tree b's (A*). Following a
-    // trail of the same kind is cheap, so trails merge. Stepping onto another
-    // kind's trail is expensive, so different kinds only meet at short
+    // Cheapest 4-way route between two tiles (A* over tile and heading).
+    // Following a trail of the same kind is cheap, so trails merge. Stepping onto
+    // another kind's trail is expensive, so different kinds only meet at short
     // crossings instead of running together (where one would hide the other).
-    // Skirting a clearing that isn't this kind's costs extra too, so a trail
-    // doesn't look like it belongs to a tree it just passes.
-    function route(a, b, kind) {
+    function route(from, to, kind) {
       const mine = MAT_INDEX[kind];
-      const ai = projects.indexOf(a), bi = projects.indexOf(b);
-      const ours = (k) => projects[k].paths.includes(kind);
-      const nearForeign = (c, r) => [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dc, dr]) =>
-        inWorld(c + dc, r + dr) && owner[at(c + dc, r + dr)] !== -1 && !ours(owner[at(c + dc, r + dr)]));
       const cost = (i) => {
         if (blocked[i]) return Infinity;
-        if (owner[i] !== -1) return owner[i] === bi ? 0 : ours(owner[i]) ? 0.35 : Infinity;
         const m = material[i];
         if (m === mine) return 0.35;
         if (m !== -1) return 6;
-        return 1 + wander[i] + (nearForeign(i % COLS, Math.floor(i / COLS)) ? 4 : 0);
+        const k = near[i];
+        const foreign = k !== -1 && !projects[k].paths.includes(kind);
+        return 1 + wander[i] + (foreign ? 6 : 0);
       };
-      const to = door.get(b);
-      const guess = (i) => Math.max(0, Math.abs((i % COLS) - to[0]) + Math.abs(Math.floor(i / COLS) - to[1]) - 2) * 0.35;
-      const best = new Float32Array(COLS * ROWS).fill(Infinity);
-      const came = new Int32Array(COLS * ROWS).fill(-1);
+      const goal = at(...to);
+      const guess = (i) => (Math.abs((i % COLS) - to[0]) + Math.abs(Math.floor(i / COLS) - to[1])) * 0.35;
+      // state = tile * 4 + heading
+      const best = new Float32Array(COLS * ROWS * 4).fill(Infinity);
+      const came = new Int32Array(COLS * ROWS * 4).fill(-1);
       const open = new Heap();
-      for (let i = 0; i < owner.length; i++) {
-        if (owner[i] === ai && !blocked[i]) {
-          best[i] = 0;
-          open.push(i, guess(i));
-        }
+      const startI = at(...from);
+      for (let d = 0; d < 4; d++) {
+        best[startI * 4 + d] = 0;
+        open.push(startI * 4 + d, guess(startI));
       }
-      let goal = -1;
+      let end = -1;
       while (open.size) {
-        const i = open.pop();
-        if (owner[i] === bi) { goal = i; break; }
+        const st = open.pop();
+        const i = st >> 2, d = st & 3;
+        if (i === goal) { end = st; break; }
         const c = i % COLS, r = Math.floor(i / COLS);
-        for (const [dc, dr] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-          if (!inWorld(c + dc, r + dr)) continue;
+        DIRS.forEach(([dc, dr], nd) => {
+          if (!inWorld(c + dc, r + dr)) return;
           const j = at(c + dc, r + dr);
-          const g = best[i] + cost(j);
-          if (g < best[j]) {
-            best[j] = g;
-            came[j] = i;
-            open.push(j, g + guess(j));
+          const g = best[st] + cost(j) + (nd === d ? 0 : TURN);
+          const ns = j * 4 + nd;
+          if (g < best[ns]) {
+            best[ns] = g;
+            came[ns] = st;
+            open.push(ns, g + guess(j));
           }
-        }
+        });
       }
-      if (goal === -1) return;
-      for (let i = goal; i !== -1; i = came[i]) {
+      for (let st = end; st !== -1; st = came[st]) {
+        const i = st >> 2;
         if (material[i] === -1) material[i] = mine;
-        kinds[i] |= 1 << mine;
       }
     }
 
-    // For each kind: join every tree of that kind with the shortest set of links
-    // that connects them all (a minimum spanning tree), then lay a trail along
-    // each link.
-    for (const kind of KINDS) {
-      const members = projects.filter((p) => p.paths.includes(kind));
-      const stops = members.map((p) => door.get(p));
-      if (!stops.length) continue;
-      const joined = [0];
-      const left = new Set(stops.keys());
-      left.delete(0);
-      while (left.size) {
-        let link = null;
-        for (const a of joined) {
-          for (const b of left) {
-            const d = Math.hypot(stops[a][0] - stops[b][0], stops[a][1] - stops[b][1]);
-            if (!link || d < link.d) link = { a, b, d };
+    // Each kind is one trail. It starts at the spawn point (the trailhead) and
+    // passes all its trees, ending beside the last one rather than at it. The order is the shortest walk we can find:
+    // nearest tree first, then 2-opt (reverse any stretch that makes it shorter),
+    // which also untangles the trail where it would cross itself.
+    const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
+    function walkOrder(head, stops) {
+      const order = [head];
+      const left = [...stops];
+      while (left.length) {
+        const here = order[order.length - 1];
+        let n = 0;
+        left.forEach((s, i) => { if (dist(s, here) < dist(left[n], here)) n = i; });
+        order.push(...left.splice(n, 1));
+      }
+      for (let better = true; better;) {
+        better = false;
+        for (let i = 1; i < order.length - 1; i++) {
+          for (let j = i + 1; j < order.length; j++) {
+            const after = order[j + 1];
+            const before = dist(order[i - 1], order[i]) + (after ? dist(order[j], after) : 0);
+            const swapped = dist(order[i - 1], order[j]) + (after ? dist(order[i], after) : 0);
+            if (swapped < before - 0.01) {
+              order.splice(i, j - i + 1, ...order.slice(i, j + 1).reverse());
+              better = true;
+            }
           }
         }
-        route(members[link.a], members[link.b], kind);
-        joined.push(link.b);
-        left.delete(link.b);
       }
+      return order;
     }
+
+    KINDS.forEach((kind, k) => {
+      const stops = projects.filter((p) => p.paths.includes(kind)).map((p) => passBy.get(p)[kind]);
+      if (!stops.length) return;
+      const head = [SPAWN[0] - 1 + k, SPAWN[1] + 1];
+      const walk = walkOrder(head, stops);
+      // Following its own trail is cheap, so where the next tree is back the
+      // way it came, a trail walks back along itself: one two-way path, not two.
+      for (let i = 1; i < walk.length; i++) route(walk[i - 1], walk[i], kind);
+    });
+
 
     // --- path tiles -----------------------------------------------------------
     // Drawn once per tile and cached. Edges go ragged wherever a trail meets

@@ -5,7 +5,7 @@ main = Blueprint("main", __name__)
 @main.route("/")
 def home():
     # the project forest is the home page
-    return render_template("projects.html")
+    return render_template("projects.html", title="Abram's Portfolio")
 
 @main.route("/grid")
 def grid():

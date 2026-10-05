@@ -63,6 +63,9 @@ import { FONT } from './font.js';
       edge: [128, 120, 102] },  // earthy, like the soil between the stones, not a grey shadow
     work: { style: 'gravel', label: 'work',
       base: [176, 168, 150], edge: [154, 146, 130], dark: [160, 152, 136], light: [192, 186, 170], darker: [140, 132, 118] },
+    // the pale packed-earth clearing at spawn that every trail starts from
+    trailhead: { style: 'dirt', label: 'trailhead',
+      base: [222, 206, 160], edge: [198, 180, 132], dark: [200, 182, 136], light: [236, 224, 186] },
   };
   const KINDS = ['work', 'mechanical', 'coding'];  // routed in this order; earlier ones keep shared tiles
   const MAT_INDEX = Object.fromEntries(Object.keys(MATERIALS).map((k, i) => [k, i]));
@@ -163,18 +166,6 @@ import { FONT } from './font.js';
     el.getContext('2d').putImageData(img, 0, 0);
   }
 
-  const key = document.getElementById('key');
-  const keyToggle = document.getElementById('key-toggle');
-  // starts closed, since the intro already explained everything in it
-  function showKey(open) {
-    key.dataset.open = String(open);
-    keyToggle.setAttribute('aria-expanded', String(open));
-  }
-  keyToggle.addEventListener('click', () => showKey(key.dataset.open !== 'true'));
-  window.addEventListener('keydown', (e) => {
-    if (e.code === 'KeyH' && !introOpen) showKey(key.dataset.open !== 'true');
-  });
-
   // --- intro: welcome, how it works, pick a character, controls -------------
   const CHARACTERS = [
     { id: 'explorer', name: 'Explorer', look: EXPLORER },
@@ -203,9 +194,26 @@ import { FONT } from './font.js';
   }
   intro.querySelectorAll('[data-next]').forEach((b) => b.addEventListener('click', () => showSlide(slide + 1)));
   intro.querySelectorAll('[data-back]').forEach((b) => b.addEventListener('click', () => showSlide(slide - 1)));
-  intro.querySelector('[data-start]').addEventListener('click', () => {
+  function startExploring() {
     intro.style.display = 'none';        // not `hidden`: the overlay's Tailwind `flex` class overrides it
     introOpen = false;
+  }
+  intro.querySelector('[data-start]').addEventListener('click', startExploring);
+  // the help button (or H) plays the intro again from the start
+  function replayIntro() {
+    intro.style.display = '';
+    introOpen = true;
+    showSlide(0);
+  }
+  document.getElementById('help').addEventListener('click', replayIntro);
+  window.addEventListener('keydown', (e) => {
+    if (e.code === 'KeyH' && !introOpen) replayIntro();
+  });
+  // clicking the dark area outside the panel skips the intro, as the first character
+  intro.addEventListener('click', (e) => {
+    if (e.target !== intro) return;
+    pick(CHARACTERS[0]);
+    startExploring();
   });
 
   // character picker: each choice shows its sprite walking toward you
@@ -259,55 +267,65 @@ import { FONT } from './font.js';
     if (text) node.textContent = text;
     return node;
   };
-  // Sizes a list image to its card, always showing the whole image. Side by
-  // side, the frame is as tall as the text and as wide as the image's shape
-  // needs. The frame's width changes how the text wraps, which changes its
-  // height, so it measures a few times until the two agree. If a wide image
-  // would need more than MAX_SIDE of the card, there's no width where both fit,
-  // so that card puts the image on top at full width instead.
-  const MAX_SIDE = 0.55;
+  // Sizes a list image to its card, always showing the whole image, on the
+  // left. The image starts as tall as the text, at its own shape. That width
+  // narrows the text column, which can wrap to an extra line and get taller,
+  // so the image grows again to match, and so on. It only ever grows, so it
+  // settles in a few steps, at worst a little taller than the text, which
+  // just leaves some cream space under the text instead of a band beside the
+  // image. MAX_SIDE caps how much of the card it can take. Phone-width cards
+  // put the image on top, full width.
+  const MAX_SIDE = 0.6;
   const sideBySide = window.matchMedia('(min-width: 640px)');
   let fitted = [];
-  function stack(item, frame, ratio, on) {
-    item.style.display = on ? 'block' : '';
-    frame.style.width = on ? '100%' : '';
-    frame.style.aspectRatio = on ? String(ratio) : 'auto';
-    frame.style.borderRightWidth = on ? '0' : '';
-    frame.style.borderBottomWidth = on ? '4px' : '';
-  }
   function fitImage(item, frame, body, img) {
-    if (!img.naturalWidth) return;
+    // the image can finish loading before the card is on the page, when
+    // there's nothing to measure yet; the ResizeObserver below fits it once it is
+    if (!img.naturalWidth || !item.isConnected || !item.clientWidth) return;
     const ratio = img.naturalWidth / img.naturalHeight;
     if (!sideBySide.matches) {
-      stack(item, frame, ratio, true);
+      frame.style.width = '';
+      frame.style.height = '';
+      frame.style.aspectRatio = String(ratio);
       return;
     }
-    stack(item, frame, ratio, false);
-    let width = 0;
-    for (let i = 0; i < 6; i++) {
-      width = body.offsetHeight * ratio;
-      if (width > item.clientWidth * MAX_SIDE) break;
-      if (Math.abs(width - frame.offsetWidth) < 1) return;
+    frame.style.aspectRatio = 'auto';
+    const max = Math.floor(item.clientWidth * MAX_SIDE);
+    let width = Math.min(Math.ceil(body.offsetHeight * ratio), max);
+    for (let i = 0; i < 8; i++) {
       frame.style.width = width + 'px';
+      frame.style.height = Math.round(width / ratio) + 'px';  // whole pixels: no slivers
+      const needed = Math.ceil(body.offsetHeight * ratio);
+      if (needed <= width || width >= max) break;
+      width = Math.min(needed, max);
     }
-    if (width > item.clientWidth * MAX_SIDE) stack(item, frame, ratio, true);
+    // The frame is the image's shape to within a pixel, so the image fills it
+    // edge to edge (trimming at most a fraction of a pixel).
+    img.style.objectFit = 'cover';
   }
-  window.addEventListener('resize', () => {
-    for (const args of fitted) fitImage(...args);
+
+  // Re-fit whenever a card's text box changes size: when it first lands on the
+  // page, when the window resizes, or when the image's width rewraps the text.
+  const refit = new ResizeObserver((entries) => {
+    for (const entry of entries) {
+      const args = fitted.find((f) => f[2] === entry.target);
+      if (args) fitImage(...args);
+    }
   });
 
   function renderList(projects) {
     listItems.replaceChildren();
+    refit.disconnect();
     fitted = [];
     const newest = [...projects].sort((a, b) => b.start.localeCompare(a.start));
     for (const p of newest) {
       const item = el('article', 'overflow-hidden rounded border-4 border-[#28201e] bg-[#f4ead2] text-[#28201e] shadow-[6px_6px_0_rgba(0,0,0,0.25)] sm:flex');
-      const body = el('div', 'min-w-0 flex-1 p-4');
+      const body = el('div', 'min-w-0 flex-1 p-4 sm:self-start');
       if (p.images?.length) {
         // The whole image, never cropped. Side by side, the frame is as tall as
         // the text and as wide as the image's shape needs (up to half the card);
         // on narrow screens it sits on top at full width. See fitImage().
-        const frame = el('div', 'relative w-full shrink-0 border-b-4 border-[#28201e] sm:w-48 sm:border-b-0 sm:border-r-4');
+        const frame = el('div', 'relative w-full shrink-0 overflow-hidden border-b-4 border-[#28201e] sm:w-48 sm:border-b-0 sm:border-r-4');
         frame.style.aspectRatio = '16 / 9';     // until the image loads and says its real shape
         const img = el('img', 'absolute inset-0 h-full w-full object-contain');
         img.addEventListener('load', () => fitImage(item, frame, body, img));
@@ -317,6 +335,7 @@ import { FONT } from './font.js';
         frame.append(img);
         item.append(frame);
         fitted.push([item, frame, body, img]);
+        refit.observe(body);
       }
       body.append(
         el('p', 'text-xs uppercase tracking-wide opacity-60', `${p.date} · ${p.status}`),
@@ -337,11 +356,13 @@ import { FONT } from './font.js';
   }
   intro.querySelector('[data-list]').addEventListener('click', () => {
     loaded.then(renderList);
+    intro.style.display = 'none';        // the list is see-through, so the intro would show between cards
     list.hidden = false;
     list.scrollTop = 0;
   });
   list.querySelector('[data-forest]').addEventListener('click', () => {
     list.hidden = true;
+    intro.style.display = '';
     showSlide(0);
   });
 
@@ -450,6 +471,22 @@ import { FONT } from './font.js';
       })));
     });
 
+    // The trailhead: a small clearing around the spawn point with a signpost on
+    // its top row. Every trail starts in the middle of it and heads out on
+    // whichever side faces its first tree, so no trail starts on bare grass.
+    const TRAILHEAD = { cols: [-2, 2], rows: [-1, 1] };   // tiles around SPAWN
+    for (let dr = TRAILHEAD.rows[0]; dr <= TRAILHEAD.rows[1]; dr++) {
+      for (let dc = TRAILHEAD.cols[0]; dc <= TRAILHEAD.cols[1]; dc++) {
+        material[at(SPAWN[0] + dc, SPAWN[1] + dr)] = MAT_INDEX.trailhead;
+      }
+    }
+    const trailSign = {
+      x: SPAWN[0] * TILE + TILE / 2,
+      y: (SPAWN[1] - 1) * TILE + TILE - 12,
+      sign: makeSign('WELCOME'),
+    };
+    blocked[at(SPAWN[0], SPAWN[1] - 1)] = 1;
+
     // --- trails -------------------------------------------------------------
     // A little random cost on every tile, so two loads don't route identically.
     // Kept small: most of a trail's character comes from TURN below.
@@ -468,7 +505,7 @@ import { FONT } from './font.js';
       const cost = (i) => {
         if (blocked[i]) return Infinity;
         const m = material[i];
-        if (m === mine) return 0.35;
+        if (m === mine || m === MAT_INDEX.trailhead) return 0.35;
         if (m !== -1) return 6;
         const k = near[i];
         const foreign = k !== -1 && !projects[k].paths.includes(kind);
@@ -543,7 +580,7 @@ import { FONT } from './font.js';
     KINDS.forEach((kind, k) => {
       const stops = projects.filter((p) => p.paths.includes(kind)).map((p) => passBy.get(p)[kind]);
       if (!stops.length) return;
-      const head = [SPAWN[0] - 1 + k, SPAWN[1] + 1];
+      const head = SPAWN;
       const walk = walkOrder(head, stops);
       // Following its own trail is cheap, so where the next tree is back the
       // way it came, a trail walks back along itself: one two-way path, not two.
@@ -619,6 +656,28 @@ import { FONT } from './font.js';
       }
       return toCanvas(outline(img, SIGN.outline));
     }
+
+    // --- visited counter ------------------------------------------------------
+    // A project counts as visited once its card has opened. Each kind shows
+    // visited/total of the projects whose trail it is (starts fresh every visit).
+    const visited = new Set();
+    function updateProgress() {
+      for (const kind of KINDS) {
+        const mine = projects.filter((p) => p.paths.includes(kind));
+        const seen = mine.filter((p) => visited.has(p.id)).length;
+        document.querySelector(`[data-progress="${kind}"]`).textContent = `${seen}/${mine.length}`;
+      }
+    }
+    updateProgress();
+
+    // Clicking a kind in the counter shows arrows around the player, one toward
+    // each project of that kind not visited yet, for a few seconds.
+    const POINT_MS = 3000;
+    let pointing = { kind: null, until: 0 };
+    document.querySelectorAll('[data-point]').forEach((b) => b.addEventListener('click', () => {
+      pointing = { kind: b.dataset.point, until: performance.now() + POINT_MS };
+      b.blur();   // so the arrow keys go back to walking
+    }));
 
     // --- trees ----------------------------------------------------------------
     const trees = projects.map((p, i) => {
@@ -714,6 +773,7 @@ import { FONT } from './font.js';
         if (t.trunkR) pushOut(t.x, t.y, t.trunkR + PLAYER_RADIUS);
         pushOut(t.signX, t.signY, 6 + PLAYER_RADIUS);
       }
+      pushOut(trailSign.x, trailSign.y, 6 + PLAYER_RADIUS);
       player.x = clamp(player.x, 16, WORLD_W - 16);
       player.y = clamp(player.y, 48, WORLD_H - 8);
     }
@@ -724,6 +784,11 @@ import { FONT } from './font.js';
     let nearest = null;
     let shown = null;
 
+    // Projects with several images flip through them while their card is open.
+    const SLIDE_MS = 2000;
+    let slideshow = 0;
+    let cardToken = 0;   // bumped each time the nearest tree changes
+
     function updateCard() {
       nearest = null;
       let best = CARD_DISTANCE;
@@ -733,29 +798,52 @@ import { FONT } from './font.js';
       }
       if (nearest === shown) return;
       shown = nearest;
+      clearInterval(slideshow);
       if (!nearest) {
+        cardToken++;                     // forget any card still waiting on its image
         card.dataset.open = 'false';
         return;
       }
       const p = nearest.project;
-      field('title').textContent = p.title;
-      field('date').textContent = `${p.date} · ${p.status}`;
-      field('paths').textContent = p.paths.map((k) => MATERIALS[k].label).join(' · ');
-      field('text').textContent = p.description;
-      field('link').textContent = p.linkUrl ? p.linkText + ' ↗' : '';
-      field('link').href = p.linkUrl || '#';
-      field('key').hidden = !p.linkUrl;
-      // style.display, not `hidden`: the img's Tailwind `block` class overrides `hidden`
-      const img = field('img');
-      const hasImage = p.images?.length > 0;
-      img.style.display = hasImage ? '' : 'none';
-      if (hasImage) {
-        img.src = imageUrl(p.images[0]);
-        img.alt = p.title;
-      } else {
-        img.removeAttribute('src');
-      }
-      card.dataset.open = 'true';
+      const token = ++cardToken;
+      const urls = (p.images || []).map(imageUrl);
+      urls.forEach((u) => { new Image().src = u; });   // start loading them all, so slideshow flips never show a gap
+
+      // Fill in and open the card only once its first image is ready. Until then
+      // the old card's picture would sit next to the new text for a moment.
+      const show = () => {
+        if (token !== cardToken) return;   // walked on to another tree (or away) meanwhile
+        field('title').textContent = p.title;
+        field('date').textContent = `${p.date} · ${p.status}`;
+        field('paths').textContent = p.paths.map((k) => MATERIALS[k].label).join(' · ');
+        field('text').textContent = p.description;
+        field('link').textContent = p.linkUrl ? p.linkText + ' ↗' : '';
+        field('link').href = p.linkUrl || '#';
+        field('key').hidden = !p.linkUrl;
+        // style.display, not `hidden`: the img's Tailwind `block` class overrides `hidden`
+        const img = field('img');
+        img.style.display = urls.length ? '' : 'none';
+        if (urls.length) {
+          img.src = urls[0];
+          img.alt = p.title;
+        } else {
+          img.removeAttribute('src');
+        }
+        if (urls.length > 1) {
+          let i = 0;
+          slideshow = setInterval(() => {
+            i = (i + 1) % urls.length;
+            img.src = urls[i];
+          }, SLIDE_MS);
+        }
+        card.dataset.open = 'true';
+        visited.add(p.id);
+        updateProgress();
+      };
+      if (!urls.length) return show();
+      const first = new Image();
+      first.src = urls[0];
+      first.decode().then(show, show);   // a broken image still shows the card, just without it
     }
 
     // --- drawing --------------------------------------------------------------
@@ -818,6 +906,14 @@ import { FONT } from './font.js';
       shadowsCtx.imageSmoothingEnabled = false;
       shadowsCtx.fillStyle = '#000';
       const things = [];
+      {
+        const sx = trailSign.x - cx, sy = trailSign.y - cy;
+        footShadow(sx, sy, [3, 5]);
+        things.push({ y: trailSign.y, draw: () => {
+          const s = trailSign.sign;
+          ctx.drawImage(s, sx - (s.width * PIXEL) / 2, sy - s.height * PIXEL + PIXEL, s.width * PIXEL, s.height * PIXEL);
+        } });
+      }
       for (const t of trees) {
         const sx = t.signX - cx, sy = t.signY - cy;
         if (sx > -200 && sx < w + 200 && sy > -100 && sy < h + 100) {
@@ -854,6 +950,55 @@ import { FONT } from './font.js';
 
       things.sort((a, b) => a.y - b.y);
       for (const thing of things) thing.draw();
+      drawArrows(cx, cy);
+    }
+
+    // The counter's arrows: a ring around the player pointing at the nearest few
+    // unvisited trees of the chosen kind, in that trail's colour, the closest
+    // biggest. An arrow pointing almost the same way as a nearer one is left
+    // out, so the ring stays readable. They fade out over the last half second.
+    const MAX_ARROWS = 5;
+    const MIN_GAP = (15 * Math.PI) / 180;
+    function drawArrows(cx, cy) {
+      const left = pointing.until - performance.now();
+      if (left <= 0) return;
+      const kind = pointing.kind;
+      const px = player.x - cx;
+      const py = player.y - cy - 28;          // around the middle of the sprite
+      const [r, g, b] = MATERIALS[kind].base;
+      ctx.save();
+      ctx.globalAlpha = Math.min(1, left / 500);
+      ctx.lineJoin = 'round';
+      const targets = trees
+        .filter((t) => !visited.has(t.project.id) && t.project.paths.includes(kind))
+        .map((t) => ({ angle: Math.atan2(t.y - player.y, t.x - player.x), d: Math.hypot(t.x - player.x, t.y - player.y) }))
+        .sort((a, b) => a.d - b.d);
+      const shown = [];
+      for (const t of targets) {
+        if (shown.length >= MAX_ARROWS) break;
+        const apart = shown.every((s) => Math.abs(Math.atan2(Math.sin(t.angle - s.angle), Math.cos(t.angle - s.angle))) >= MIN_GAP);
+        if (apart) shown.push(t);
+      }
+      shown.forEach(({ angle }, i) => {
+        const size = 1.3 - i * 0.12;         // nearest first, biggest
+        ctx.save();
+        ctx.translate(px + Math.cos(angle) * 95, py + Math.sin(angle) * 95);
+        ctx.rotate(angle);
+        ctx.scale(size, size);
+        ctx.beginPath();
+        ctx.moveTo(14, 0);
+        ctx.lineTo(-6, -10);
+        ctx.lineTo(-2, 0);
+        ctx.lineTo(-6, 10);
+        ctx.closePath();
+        ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+        ctx.strokeStyle = '#28201e';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+        ctx.fill();
+        ctx.restore();
+      });
+      ctx.restore();
     }
 
     // --- main loop ------------------------------------------------------------

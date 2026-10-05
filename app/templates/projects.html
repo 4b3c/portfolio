@@ -6,33 +6,25 @@
         data-projects="{{ url_for('static', filename='data/projects.json') }}"
         data-image-base="https://4b3c.github.io/digitalQuiver/"></canvas>
 
-<!-- map key: same look as the project cards; H or the button shows and hides it -->
-<button id="key-toggle" type="button" aria-controls="key" aria-expanded="false"
-        class="fixed bottom-4 right-4 rounded border-4 border-[#28201e] bg-[#f4ead2] px-3 py-1 text-sm font-bold text-[#28201e] shadow-[4px_4px_0_rgba(0,0,0,0.25)] hover:bg-white">
-  key
-</button>
-<div id="key" data-open="false"
-     class="fixed bottom-16 right-4 rounded border-4 border-[#28201e] bg-[#f4ead2] text-[#28201e] shadow-[6px_6px_0_rgba(0,0,0,0.25)] p-3 text-sm
-            transition duration-200 opacity-0 translate-y-4 pointer-events-none
-            data-[open=true]:opacity-100 data-[open=true]:translate-y-0 data-[open=true]:pointer-events-auto">
-  <div class="flex flex-wrap gap-x-3 gap-y-1">
-        <span class="flex items-center gap-1.5"><canvas data-leaf="active" class="h-5 w-5 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>active</span>
-        <span class="flex items-center gap-1.5"><canvas data-leaf="parked" class="h-5 w-5 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>parked</span>
-        <span class="flex items-center gap-1.5"><canvas data-leaf="complete" class="h-5 w-5 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>done</span>
-        <span class="flex items-center gap-1.5"><canvas data-leaf="abandoned" class="h-5 w-5 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>abandoned</span>
+<!-- bottom right: how many projects of each kind you've visited (click one for arrows to the rest), and help (replays the intro; H does the same) -->
+<div class="fixed bottom-4 right-4 flex items-stretch gap-2 text-sm font-bold text-[#28201e]">
+  <div id="progress" class="flex items-center gap-3 rounded border-4 border-[#28201e] bg-[#f4ead2] px-3 py-1 shadow-[4px_4px_0_rgba(0,0,0,0.25)]">
+    <button type="button" data-point="mechanical" title="point to the CAD projects you haven't visited" class="flex items-center gap-1.5 rounded px-1 hover:bg-white"><canvas data-swatch="mechanical" class="h-4 w-4 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>CAD <span data-progress="mechanical">0/0</span></button>
+    <button type="button" data-point="coding" title="point to the code projects you haven't visited" class="flex items-center gap-1.5 rounded px-1 hover:bg-white"><canvas data-swatch="coding" class="h-4 w-4 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>code <span data-progress="coding">0/0</span></button>
+    <button type="button" data-point="work" title="point to the work projects you haven't visited" class="flex items-center gap-1.5 rounded px-1 hover:bg-white"><canvas data-swatch="work" class="h-4 w-4 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>work <span data-progress="work">0/0</span></button>
   </div>
-  <div class="mt-2 flex flex-wrap gap-x-3 gap-y-1">
-        <span class="flex items-center gap-1.5"><canvas data-swatch="mechanical" class="h-5 w-5 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>CAD</span>
-        <span class="flex items-center gap-1.5"><canvas data-swatch="coding" class="h-5 w-5 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>code</span>
-        <span class="flex items-center gap-1.5"><canvas data-swatch="work" class="h-5 w-5 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>work</span>
-  </div>
+  <button id="help" type="button"
+          class="rounded border-4 border-[#28201e] bg-[#f4ead2] px-3 py-1 shadow-[4px_4px_0_rgba(0,0,0,0.25)] hover:bg-white">
+    help
+  </button>
 </div>
 
 <div id="card" data-open="false"
-     class="fixed bottom-4 left-4 w-[22rem] max-w-[calc(100vw-2rem)] rounded border-4 border-[#28201e] bg-[#f4ead2] text-[#28201e] shadow-[6px_6px_0_rgba(0,0,0,0.25)]
+     class="fixed bottom-4 left-4 w-[22rem] max-w-[calc(100vw-2rem)] max-h-[calc(100vh-2rem)] overflow-y-auto rounded border-4 border-[#28201e] bg-[#f4ead2] text-[#28201e] shadow-[6px_6px_0_rgba(0,0,0,0.25)]
             transition duration-200 opacity-0 translate-y-4 pointer-events-none
             data-[open=true]:opacity-100 data-[open=true]:translate-y-0 data-[open=true]:pointer-events-auto">
-  <img data-img class="block w-full h-40 object-cover border-b-4 border-[#28201e] bg-[#d9c9a3]" alt="">
+  <!-- full width at the image's own shape, so its height follows; never cropped -->
+  <img data-img class="block w-full h-auto border-b-4 border-[#28201e]" alt="">
   <div class="p-4">
     <p data-date class="text-xs uppercase tracking-wide opacity-60"></p>
     <h2 data-title class="mt-0.5 font-bold leading-snug"></h2>
@@ -102,7 +94,7 @@
 <!-- the "just show me a list" view -->
 <!-- see-through, so the forest stays behind the cards -->
 <div id="list" hidden class="fixed inset-0 z-30 overflow-y-auto px-4 py-8">
-  <div class="mx-auto max-w-3xl">
+  <div class="mx-auto max-w-6xl">
     <div class="flex flex-wrap items-center justify-between gap-3 rounded border-4 border-[#28201e] bg-[#f4ead2] p-4 text-[#28201e] shadow-[6px_6px_0_rgba(0,0,0,0.25)]">
       <div>
         <h1 class="text-2xl font-bold">Abram's projects</h1>

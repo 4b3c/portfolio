@@ -93,7 +93,10 @@
     "start": "2023-05",
     "date": "2023 – now",
     "size": "large",
-    "images": [],
+    "images": [
+      "/static/img/projects/taptech/orders.png",
+      "/static/img/projects/taptech/tap-demo.png"
+    ],
     "description": "NFC products, from wooden necklaces with NFC tags inside to 3D-printed keychains, like a Spotify-logo keychain that opens a song when you tap it. For a Luminosity Lab event I made 300 keychains, each with its own URL that its owner could point at their LinkedIn or anything else.",
     "linkText": "Check out the site!",
     "linkUrl": "https://taptechstudio.com",
@@ -136,7 +139,9 @@
     "start": "2023-09",
     "date": "2023 – 2024",
     "size": "medium",
-    "images": [],
+    "images": [
+      "/static/img/projects/mechvolta/cad.png"
+    ],
     "description": "My first Luminosity Lab project, freshman year: storing electricity mechanically in small form factors, so electric cars could rely less on rare metals. It didn’t pan out, but it taught me a lot.",
     "linkText": "",
     "linkUrl": "",
@@ -258,7 +263,9 @@
     "start": "2025-01",
     "date": "2025",
     "size": "small",
-    "images": [],
+    "images": [
+      "/static/img/projects/toolboard/dashboard.png"
+    ],
     "description": "A dashboard that pulls all your tools into one place: email, to-do lists, Slack notifications and favourite links, as cards you can drag and resize. React + TypeScript on the front, Flask + Supabase on the back.",
     "linkText": "Check out the repo!",
     "linkUrl": "https://github.com/4b3c/toolboard-html",
@@ -290,7 +297,8 @@
     "tree": {
       "seed": 3532105243,
       "maxAge": 157
-    }
+    },
+    "hidden": true
   },
   {
     "id": "pantry",
@@ -415,7 +423,9 @@
     "start": "2026-07",
     "date": "2026",
     "size": "tiny",
-    "images": [],
+    "images": [
+      "/static/img/projects/voussoir/landing.png"
+    ],
     "description": "A referral-code marketplace concept, tested for demand before building: I designed the concept, bought the domain, built a waitlist and posted it to Reddit.",
     "linkText": "Check out the waitlist!",
     "linkUrl": "https://voussoir.app",
@@ -494,7 +504,8 @@
     "tree": {
       "seed": 3276591264,
       "maxAge": 276
-    }
+    },
+    "hidden": true
   },
   {
     "id": "purchase",
@@ -517,5 +528,95 @@
       "maxAge": 270
     },
     "hidden": true
+  },
+  {
+    "id": "proctrees",
+    "title": "Procedural Pixel Art Trees",
+    "images": [
+      "/static/img/projects/proctrees/tree.png"
+    ],
+    "description": "I'm bad at pixel art, so I wrote a program to make it for me. It grows a random tree branch by branch and animates it growing, then turns it into pixel art with outlines, leaves and a shadow, ready to save as an image or a video. Every tree in this forest is grown by a JavaScript port of it.",
+    "linkText": "Check out the itch.io page!",
+    "linkUrl": "https://4b3c.itch.io/procedural-pixel-art-tree-generator",
+    "start": "2024-05",
+    "date": "2024 – now",
+    "size": "medium",
+    "status": "active",
+    "paths": [
+      "coding"
+    ],
+    "sign": "TREES",
+    "tree": {
+      "seed": 1838422744,
+      "maxAge": 450
+    }
+  },
+  {
+    "id": "tileworld",
+    "title": "TileWorld",
+    "images": [
+      "/static/img/projects/tileworld/world.png",
+      "/static/img/projects/tileworld/menu.png"
+    ],
+    "description": "A top-down pygame world that generates itself in chunks as you walk: grassland and forest from my own pixel-art tiles, with menus, separate save files for each world, and tiles you can build on. The grass in this forest comes from it.",
+    "linkText": "Check out the repo!",
+    "linkUrl": "https://github.com/4b3c/TileWorld",
+    "start": "2023-12",
+    "date": "2023 – 2025",
+    "size": "medium",
+    "status": "parked",
+    "paths": [
+      "coding"
+    ],
+    "sign": "TILEWORLD",
+    "tree": {
+      "seed": 2090556797,
+      "maxAge": 436
+    }
+  },
+  {
+    "id": "stonkle",
+    "title": "Stonkle",
+    "images": [
+      "/static/img/projects/stonkle/landing.png",
+      "/static/img/projects/stonkle/round.png"
+    ],
+    "description": "A stock-guessing game. You see the first three months of a random stock's chart, with the company and year hidden, and choose buy or sell. Then the next three months are revealed and you score points for being right, levelling up as you go. Flask and pandas on eight years of Yahoo Finance data.",
+    "linkText": "",
+    "linkUrl": "",
+    "start": "2025-06",
+    "date": "2025",
+    "size": "small",
+    "status": "complete",
+    "paths": [
+      "coding"
+    ],
+    "sign": "STONKLE",
+    "tree": {
+      "seed": 1725354302,
+      "maxAge": 276
+    }
+  },
+  {
+    "id": "tictactoe",
+    "title": "Bit Tic-Tac-Toe",
+    "images": [
+      "/static/img/projects/tictactoe/game.png"
+    ],
+    "description": "A command-line tic-tac-toe in C++ where each player's moves are stored as a 9-bit number. Checking for a win is just ANDing those bits against the eight winning patterns, so it's very fast.",
+    "linkText": "Check out the repo!",
+    "linkUrl": "https://github.com/4b3c/bit-tictactoe",
+    "start": "2024-08",
+    "date": "2024",
+    "size": "tiny",
+    "status": "complete",
+    "paths": [
+      "coding"
+    ],
+    "sign": "TICTACTOE",
+    "tree": {
+      "seed": 3101722587,
+      "maxAge": 145
+    }
   }
 ]

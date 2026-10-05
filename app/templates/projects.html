@@ -3,8 +3,7 @@
 {% block content %}
 <canvas id="projects" class="fixed inset-0 -z-10"
         data-grass="{{ url_for('static', filename='img/grass.png') }}"
-        data-projects="{{ url_for('static', filename='data/projects.json') }}"
-        data-image-base="https://4b3c.github.io/digitalQuiver/"></canvas>
+        data-projects="{{ url_for('static', filename='data/projects.json') }}"></canvas>
 
 <!-- bottom right: how many projects of each kind you've visited (click one for arrows to the rest), and help (replays the intro; H does the same) -->
 <div class="fixed bottom-4 right-4 flex items-stretch gap-2 text-sm font-bold text-[#28201e]">

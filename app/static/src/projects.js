@@ -135,11 +135,6 @@ import { FONT } from './font.js';
   const grass = new Image();
   grass.src = canvas.dataset.grass;
 
-  // Image paths in projects.json are either our own (/static/...) or relative
-  // to the digitalQuiver site.
-  const imageUrl = (path) =>
-    path.startsWith('/') || /^https?:/.test(path) ? path : canvas.dataset.imageBase + path;
-
   // --- map key -------------------------------------------------------------
   // Swatches are drawn with the same pixel art as the world, so they match.
   for (const el of document.querySelectorAll('[data-swatch]')) {
@@ -330,7 +325,7 @@ import { FONT } from './font.js';
         frame.style.aspectRatio = '16 / 9';     // until the image loads and says its real shape
         const img = el('img', 'absolute inset-0 h-full w-full object-contain');
         img.addEventListener('load', () => fitImage(item, frame, body, img));
-        img.src = imageUrl(p.images[0]);
+        img.src = p.images[0];
         img.alt = p.title;
         img.loading = 'lazy';
         frame.append(img);
@@ -843,7 +838,7 @@ import { FONT } from './font.js';
       }
       const p = nearest.project;
       const token = ++cardToken;
-      const urls = (p.images || []).map(imageUrl);
+      const urls = p.images || [];
       urls.forEach((u) => { new Image().src = u; });   // start loading them all, so slideshow flips never show a gap
 
       // Fill in and open the card only once its first image is ready. Until then

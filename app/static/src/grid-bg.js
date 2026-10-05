@@ -5,10 +5,11 @@
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const bg = canvas.dataset.bg || '#000000';  // pages can override via {% block grid_bg %}
 
   function draw(w, h) {
     ctx.clearRect(0, 0, w, h);
-    ctx.fillStyle = '#000000';
+    ctx.fillStyle = bg;
     ctx.fillRect(0, 0, w, h);
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
     ctx.lineWidth = 1;

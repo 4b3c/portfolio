@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block grid_bg %}rgb(130, 170, 70){% endblock %}
+{% block content %}
+<canvas id="projects" class="fixed inset-0 -z-10"
+        data-grass="{{ url_for('static', filename='img/grass.png') }}"
+        data-projects="{{ url_for('static', filename='data/projects.json') }}"
+        data-image-base="https://4b3c.github.io/digitalQuiver/"></canvas>
+
+<a href="{{ url_for('main.home') }}" class="fixed top-4 left-4 text-xs text-slate-800/70 hover:text-white">
+  ← home
+</a>
+
+<p class="fixed bottom-4 right-4 text-xs text-slate-800/70 pointer-events-none text-right">
+  wasd / arrows to walk · shift to run<br>
+  walk up to a tree to see its project<br>
+  trails: dirt = CAD &amp; hardware · stone = coding · gravel = work<br>
+  leaves: green = active · autumn = parked · blossom = complete · bare = abandoned
+</p>
+
+<div id="card" data-open="false"
+     class="fixed bottom-4 left-4 w-[22rem] max-w-[calc(100vw-2rem)] rounded border-4 border-[#28201e] bg-[#f4ead2] text-[#28201e] shadow-[6px_6px_0_rgba(0,0,0,0.25)]
+            transition duration-200 opacity-0 translate-y-4 pointer-events-none
+            data-[open=true]:opacity-100 data-[open=true]:translate-y-0 data-[open=true]:pointer-events-auto">
+  <img data-img class="block w-full h-40 object-cover border-b-4 border-[#28201e] bg-[#d9c9a3]" alt="">
+  <div class="p-4">
+    <p data-date class="text-xs uppercase tracking-wide opacity-60"></p>
+    <h2 data-title class="mt-0.5 font-bold leading-snug"></h2>
+    <p data-paths class="mt-1 text-xs opacity-70"></p>
+    <p data-text class="mt-2 text-sm leading-relaxed"></p>
+    <div class="mt-3 flex items-center justify-between text-sm">
+      <a data-link target="_blank" rel="noopener" class="font-semibold underline decoration-2 underline-offset-2 hover:text-[#aa3220]"></a>
+      <span data-key class="text-xs opacity-60">press E</span>
+    </div>
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='src/pixeltree.js') }}" defer></script>
+<script type="module" src="{{ url_for('static', filename='src/projects.js') }}"></script>
+{% endblock %}

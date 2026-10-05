@@ -1,0 +1,538 @@
+[
+  {
+    "id": "game",
+    "title": "Isometric Game",
+    "images": [
+      "media/game.png"
+    ],
+    "description": "An ongoing project inspired by Polytopia, SimCity, and Civ VI. Built both 2D and isometric prototypes, implemented pathfinding and world saving. I plan to restart the project in C++ with better architecture and devlogs.",
+    "linkText": "Check out the repo!",
+    "linkUrl": "https://github.com/4b3c/Isometric-Map_game",
+    "start": "2022-01",
+    "date": "2022",
+    "size": "medium",
+    "status": "parked",
+    "paths": [
+      "coding"
+    ],
+    "sign": "ISO GAME",
+    "tree": {
+      "seed": 9629817,
+      "maxAge": 443
+    }
+  },
+  {
+    "id": "mnist",
+    "title": "MNIST Neural Network",
+    "images": [
+      "media/mnist.png"
+    ],
+    "description": "My first dive into machine learning. Wrote a neural network from scratch to classify hand-drawn digits using the MNIST dataset. Focused on understanding the fundamentals of forward propagation and backpropagation.",
+    "linkText": "Check out the repo!",
+    "linkUrl": "https://github.com/4b3c/mnist_machine_learning",
+    "start": "2022-02",
+    "date": "2021 – 2022",
+    "size": "small",
+    "status": "abandoned",
+    "paths": [
+      "coding"
+    ],
+    "sign": "MNIST",
+    "tree": {
+      "seed": 304449442,
+      "maxAge": 288
+    }
+  },
+  {
+    "id": "bezier",
+    "title": "Bezier Curve Swerve Paths",
+    "images": [
+      "media/bezier.png"
+    ],
+    "description": "A tool to generate smooth autonomous paths for our FIRST Robotics team's swerve drive using Bezier curves. Helped us win the Autonomous Award at the Arizona East 2023 Regional.",
+    "linkText": "Check out the repo!",
+    "linkUrl": "https://github.com/4b3c/bezier-curves",
+    "start": "2022-08",
+    "date": "2022 – 2023",
+    "size": "medium",
+    "status": "complete",
+    "paths": [
+      "coding"
+    ],
+    "sign": "BEZIER",
+    "tree": {
+      "seed": 525262247,
+      "maxAge": 448
+    }
+  },
+  {
+    "id": "wikifacts",
+    "title": "WikiFacts AI Video Project",
+    "images": [
+      "media/wikifacts.png"
+    ],
+    "description": "An automated pipeline that generated short videos summarizing Wikipedia articles into 5 facts. Used ChatGPT, Wikipedia API, Google Images, Amazon TTS, and OpenCV to compile videos and upload to YouTube Shorts. Gained 70+ subs and 19K+ views.",
+    "linkText": "Check out the channel!",
+    "linkUrl": "https://www.youtube.com/channel/UCbY-W4ZfbrnHluhPqqADrIA",
+    "start": "2023-02",
+    "date": "2023",
+    "size": "medium",
+    "status": "complete",
+    "paths": [
+      "coding"
+    ],
+    "sign": "WIKIFACTS",
+    "tree": {
+      "seed": 174042548,
+      "maxAge": 454
+    }
+  },
+  {
+    "id": "taptech",
+    "title": "TapTech Studio",
+    "start": "2023-05",
+    "date": "2023 – now",
+    "size": "large",
+    "images": [],
+    "description": "NFC products, from wooden necklaces with NFC tags inside to 3D-printed keychains, like a Spotify-logo keychain that opens a song when you tap it. For a Luminosity Lab event I made 300 keychains, each with its own URL that its owner could point at their LinkedIn or anything else.",
+    "linkText": "Check out the site!",
+    "linkUrl": "https://taptechstudio.com",
+    "status": "active",
+    "paths": [
+      "mechanical",
+      "coding"
+    ],
+    "sign": "TAPTECH",
+    "tree": {
+      "seed": 2070000338,
+      "maxAge": 699
+    }
+  },
+  {
+    "id": "valton",
+    "title": "Valton",
+    "start": "2023-07",
+    "date": "2023",
+    "size": "tiny",
+    "images": [],
+    "description": "A two-day browser game experiment: a welcome screen, profiles for two players, player locations, and a map maker and viewer. An early try at multiplayer game state.",
+    "linkText": "",
+    "linkUrl": "",
+    "status": "abandoned",
+    "paths": [
+      "coding"
+    ],
+    "sign": "VALTON",
+    "tree": {
+      "seed": 1093744986,
+      "maxAge": 144
+    }
+  },
+  {
+    "id": "waves",
+    "title": "Abstract Wave Art",
+    "images": [
+      "media/abstract_wave_art.jpg"
+    ],
+    "description": "Inspired by water caustics and wave patterns. This Python project layers and rotates mathematical waveforms (e^sin(x)) to generate intricate light-shadow maps. I used cv2 for rotation, optimized performance, and shared the generative art via an Instagram page.",
+    "linkText": "Check out the videos!",
+    "linkUrl": "https://www.instagram.com/coded_desines/",
+    "start": "2023-08",
+    "date": "2023",
+    "size": "small",
+    "status": "complete",
+    "paths": [
+      "coding"
+    ],
+    "sign": "WAVES",
+    "tree": {
+      "seed": 313309429,
+      "maxAge": 287
+    }
+  },
+  {
+    "id": "mechvolta",
+    "title": "MechVolta",
+    "start": "2023-09",
+    "date": "2023 – 2024",
+    "size": "medium",
+    "images": [],
+    "description": "My first Luminosity Lab project, freshman year: storing electricity mechanically in small form factors, so electric cars could rely less on rare metals. It didn’t pan out, but it taught me a lot.",
+    "linkText": "",
+    "linkUrl": "",
+    "status": "abandoned",
+    "paths": [
+      "mechanical",
+      "work"
+    ],
+    "sign": "MECHVOLTA",
+    "tree": {
+      "seed": 4163889276,
+      "maxAge": 463
+    }
+  },
+  {
+    "id": "physim",
+    "title": "Gravitational Physics Sim → PBB Lab",
+    "images": [
+      "media/GravPhySim.png"
+    ],
+    "description": "A JavaFX simulation modeling orbital physics using Newton's law of gravitation and 3D vector math. I used object-oriented design and built visual representations of 3D vectors using cylinder-cone models, applying concepts from calculus and physics. It started as an honors project and led to a spot in the Photoemission and Bright Beams lab, where I rewrote their MATLAB simulation in C and Python.",
+    "linkText": "Check out the repo!",
+    "linkUrl": "https://github.com/4b3c/GravitationalPhysicsSimulation",
+    "start": "2024-02",
+    "date": "2024 – now",
+    "size": "large",
+    "status": "active",
+    "paths": [
+      "coding",
+      "work"
+    ],
+    "sign": "PBB LAB",
+    "tree": {
+      "seed": 928820862,
+      "maxAge": 693
+    }
+  },
+  {
+    "id": "sabL",
+    "title": "SabL-Cesium",
+    "images": [
+      "media/sabL.png"
+    ],
+    "description": "A conceptual system of universal measurement units not based on Earth-centric standards like the second or meter. Built from a conversation about how units should be derived from universal constants instead of arbitrary Earth measurements.",
+    "linkText": "Check out the project!",
+    "linkUrl": "https://4b3c.github.io/digitalQuiver/SabL/convert.html",
+    "start": "2024-04",
+    "date": "2024",
+    "size": "tiny",
+    "status": "complete",
+    "paths": [
+      "coding"
+    ],
+    "sign": "SABL",
+    "tree": {
+      "seed": 9986943,
+      "maxAge": 149
+    }
+  },
+  {
+    "id": "esp32car",
+    "title": "ESP32 Websocket Car",
+    "images": [
+      "media/esp32-car/main.jpeg",
+      "media/esp32-car/building.jpeg"
+    ],
+    "description": "I designed this car that hosts a website on the ESP32. The website allows you to control the car using a keyboard on any device on the same network. Modeled, printed, wired and programmed solo in C and C++, and moved the controls from HTTP requests to WebSockets to cut latency.",
+    "linkText": "Check out the CAD!",
+    "linkUrl": "https://cad.onshape.com/documents/ae932ce799a5eb2243f604de/w/c48c736baf26eec3e2e0e66b/e/38bae2259a29866f206b20a2?renderMode=0&uiState=67e71e46e3d6fe38a5b350ec",
+    "start": "2024-07",
+    "date": "2024",
+    "size": "medium",
+    "status": "complete",
+    "paths": [
+      "mechanical",
+      "coding"
+    ],
+    "sign": "ESP32 CAR",
+    "tree": {
+      "seed": 2401765850,
+      "maxAge": 458
+    }
+  },
+  {
+    "id": "charlotte",
+    "title": "Mini CHARLOTTE",
+    "images": [
+      "media/mini-charlotte/main.jpeg",
+      "media/mini-charlotte/cad.jpeg",
+      "media/mini-charlotte/building.jpeg",
+      "media/mini-charlotte/presenting.jpeg"
+    ],
+    "description": "I designed this robot using the CHARLOTTE robot as a reference. The original CHARLOTTE was made for the NASA Big Idea Competition in 2022, and won the Systems Engineering Award. Mini CHARLOTTE is fully 3D-printed, uses a Raspberri Pi and 12 Robotis motors to control the 3 3DOF legs, and the 3 1DOF legs.",
+    "linkText": "Check out the CAD!",
+    "linkUrl": "https://cad.onshape.com/documents/5d7b9cb4acdde16bb73fc4c7/w/094b5123dbbe6feb66b45634/e/4d78dbf04e5d538562c00eb0?renderMode=0&uiState=67e71c3815765d0c6b872c8c",
+    "start": "2024-08",
+    "date": "2024 – now",
+    "size": "huge",
+    "status": "active",
+    "paths": [
+      "mechanical",
+      "coding",
+      "work"
+    ],
+    "sign": "CHARLOTTE",
+    "tree": {
+      "seed": 199117766,
+      "maxAge": 1007
+    }
+  },
+  {
+    "id": "toolboard",
+    "title": "Toolboard",
+    "start": "2025-01",
+    "date": "2025",
+    "size": "small",
+    "images": [],
+    "description": "A dashboard that pulls all your tools into one place: email, to-do lists, Slack notifications and favourite links, as cards you can drag and resize. React + TypeScript on the front, Flask + Supabase on the back.",
+    "linkText": "Check out the repo!",
+    "linkUrl": "https://github.com/4b3c/toolboard-html",
+    "status": "abandoned",
+    "paths": [
+      "coding"
+    ],
+    "sign": "TOOLBOARD",
+    "tree": {
+      "seed": 2506021928,
+      "maxAge": 265
+    }
+  },
+  {
+    "id": "prompter",
+    "title": "Prompter",
+    "start": "2025-04",
+    "date": "2025",
+    "size": "tiny",
+    "images": [],
+    "description": "An experiment in measuring prompts. It changes a prompt in small ways, like swapping words, and measures the effect on the output, to learn what makes a prompt powerful instead of guessing. Python engine, TypeScript UI, Flask backend.",
+    "linkText": "",
+    "linkUrl": "",
+    "status": "abandoned",
+    "paths": [
+      "coding"
+    ],
+    "sign": "PROMPTER",
+    "tree": {
+      "seed": 3532105243,
+      "maxAge": 157
+    }
+  },
+  {
+    "id": "pantry",
+    "title": "Pantry",
+    "start": "2025-06",
+    "date": "2025 – 2026",
+    "size": "huge",
+    "images": [],
+    "description": "An iOS macro-tracking app, live on the App Store. Barcode scanning, receipt scanning through an LLM + Open Food Facts pipeline, RevenueCat subscriptions and a Supabase backend. Built from a web app all the way to its App Store debut.",
+    "linkText": "",
+    "linkUrl": "",
+    "status": "parked",
+    "paths": [
+      "coding"
+    ],
+    "sign": "PANTRY",
+    "tree": {
+      "seed": 922029765,
+      "maxAge": 1005
+    }
+  },
+  {
+    "id": "orbitscape",
+    "title": "Orbitscape",
+    "start": "2025-08",
+    "date": "2025 – now",
+    "size": "large",
+    "images": [],
+    "description": "A browser-native orbit visualization platform from the Luminosity Lab, now launched as a startup with a twelve-person team. I’m building the mission-planning frontend that generates scripts for the simulation engine.",
+    "linkText": "",
+    "linkUrl": "",
+    "status": "active",
+    "paths": [
+      "coding",
+      "work"
+    ],
+    "sign": "ORBITSCAPE",
+    "tree": {
+      "seed": 1202260740,
+      "maxAge": 700
+    }
+  },
+  {
+    "id": "particle",
+    "title": "Particle Analyzer",
+    "start": "2025-09",
+    "date": "2025",
+    "size": "medium",
+    "images": [],
+    "description": "A Luminosity Lab device that charges particles and then detects them, measuring their size and other properties. I did the CAD, which taught me to design parts for machining in metal instead of 3D printing.",
+    "linkText": "",
+    "linkUrl": "",
+    "status": "active",
+    "paths": [
+      "mechanical",
+      "work"
+    ],
+    "sign": "PARTICLES",
+    "tree": {
+      "seed": 1421571982,
+      "maxAge": 456
+    }
+  },
+  {
+    "id": "jude",
+    "title": "Project Jude",
+    "start": "2025-10",
+    "date": "2025 – now",
+    "size": "small",
+    "images": [],
+    "description": "A lifesaving submarine device at the Luminosity Lab. I did the CAD for the first version and now advise the team building the next one.",
+    "linkText": "",
+    "linkUrl": "",
+    "status": "active",
+    "paths": [
+      "mechanical",
+      "work"
+    ],
+    "sign": "JUDE",
+    "tree": {
+      "seed": 9738131,
+      "maxAge": 273
+    }
+  },
+  {
+    "id": "zipper",
+    "title": "Zipper: Discord/Terminal AI Assistant",
+    "images": [
+      "media/zipper/discord.png",
+      "media/zipper/terminal.png"
+    ],
+    "description": "A personal assistant chatbot that can be used on Discord and in the terminal. It can answer questions, but most importantly has the ability to run bash commands on my computer. I can control my computer from my phone using it, and it can explain terminal outputs to me. Rebuilt in 2026 around Claude: each Discord thread is its own conversation, working in a folder of notes kept in git.",
+    "linkText": "Check out the repo!",
+    "linkUrl": "https://github.com/4b3c/zipper",
+    "start": "2026-02",
+    "date": "2026",
+    "size": "large",
+    "status": "active",
+    "paths": [
+      "coding"
+    ],
+    "sign": "ZIPPER",
+    "tree": {
+      "seed": 1215764771,
+      "maxAge": 698
+    }
+  },
+  {
+    "id": "pergola",
+    "title": "Pergola",
+    "start": "2026-06",
+    "date": "2026",
+    "size": "tiny",
+    "images": [],
+    "description": "A self-hosted, browser-based app builder: an attempt at something as powerful as FileMaker without the baggage. Design an app in develop, deploy it with serve, and the output is a portable folder either tool can read.",
+    "linkText": "",
+    "linkUrl": "",
+    "status": "parked",
+    "paths": [
+      "coding"
+    ],
+    "sign": "PERGOLA",
+    "tree": {
+      "seed": 2930939157,
+      "maxAge": 146
+    }
+  },
+  {
+    "id": "voussoir",
+    "title": "Voussoir",
+    "start": "2026-07",
+    "date": "2026",
+    "size": "tiny",
+    "images": [],
+    "description": "A referral-code marketplace concept, tested for demand before building: I designed the concept, bought the domain, built a waitlist and posted it to Reddit.",
+    "linkText": "Check out the waitlist!",
+    "linkUrl": "https://voussoir.app",
+    "status": "parked",
+    "paths": [
+      "coding"
+    ],
+    "sign": "VOUSSOIR",
+    "tree": {
+      "seed": 2913922339,
+      "maxAge": 160
+    }
+  },
+  {
+    "id": "ironman",
+    "title": "Iron Man Helmet",
+    "start": "2026-08",
+    "date": "2026",
+    "size": "medium",
+    "images": [],
+    "description": "A multi-piece helmet surface-modeled in Onshape and printed on a Bambu P1S, with heat-set inserts joining the panels. A deliberate step outside my usual parametric CAD.",
+    "linkText": "",
+    "linkUrl": "",
+    "status": "active",
+    "paths": [
+      "mechanical"
+    ],
+    "sign": "HELMET",
+    "tree": {
+      "seed": 87546457975,
+      "maxAge": 463
+    }
+  },
+  {
+    "id": "gifs",
+    "title": "GIFs Against Humanity",
+    "start": "2026-08",
+    "date": "2026",
+    "size": "medium",
+    "images": [],
+    "description": "A party game where the answers are GIFs. Everyone plays on their own phone, with an optional TV as the shared screen. No accounts or downloads: open the site, type a four-letter code, pick a nickname. Flask backend, 100 curated prompts.",
+    "linkText": "Play it!",
+    "linkUrl": "https://gifs-against-humanity.com",
+    "status": "active",
+    "paths": [
+      "coding"
+    ],
+    "sign": "GIFS",
+    "tree": {
+      "seed": 9637302,
+      "maxAge": 457
+    }
+  },
+  {
+    "id": "barrett",
+    "title": "Barrett Thesis",
+    "start": "2026-08",
+    "date": "2026 – now",
+    "size": "small",
+    "images": [],
+    "description": "My honors thesis: designing a low-cost, open-ended STEM kit and coding curriculum for an under-resourced classroom, with a school in Kenya as the main deployment site.",
+    "linkText": "",
+    "linkUrl": "",
+    "status": "active",
+    "paths": [
+      "mechanical",
+      "coding"
+    ],
+    "sign": "THESIS",
+    "tree": {
+      "seed": 3276591264,
+      "maxAge": 276
+    }
+  },
+  {
+    "id": "purchase",
+    "title": "Purchase Request Extension",
+    "start": "2026-09",
+    "date": "2026",
+    "size": "small",
+    "images": [],
+    "description": "A Chrome extension for the Luminosity Lab’s purchasing workflow: open a purchase request, click once, and the Airtable form fills itself, replacing about sixteen fields of retyping.",
+    "linkText": "",
+    "linkUrl": "",
+    "status": "active",
+    "paths": [
+      "coding",
+      "work"
+    ],
+    "sign": "REQUESTS",
+    "tree": {
+      "seed": 1976045064,
+      "maxAge": 270
+    }
+  }
+]

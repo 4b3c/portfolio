@@ -29,3 +29,12 @@ def learn():
 @main.route("/life")
 def life():
     return render_template("life.html")
+
+@main.route("/trees")
+def trees():
+    return render_template("trees.html")
+
+
+@main.route("/projects")
+def projects():
+    return render_template("projects.html")

@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block grid_bg %}rgb(130, 170, 70){% endblock %}
+{% block content %}
+<canvas id="trees" class="fixed inset-0 -z-10"
+        data-grass="{{ url_for('static', filename='img/grass.png') }}"></canvas>
+
+<a href="{{ url_for('main.home') }}" class="fixed top-4 left-4 text-xs text-slate-800/70 hover:text-white">
+  ← home
+</a>
+
+<select id="palette" class="fixed top-3 right-4 rounded border border-slate-800/30 bg-transparent px-2 py-1 text-xs text-slate-800/80"></select>
+
+<p class="fixed bottom-4 left-4 text-xs text-slate-800/70 pointer-events-none">
+  explorer: wasd + left shift · girl: arrows + right shift · n for a new world
+</p>
+
+<script src="{{ url_for('static', filename='src/pixeltree.js') }}" defer></script>
+<script src="{{ url_for('static', filename='src/trees.js') }}" defer></script>
+{% endblock %}

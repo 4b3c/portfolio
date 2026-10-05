@@ -1,0 +1,5 @@
+.git
+node_modules
+app/static/dist
+__pycache__
+.venv

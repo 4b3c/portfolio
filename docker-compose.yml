@@ -1,0 +1,9 @@
+# The live site, abrampierce.com. nginx on the host proxies to the loopback port;
+# to deploy: git pull && docker compose up -d --build
+services:
+  web:
+    build: .
+    container_name: portfolio
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8020:8000"

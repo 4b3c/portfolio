@@ -355,6 +355,7 @@ import { FONT } from './font.js';
       listItems.append(item);
     }
   }
+  const onPhone = window.matchMedia('(max-width: 640px), (pointer: coarse) and (not (any-pointer: fine))').matches;
   intro.querySelector('[data-list]').addEventListener('click', () => {
     loaded.then(renderList);
     intro.style.display = 'none';        // the list is see-through, so the intro would show between cards
@@ -363,15 +364,16 @@ import { FONT } from './font.js';
   });
   list.querySelector('[data-forest]').addEventListener('click', () => {
     list.hidden = true;
+    if (onPhone) { showMobile(); return; }  // no forest without a keyboard: back to the desktop suggestion
     intro.style.display = '';
     showSlide(0);
   });
 
   // --- phones --------------------------------------------------------------
   // The forest needs a keyboard, so on a small screen or a touch-only device,
-  // show the Explorer and suggest a desktop, with the list as a way in.
-  const onPhone = window.matchMedia('(max-width: 640px), (pointer: coarse) and (not (any-pointer: fine))').matches;
-  if (onPhone) {
+  // show the Explorer and suggest a desktop, with the list as a way in. The
+  // list's "take me to the forest" comes back here too.
+  function showMobile() {
     const mobile = document.getElementById('mobile');
     const guy = document.getElementById('mobile-guy');
     const frames = CHARACTERS[0].sprites.down;
@@ -391,13 +393,15 @@ import { FONT } from './font.js';
     intro.style.display = 'none';
     document.getElementById('progress').parentElement.style.display = 'none';  // counter and help are for the forest
     mobile.style.display = '';             // not `hidden`: its Tailwind `flex` class would override that
-    mobile.querySelector('[data-mobile-list]').addEventListener('click', () => {
+    mobile.querySelector('[data-mobile-list]').onclick = () => {  // onclick, so showing it again doesn't stack handlers
       clearInterval(walking);
       mobile.style.display = 'none';
       loaded.then(renderList);
       list.hidden = false;
-    });
+      list.scrollTop = 0;
+    };
   }
+  if (onPhone) showMobile();
 
   // Enter moves the intro along
   window.addEventListener('keydown', (e) => {

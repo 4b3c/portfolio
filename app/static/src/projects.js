@@ -409,13 +409,10 @@ import { FONT } from './font.js';
     // Following a trail of the same kind is cheap, so trails merge. Stepping onto
     // another kind's trail is expensive, so different kinds only meet at short
     // crossings instead of running together (where one would hide the other).
-    // `behind` is the leg just laid: stepping back onto it costs extra, so a
-    // trail carries on past a tree instead of doubling back the way it came.
-    function route(from, to, kind, behind) {
+    function route(from, to, kind) {
       const mine = MAT_INDEX[kind];
       const cost = (i) => {
         if (blocked[i]) return Infinity;
-        if (behind.has(i)) return 4;
         const m = material[i];
         if (m === mine) return 0.35;
         if (m !== -1) return 6;
@@ -452,14 +449,10 @@ import { FONT } from './font.js';
           }
         });
       }
-      const leg = new Set();
-      if (end === -1) return leg;
       for (let st = end; st !== -1; st = came[st]) {
         const i = st >> 2;
         if (material[i] === -1) material[i] = mine;
-        if (i !== goal) leg.add(i);
       }
-      return leg;
     }
 
     // Each kind is one trail. It starts at the spawn point (the trailhead) and
@@ -498,8 +491,9 @@ import { FONT } from './font.js';
       if (!stops.length) return;
       const head = [SPAWN[0] - 1 + k, SPAWN[1] + 1];
       const walk = walkOrder(head, stops);
-      let behind = new Set();
-      for (let i = 1; i < walk.length; i++) behind = route(walk[i - 1], walk[i], kind, behind);
+      // Following its own trail is cheap, so where the next tree is back the
+      // way it came, a trail walks back along itself: one two-way path, not two.
+      for (let i = 1; i < walk.length; i++) route(walk[i - 1], walk[i], kind);
     });
 
 

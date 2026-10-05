@@ -424,6 +424,126 @@ window.PixelTree = (function () {
     },
   };
 
+  const ROBOT = {
+    colours: {
+      a: [230, 70, 60, 255],   // antenna light
+      M: [120, 126, 138, 255], // dark metal
+      m: [170, 176, 186, 255], // metal
+      v: [90, 220, 230, 255],  // visor
+      j: [70, 74, 84, 255],    // joints
+      p: [120, 126, 138, 255], // legs
+      b: [70, 74, 84, 255],    // feet
+    },
+    bodies: {
+      down: ['...a....', '...M....', '.MMMMMM.', '.MvvvvM.', '.MMMMMM.',
+             'jmmmmmmj', 'jmMmmMmj', '.mmmmmm.', '..MMMM..', '..MMMM..'],
+      up:   ['...a....', '...M....', '.MMMMMM.', '.MmmmmM.', '.MMMMMM.',
+             'jmmmmmmj', 'jmmmmmmj', '.mmmmmm.', '..MMMM..', '..MMMM..'],
+      right: ['....a...', '....M...', '..MMMMM.', '..MMvvv.', '..MMMMM.',
+              '..mmmm..', '..mmMm..', '..mmjm..', '..MMMM..', '..MMMM..'],
+    },
+    legs: EXPLORER.legs,
+  };
+
+  const RANGER = {
+    colours: {
+      g: [70, 120, 60, 255],   // cloak
+      G: [50, 90, 45, 255],    // cloak shade
+      s: [238, 196, 150, 255], // skin
+      e: [40, 28, 28, 255],    // eyes
+      t: [180, 140, 80, 255],  // belt
+      p: [60, 70, 50, 255],    // trousers
+      b: [70, 45, 30, 255],    // boots
+    },
+    bodies: {
+      down: ['..gggg..', '.gGGGGg.', '.gssssg.', '.gesseg.', '..gssg..',
+             'gggggggg', 'gGggggGg', 'gGttttGg', '.gggggg.', '.GGGGGG.'],
+      up:   ['..gggg..', '.gggggg.', '.gGGGGg.', '.gGGGGg.', '..gggg..',
+             'gggggggg', 'gGggggGg', 'gGttttGg', '.gggggg.', '.GGGGGG.'],
+      right: ['..ggggg.', '.gggGGg.', '.gggsss.', '.gggses.', '..ggss..',
+              '.ggggg..', '.gGggg..', '.gGtts..', '.gggggg.', '.GGGGGG.'],
+    },
+    legs: EXPLORER.legs,
+  };
+
+  // skin tones shared by the characters below
+  const SKIN = {
+    light: [238, 196, 150, 255], medium: [198, 140, 95, 255],
+    brown: [150, 96, 60, 255], deep: [105, 66, 42, 255],
+  };
+
+  const SCOUT = {   // afro puffs, yellow top, denim skirt
+    colours: {
+      h: [30, 24, 24, 255], s: SKIN.deep, e: [18, 10, 10, 255],
+      y: [240, 190, 60, 255], Y: [200, 150, 40, 255], k: [70, 90, 150, 255],
+      b: [235, 235, 235, 255],
+    },
+    bodies: {
+      down: ['hh....hh', 'hhhhhhhh', '.hssssh.', '.sesses.', '..ssss..',
+             '.yyyyyy.', 'YyyyyyyY', 'sYyyyyYs', '.kkkkkk.', 'kkkkkkkk'],
+      up:   ['hh....hh', 'hhhhhhhh', '.hhhhhh.', '.hhhhhh.', '..ssss..',
+             '.yyyyyy.', 'YyyyyyyY', 'sYyyyyYs', '.kkkkkk.', 'kkkkkkkk'],
+      right: ['hh.hhh..', 'hhhhhhh.', '.hhhsss.', '.hhhses.', '..ssss..',
+              '..yyyy..', '..yyYy..', '..yysy..', '.kkkkkk.', '.kkkkkk.'],
+    },
+    legs: GIRL.legs,
+  };
+
+  const VOYAGER = {   // teal hijab, long purple dress
+    colours: {
+      c: [40, 150, 140, 255], C: [25, 110, 105, 255], s: SKIN.medium, e: [30, 20, 20, 255],
+      d: [120, 70, 160, 255], D: [90, 50, 125, 255], b: [60, 40, 40, 255],
+    },
+    bodies: {
+      down: ['..cccc..', '.cccccc.', 'ccsssscc', 'csessesc', 'ccsssscc',
+             'cCCCCCCc', 'sdddddds', '.dDddDd.', '.dddddd.', '.dddddd.'],
+      up:   ['..cccc..', '.cccccc.', 'cccccccc', 'cccccccc', 'cCccccCc',
+             'cCCCCCCc', 'sdddddds', '.dDddDd.', '.dddddd.', '.dddddd.'],
+      right: ['..cccc..', '.cccccc.', 'ccccsss.', 'cccsses.', 'cccsss..',
+              'cCCCdd..', '.cddDd..', '..ddsd..', '.dddddd.', '.dddddd.'],
+    },
+    legs: {   // the dress covers the legs; only the shoes step
+      down: [['.DDDDDD.', '..b..b..'], ['.DDDDDD.', '..b.....'],
+             ['.DDDDDD.', '..b..b..'], ['.DDDDDD.', '.....b..']],
+      right: [['.DDDDDD.', '...bb...'], ['.DDDDDD.', '.b...b..'],
+              ['.DDDDDD.', '...bb...'], ['.DDDDDD.', '.b...b..']],
+    },
+  };
+
+  const SKATER = {   // backwards cap, green hoodie
+    colours: {
+      r: [200, 50, 50, 255], R: [150, 30, 30, 255], h: [25, 20, 20, 255], s: SKIN.brown,
+      e: [18, 10, 10, 255], g: [60, 150, 90, 255], G: [40, 110, 65, 255],
+      p: [40, 40, 50, 255], b: [240, 240, 240, 255],
+    },
+    bodies: {
+      down: ['..rrrr..', '.rrrrrr.', '.hssssh.', '.sesses.', '..ssss..',
+             '.gggggg.', 'GggGGggG', 'sGggggGs', '..pppp..', '..pppp..'],
+      up:   ['..rrrr..', '.rrRRrr.', '.hhhhhh.', '.hhhhhh.', '..ssss..',
+             '.gGGGGg.', 'GggggggG', 'sGggggGs', '..pppp..', '..pppp..'],
+      right: ['..rrrr..', 'Rrrrrrr.', '.hhhsss.', '.hhhses.', '..ssss..',
+              '..gggg..', '..ggGg..', '..ggsg..', '..pppp..', '..pppp..'],
+    },
+    legs: EXPLORER.legs,
+  };
+
+  const SAGE = {   // grey hair, glasses, mustard cardigan
+    colours: {
+      w: [210, 210, 215, 255], s: SKIN.light, o: [40, 40, 50, 255],
+      c: [200, 160, 60, 255], C: [160, 120, 40, 255], t: [240, 240, 235, 255],
+      p: [90, 80, 70, 255], b: [60, 40, 30, 255],
+    },
+    bodies: {
+      down: ['..wwww..', '.wwwwww.', 'wwsssssw', 'woossoow', '..ssss..',
+             '.ccttcc.', 'cCcttcCc', 'sCcttcCs', '..pppp..', '..pppp..'],
+      up:   ['..wwww..', '.wwwwww.', 'wwwwwwww', 'wwwwwwww', '..ssss..',
+             '.cccccc.', 'cCccccCc', 'sCccccCs', '..pppp..', '..pppp..'],
+      right: ['..wwww..', '.wwwwww.', '.wwwsss.', '.wwwsoo.', '..ssss..',
+              '..cccc..', '..ccCc..', '..ccsc..', '..pppp..', '..pppp..'],
+    },
+    legs: EXPLORER.legs,
+  };
+
   const mirror = (rows) => rows.map((r) => [...r].reverse().join(''));
 
   function makeSprite(rows, colours) {
@@ -451,6 +571,6 @@ window.PixelTree = (function () {
   return {
     PIXEL, PALETTES, DEFAULTS, TRUNK_WIDTH_POWER,
     makeRng, Tree, count, endOf, renderLayers, outline, toCanvas,
-    makeSprites, EXPLORER, GIRL,
+    makeSprites, EXPLORER, GIRL, ROBOT, RANGER, SCOUT, VOYAGER, SKATER, SAGE,
   };
 })();

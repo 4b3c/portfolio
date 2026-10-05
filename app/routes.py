@@ -1,10 +1,11 @@
-from flask import Blueprint, render_template
+from flask import Blueprint, redirect, render_template, url_for
 
 main = Blueprint("main", __name__)
 
 @main.route("/")
 def home():
-    return render_template("home.html")
+    # the project forest is the home page
+    return render_template("projects.html")
 
 @main.route("/grid")
 def grid():
@@ -37,4 +38,4 @@ def trees():
 
 @main.route("/projects")
 def projects():
-    return render_template("projects.html")
+    return redirect(url_for("main.home"))

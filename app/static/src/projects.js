@@ -7,7 +7,7 @@ import { FONT } from './font.js';
 (function () {
   const {
     PIXEL, PALETTES, TRUNK_WIDTH_POWER,
-    Tree, count, renderLayers, outline, toCanvas, makeSprites, EXPLORER,
+    Tree, count, renderLayers, outline, toCanvas, makeSprites, EXPLORER, GIRL, ROBOT, RANGER, SCOUT, VOYAGER, SKATER, SAGE,
   } = window.PixelTree;
 
   // --- world ------------------------------------------------------------
@@ -37,9 +37,12 @@ import { FONT } from './font.js';
     abandoned: { palette: 'green', leaves: false },
   };
 
-  // While trees are growing, each frame one random tree takes this many growth
-  // steps and gets redrawn. Redrawing is the slow part, so only one per frame.
-  const STEPS_PER_TURN = 1;
+  // Each tree grows one step every n ticks, with n picked at random per tree, so
+  // some grow fast and some slow. Redrawing a tree is the slow part, so trees
+  // that changed wait their turn: each frame redraws as many as fit in the
+  // budget, on-screen ones first.
+  const MIN_TICKS = 1, MAX_TICKS = 10;
+  const RENDER_BUDGET_MS = 6;
   const CARD_DISTANCE = 170;             // how close to a trunk before its card shows
 
   // --- player -------------------------------------------------------------
@@ -50,14 +53,19 @@ import { FONT } from './font.js';
   const CAMERA_EASE = 8;
 
   // --- trails -------------------------------------------------------------
-  // Each kind of work gets its own material.
+  // Each kind of work gets its own material, and every tree stands in a pale
+  // clearing that its trails run into.
   const MATERIALS = {
     mechanical: { style: 'dirt', label: 'CAD & hardware',
       base: [200, 165, 105], edge: [176, 140, 84], dark: [170, 134, 80], light: [224, 194, 136] },
+    // rounded cobbles set in earth, at grass level
     coding: { style: 'cobble', label: 'coding',
-      base: [156, 158, 160], edge: [110, 112, 115], dark: [132, 134, 137], light: [186, 188, 190], mortar: [96, 98, 100] },
+      base: [152, 152, 148], dark: [136, 136, 132], light: [172, 172, 166], gap: [118, 110, 94],
+      edge: [128, 120, 102] },  // earthy, like the soil between the stones, not a grey shadow
     work: { style: 'gravel', label: 'work',
-      base: [168, 158, 140], edge: [140, 132, 118], dark: [132, 124, 110], light: [196, 188, 172], darker: [110, 104, 94] },
+      base: [176, 168, 150], edge: [154, 146, 130], dark: [160, 152, 136], light: [192, 186, 170], darker: [140, 132, 118] },
+    clearing: { style: 'dirt', label: 'a project',
+      base: [222, 206, 160], edge: [198, 180, 132], dark: [200, 182, 136], light: [236, 224, 186] },
   };
   const KINDS = ['work', 'mechanical', 'coding'];  // routed in this order; earlier ones keep shared tiles
   const MAT_INDEX = Object.fromEntries(Object.keys(MATERIALS).map((k, i) => [k, i]));
@@ -68,6 +76,52 @@ import { FONT } from './font.js';
     border: [96, 62, 34, 255], board: [184, 132, 78, 255], grain: [164, 114, 64, 255],
     text: [70, 44, 24, 255], post: [120, 80, 44, 255], outline: [40, 30, 30, 255],
   };
+
+  // --- trail pixel art ----------------------------------------------------
+  // One art pixel of a trail at world art-pixel (wx, wy). Patterns use world
+  // coordinates so they line up across tile boundaries.
+  const hashXY = (x, y) => {
+    let h = Math.imul(x, 374761393) + Math.imul(y, 668265263);
+    h = Math.imul(h ^ (h >>> 13), 1274126177);
+    return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+  };
+
+  const STONE = 6;  // art pixels per cobble
+  function nearestStone(wx, wy) {
+    const cx = Math.floor(wx / STONE), cy = Math.floor(wy / STONE);
+    let best = { id: 0, d: Infinity };
+    for (let oy = -1; oy <= 1; oy++) {
+      for (let ox = -1; ox <= 1; ox++) {
+        const sx = (cx + ox) * STONE + 0.5 + hashXY(cx + ox, cy + oy) * (STONE - 1);
+        const sy = (cy + oy) * STONE + 0.5 + hashXY(cy + oy + 101, cx + ox) * (STONE - 1);
+        const d = Math.hypot(wx - sx, wy - sy);
+        if (d < best.d) best = { id: (cx + ox) * 7919 + (cy + oy), d };
+      }
+    }
+    return best;
+  }
+
+  function trailPixel(mat, wx, wy) {
+    const m = MATERIALS[mat];
+    if (m.style === 'gravel') {
+      const n = hashXY(wx, wy);
+      // mostly plain, with sparse, soft specks
+      return n < 0.03 ? m.darker : n < 0.15 ? m.dark : n < 0.24 ? m.light : m.base;
+    }
+    if (m.style === 'cobble') {
+      // Every 6x6 block of art pixels holds one stone centre, jiggled about, and
+      // each pixel belongs to the nearest centre. Where the pixel to the right or
+      // below belongs to a different stone, it's the 1px line of earth between
+      // them, which makes the stones round and uneven.
+      const here = nearestStone(wx, wy);
+      if (nearestStone(wx + 1, wy).id !== here.id || nearestStone(wx, wy + 1).id !== here.id) return m.gap;
+      if (here.d < 1.3) return m.light;        // a soft highlight in the middle of each stone
+      return hashXY(here.id, 37) < 0.35 ? m.dark : m.base;
+    }
+    // dirt: plain, with the odd speck
+    const n = hashXY(wx, wy);
+    return n < 0.04 ? m.dark : n < 0.06 ? m.light : m.base;
+  }
 
   const canvas = document.getElementById('projects');
   if (!canvas) return;
@@ -80,6 +134,175 @@ import { FONT } from './font.js';
 
   const grass = new Image();
   grass.src = canvas.dataset.grass;
+
+  // --- map key -------------------------------------------------------------
+  // Swatches are drawn with the same pixel art as the world, so they match.
+  for (const el of document.querySelectorAll('[data-swatch]')) {
+    const img = new ImageData(8, 8);
+    for (let y = 0; y < 8; y++) {
+      for (let x = 0; x < 8; x++) img.data.set(rgba(trailPixel(el.dataset.swatch, x + 40, y + 40)), (y * 8 + x) * 4);
+    }
+    el.width = el.height = 8;
+    el.getContext('2d').putImageData(img, 0, 0);
+  }
+  for (const el of document.querySelectorAll('[data-leaf]')) {
+    const status = STATUS[el.dataset.leaf];
+    const p = PALETTES[status.palette];
+    const img = new ImageData(8, 8);
+    for (let y = 0; y < 8; y++) {
+      for (let x = 0; x < 8; x++) {
+        let colour = [130, 170, 70, 255];                       // grass behind
+        if (status.leaves) colour = [p.leaves0, p.leaves1, p.leaves2][Math.floor(hashXY(x >> 1, y >> 1) * 3)];
+        else if (x === 3 || x === 4 || (y < 3 && (x === y || x === 7 - y))) colour = p.trunk0;  // a bare twig
+        img.data.set(colour, (y * 8 + x) * 4);
+      }
+    }
+    el.width = el.height = 8;
+    el.getContext('2d').putImageData(img, 0, 0);
+  }
+
+  const key = document.getElementById('key');
+  const keyToggle = document.getElementById('key-toggle');
+  // starts closed, since the intro already explained everything in it
+  function showKey(open) {
+    key.dataset.open = String(open);
+    keyToggle.setAttribute('aria-expanded', String(open));
+  }
+  keyToggle.addEventListener('click', () => showKey(key.dataset.open !== 'true'));
+  window.addEventListener('keydown', (e) => {
+    if (e.code === 'KeyH' && !introOpen) showKey(key.dataset.open !== 'true');
+  });
+
+  // --- intro: welcome, how it works, pick a character, controls -------------
+  const CHARACTERS = [
+    { id: 'explorer', name: 'Explorer', look: EXPLORER },
+    { id: 'wanderer', name: 'Wanderer', look: GIRL },
+    { id: 'robot', name: 'Robot', look: ROBOT },
+    { id: 'ranger', name: 'Ranger', look: RANGER },
+    { id: 'scout', name: 'Scout', look: SCOUT },
+    { id: 'voyager', name: 'Voyager', look: VOYAGER },
+    { id: 'skater', name: 'Skater', look: SKATER },
+    { id: 'sage', name: 'Sage', look: SAGE },
+  ].map((c) => ({ ...c, sprites: makeSprites(c.look) }));
+
+  let introOpen = true;                  // the world runs behind the intro, but you can't move yet
+  let character = CHARACTERS[0];
+  try {
+    character = CHARACTERS.find((c) => c.id === localStorage.getItem('projects.character')) || character;
+  } catch (e) { /* storage blocked */ }
+
+  const intro = document.getElementById('intro');
+  const slides = [...intro.querySelectorAll('[data-slide]')];
+  let slide = 0;
+  function showSlide(n) {
+    slide = clamp(n, 0, slides.length - 1);
+    slides.forEach((el, i) => { el.hidden = i !== slide; });
+    slides[slide].querySelector('[data-next], [data-start]')?.focus();
+  }
+  intro.querySelectorAll('[data-next]').forEach((b) => b.addEventListener('click', () => showSlide(slide + 1)));
+  intro.querySelectorAll('[data-back]').forEach((b) => b.addEventListener('click', () => showSlide(slide - 1)));
+  intro.querySelector('[data-start]').addEventListener('click', () => {
+    intro.style.display = 'none';        // not `hidden`: the overlay's Tailwind `flex` class overrides it
+    introOpen = false;
+  });
+
+  // character picker: each choice shows its sprite walking toward you
+  const picker = document.getElementById('characters');
+  const previews = CHARACTERS.map((c) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'flex flex-col items-center gap-2 rounded border-4 p-3 font-bold hover:bg-white';
+    const preview = document.createElement('canvas');
+    const frame0 = c.sprites.down[0];
+    preview.width = frame0.width;
+    preview.height = frame0.height;
+    preview.style.width = frame0.width * PIXEL + 'px';
+    preview.style.height = frame0.height * PIXEL + 'px';
+    preview.style.imageRendering = 'pixelated';
+    const label = document.createElement('span');
+    label.textContent = c.name;
+    button.append(preview, label);
+    button.addEventListener('click', () => pick(c));
+    picker.append(button);
+    return { c, button, ctx: preview.getContext('2d') };
+  });
+  function pick(c) {
+    character = c;
+    try { localStorage.setItem('projects.character', c.id); } catch (e) { /* storage blocked */ }
+    for (const p of previews) {
+      const on = p.c === c;
+      p.button.style.borderColor = on ? '#28201e' : 'transparent';
+      p.button.style.background = on ? '#fffaf0' : '';
+      p.button.setAttribute('aria-pressed', String(on));
+    }
+  }
+  pick(character);
+  let previewFrame = 0;
+  setInterval(() => {
+    if (!introOpen) return;
+    previewFrame = (previewFrame + 1) % 4;
+    for (const p of previews) {
+      const sprite = p.c.sprites.down[previewFrame];
+      p.ctx.clearRect(0, 0, sprite.width, sprite.height);
+      p.ctx.drawImage(sprite, 0, 0);
+    }
+  }, 1000 / ANIM_FPS);
+
+  // --- "just show me a list" --------------------------------------------------
+  const list = document.getElementById('list');
+  const listItems = document.getElementById('list-items');
+  const el = (tag, className, text) => {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text) node.textContent = text;
+    return node;
+  };
+  function renderList(projects) {
+    listItems.replaceChildren();
+    const newest = [...projects].sort((a, b) => b.start.localeCompare(a.start));
+    for (const p of newest) {
+      const item = el('article', 'overflow-hidden rounded border-4 border-[#28201e] bg-[#f4ead2] text-[#28201e] shadow-[6px_6px_0_rgba(0,0,0,0.25)] sm:flex');
+      if (p.images?.length) {
+        const img = el('img', 'block h-40 w-full object-cover border-b-4 border-[#28201e] sm:h-auto sm:w-48 sm:border-b-0 sm:border-r-4');
+        img.src = canvas.dataset.imageBase + p.images[0];
+        img.alt = p.title;
+        img.loading = 'lazy';
+        item.append(img);
+      }
+      const body = el('div', 'p-4');
+      body.append(
+        el('p', 'text-xs uppercase tracking-wide opacity-60', `${p.date} · ${p.status}`),
+        el('h2', 'mt-0.5 font-bold leading-snug', p.title),
+        el('p', 'mt-1 text-xs opacity-70', p.paths.map((k) => MATERIALS[k].label).join(' · ')),
+        el('p', 'mt-2 text-sm leading-relaxed', p.description),
+      );
+      if (p.linkUrl) {
+        const a = el('a', 'mt-3 inline-block text-sm font-semibold underline decoration-2 underline-offset-2 hover:text-[#aa3220]', p.linkText + ' ↗');
+        a.href = p.linkUrl;
+        a.target = '_blank';
+        a.rel = 'noopener';
+        body.append(a);
+      }
+      item.append(body);
+      listItems.append(item);
+    }
+  }
+  intro.querySelector('[data-list]').addEventListener('click', () => {
+    loaded.then(renderList);
+    list.hidden = false;
+    list.scrollTop = 0;
+  });
+  list.querySelector('[data-forest]').addEventListener('click', () => {
+    list.hidden = true;
+    showSlide(0);
+  });
+
+  // Enter moves the intro along
+  window.addEventListener('keydown', (e) => {
+    if (!introOpen || !list.hidden || e.code !== 'Enter' || e.target.tagName === 'BUTTON') return;
+    slides[slide].querySelector('[data-next], [data-start]')?.click();
+  });
+  showSlide(0);
 
   // A small min-heap of (item, priority), for A*.
   class Heap {
@@ -121,7 +344,8 @@ import { FONT } from './font.js';
       return top;
     }
   }
-  fetch(canvas.dataset.projects).then((r) => r.json()).then(start);
+  const loaded = fetch(canvas.dataset.projects).then((r) => r.json());
+  loaded.then(start);
 
   function start(projects) {
     const WORLD_W = COLS * TILE;
@@ -150,45 +374,69 @@ import { FONT } from './font.js';
       if (spots.size === projects.length) break;
     }
 
-    // Tiles a trail can't use: trunks and sign posts. Each tree's "door" is the
-    // tile just below its trunk, which is where its trails arrive.
+    // Every tree stands in a clearing: the tiles beside and below its trunk.
+    // Trunks and sign posts block trails; a trail ends when it reaches its
+    // tree's clearing, and never cuts through another kind of tree's clearing.
+    const material = new Int8Array(COLS * ROWS).fill(-1);
     const blocked = new Uint8Array(COLS * ROWS);
+    const owner = new Int16Array(COLS * ROWS).fill(-1);  // which tree's clearing a tile is in
     const door = new Map();
-    for (const [p, [c, r]] of spots) {
+    projects.forEach((p, k) => {
+      const [c, r] = spots.get(p);
+      for (const [dc, dr] of [[-1, 0], [0, 0], [1, 0], [-1, 1], [0, 1], [1, 1]]) {
+        if (!inWorld(c + dc, r + dr)) continue;
+        material[at(c + dc, r + dr)] = MAT_INDEX.clearing;
+        owner[at(c + dc, r + dr)] = k;
+      }
       blocked[at(c, r)] = 1;
       blocked[at(c + 2, r)] = 1;          // sign post
       door.set(p, [c, r + 1]);
-    }
+    });
 
     // --- trails -------------------------------------------------------------
-    const material = new Int8Array(COLS * ROWS).fill(-1);
+    // Each tile keeps the material of the first trail laid on it, but remembers
+    // every kind that passes through (one bit per kind).
+    const kinds = new Uint8Array(COLS * ROWS);
 
     // A little random cost on every tile makes trails wander instead of running
     // in straight lines. It's re-rolled on every load, like the tree layout.
     const wander = new Float32Array(COLS * ROWS).map(() => Math.random() * 1.2);
 
-    // Cheapest 4-way route from `from` to `to` (A*). Following a trail of the
-    // same kind is cheap, so trails merge; crossing another kind costs extra.
-    function route(from, to, kind) {
+    // Cheapest 4-way route from tree a's clearing to tree b's (A*). Following a
+    // trail of the same kind is cheap, so trails merge. Stepping onto another
+    // kind's trail is expensive, so different kinds only meet at short
+    // crossings instead of running together (where one would hide the other).
+    // Skirting a clearing that isn't this kind's costs extra too, so a trail
+    // doesn't look like it belongs to a tree it just passes.
+    function route(a, b, kind) {
       const mine = MAT_INDEX[kind];
+      const ai = projects.indexOf(a), bi = projects.indexOf(b);
+      const ours = (k) => projects[k].paths.includes(kind);
+      const nearForeign = (c, r) => [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dc, dr]) =>
+        inWorld(c + dc, r + dr) && owner[at(c + dc, r + dr)] !== -1 && !ours(owner[at(c + dc, r + dr)]));
       const cost = (i) => {
         if (blocked[i]) return Infinity;
+        if (owner[i] !== -1) return owner[i] === bi ? 0 : ours(owner[i]) ? 0.35 : Infinity;
         const m = material[i];
         if (m === mine) return 0.35;
-        if (m !== -1) return 2.5;
-        return 1 + wander[i];
+        if (m !== -1) return 6;
+        return 1 + wander[i] + (nearForeign(i % COLS, Math.floor(i / COLS)) ? 4 : 0);
       };
-      const goal = at(...to);
-      const guess = (i) => (Math.abs((i % COLS) - to[0]) + Math.abs(Math.floor(i / COLS) - to[1])) * 0.35;
+      const to = door.get(b);
+      const guess = (i) => Math.max(0, Math.abs((i % COLS) - to[0]) + Math.abs(Math.floor(i / COLS) - to[1]) - 2) * 0.35;
       const best = new Float32Array(COLS * ROWS).fill(Infinity);
       const came = new Int32Array(COLS * ROWS).fill(-1);
       const open = new Heap();
-      const startI = at(...from);
-      best[startI] = 0;
-      open.push(startI, guess(startI));
+      for (let i = 0; i < owner.length; i++) {
+        if (owner[i] === ai && !blocked[i]) {
+          best[i] = 0;
+          open.push(i, guess(i));
+        }
+      }
+      let goal = -1;
       while (open.size) {
         const i = open.pop();
-        if (i === goal) break;
+        if (owner[i] === bi) { goal = i; break; }
         const c = i % COLS, r = Math.floor(i / COLS);
         for (const [dc, dr] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
           if (!inWorld(c + dc, r + dr)) continue;
@@ -201,9 +449,10 @@ import { FONT } from './font.js';
           }
         }
       }
-      if (best[goal] === Infinity) return;
+      if (goal === -1) return;
       for (let i = goal; i !== -1; i = came[i]) {
         if (material[i] === -1) material[i] = mine;
+        kinds[i] |= 1 << mine;
       }
     }
 
@@ -211,7 +460,8 @@ import { FONT } from './font.js';
     // that connects them all (a minimum spanning tree), then lay a trail along
     // each link.
     for (const kind of KINDS) {
-      const stops = projects.filter((p) => p.paths.includes(kind)).map((p) => door.get(p));
+      const members = projects.filter((p) => p.paths.includes(kind));
+      const stops = members.map((p) => door.get(p));
       if (!stops.length) continue;
       const joined = [0];
       const left = new Set(stops.keys());
@@ -224,45 +474,16 @@ import { FONT } from './font.js';
             if (!link || d < link.d) link = { a, b, d };
           }
         }
-        route(stops[link.a], stops[link.b], kind);
+        route(members[link.a], members[link.b], kind);
         joined.push(link.b);
         left.delete(link.b);
       }
     }
 
-    // --- path tile art --------------------------------------------------------
-    // Drawn once per tile and cached. Cobbles and gravel use world coordinates,
-    // so stones line up across tile boundaries. Edges go ragged wherever a trail
-    // meets grass, letting the grass tile underneath show through.
+    // --- path tiles -----------------------------------------------------------
+    // Drawn once per tile and cached. Edges go ragged wherever a trail meets
+    // grass, letting the grass tile underneath show through.
     const isTrail = (c, r) => inWorld(c, r) && material[at(c, r)] !== -1;
-    const hashXY = (x, y) => {
-      let h = Math.imul(x, 374761393) + Math.imul(y, 668265263);
-      h = Math.imul(h ^ (h >>> 13), 1274126177);
-      return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
-    };
-
-    function trailPixel(mat, wx, wy) {
-      const m = MATERIALS[mat];
-      if (m.style === 'gravel') {
-        const n = hashXY(wx, wy);
-        return n < 0.12 ? m.darker : n < 0.4 ? m.dark : n < 0.6 ? m.light : m.base;
-      }
-      if (m.style === 'cobble') {
-        // rows of 4px stones, every other row shifted by 2, 1px of mortar between
-        const band = Math.floor(wy / 4);
-        const sx = wx + (band % 2) * 2;
-        const lx = ((sx % 4) + 4) % 4;
-        const ly = ((wy % 4) + 4) % 4;
-        if (lx === 3 || ly === 3) return m.mortar;
-        if (lx === 0 || ly === 0) return m.light;
-        if (lx === 2 || ly === 2) return hashXY(Math.floor(sx / 4), band) < 0.5 ? m.dark : m.base;
-        return m.base;
-      }
-      // dirt: plain, with the odd speck
-      const n = hashXY(wx, wy);
-      return n < 0.04 ? m.dark : n < 0.06 ? m.light : m.base;
-    }
-
     const trailCanvases = new Map();
     function trailTile(c, r) {
       const key = at(c, r);
@@ -342,6 +563,10 @@ import { FONT } from './font.js';
         tree: new Tree(p.tree.seed, PALETTES[status.palette],
           { ...BIG_TREE, maxAge: p.tree.maxAge, leaves: status.leaves }),
         growing: true,
+        every: randint(MIN_TICKS, MAX_TICKS),  // ticks between growth steps
+        wait: randint(1, MAX_TICKS),           // so they don't all start on the same tick
+        dirty: false,
+        rendered: 0,
         layers: null,
         trunkR: 0,
       };
@@ -349,24 +574,36 @@ import { FONT } from './font.js';
     const boxLeft = (t) => t.x - BASE[0];
     const boxTop = (t) => t.y - BASE[1];
 
+    let tick = 0;
     function updateTrees() {
-      const growing = trees.filter((t) => t.growing);
-      if (!growing.length) return;
-      const t = growing[Math.floor(Math.random() * growing.length)];
-      for (let i = 0; i < STEPS_PER_TURN; i++) {
-        if (!t.tree.grow()) { t.growing = false; break; }
+      tick++;
+      for (const t of trees) {
+        if (!t.growing || --t.wait > 0) continue;
+        t.wait = t.every;
+        if (!t.tree.grow()) { t.growing = false; continue; }
+        const nodes = count(t.tree.root);
+        t.trunkR = nodes < 4 ? 0 : (nodes ** TRUNK_WIDTH_POWER) / 2 + 2;
+        t.dirty = true;
       }
-      const nodes = count(t.tree.root);
-      t.trunkR = nodes < 4 ? 0 : (nodes ** TRUNK_WIDTH_POWER) / 2 + 2;
-      t.layers = renderLayers(t.tree);
+
+      // redraw changed trees: on screen first, then whichever has waited longest
+      const todo = trees.filter((t) => t.dirty);
+      todo.sort((a, b) => (onScreen(b) - onScreen(a)) || (a.rendered - b.rendered));
+      const begin = performance.now();
+      for (const t of todo) {
+        if (performance.now() - begin > RENDER_BUDGET_MS) break;
+        t.layers = renderLayers(t.tree);
+        t.dirty = false;
+        t.rendered = tick;
+      }
     }
 
     // --- player & input -------------------------------------------------------
-    const sprites = makeSprites(EXPLORER);
     const player = { x: SPAWN[0] * TILE + TILE / 2, y: SPAWN[1] * TILE + TILE / 2, dir: 'down', anim: 0 };
 
     const keys = new Set();
     window.addEventListener('keydown', (e) => {
+      if (introOpen) return;
       if (e.code.startsWith('Arrow') || e.code === 'Space') e.preventDefault();
       keys.add(e.code);
       const link = nearest?.project.linkUrl;
@@ -388,6 +625,7 @@ import { FONT } from './font.js';
     }
 
     function movePlayer(dt) {
+      if (introOpen) { player.anim = 0; return; }
       const dx = held('KeyD', 'ArrowRight') - held('KeyA', 'ArrowLeft');
       const dy = held('KeyS', 'ArrowDown') - held('KeyW', 'ArrowUp');
       if (!dx && !dy) { player.anim = 0; return; }
@@ -534,7 +772,7 @@ import { FONT } from './font.js';
       const py = Math.round((player.y - cy) * dpr) / dpr;
       footShadow(px, py, [4, 6, 4]);
       things.push({ y: player.y, draw: () => {
-        const frames = sprites[player.dir];
+        const frames = character.sprites[player.dir];
         const sprite = frames[Math.floor(player.anim) % frames.length];
         ctx.drawImage(sprite, px - (sprite.width * PIXEL) / 2, py - sprite.height * PIXEL + PIXEL,
           sprite.width * PIXEL, sprite.height * PIXEL);

@@ -6,16 +6,27 @@
         data-projects="{{ url_for('static', filename='data/projects.json') }}"
         data-image-base="https://4b3c.github.io/digitalQuiver/"></canvas>
 
-<a href="{{ url_for('main.home') }}" class="fixed top-4 left-4 text-xs text-slate-800/70 hover:text-white">
-  ← home
-</a>
-
-<p class="fixed bottom-4 right-4 text-xs text-slate-800/70 pointer-events-none text-right">
-  wasd / arrows to walk · shift to run<br>
-  walk up to a tree to see its project<br>
-  trails: dirt = CAD &amp; hardware · stone = coding · gravel = work<br>
-  leaves: green = active · autumn = parked · blossom = complete · bare = abandoned
-</p>
+<!-- map key: same look as the project cards; H or the button shows and hides it -->
+<button id="key-toggle" type="button" aria-controls="key" aria-expanded="false"
+        class="fixed bottom-4 right-4 rounded border-4 border-[#28201e] bg-[#f4ead2] px-3 py-1 text-sm font-bold text-[#28201e] shadow-[4px_4px_0_rgba(0,0,0,0.25)] hover:bg-white">
+  key
+</button>
+<div id="key" data-open="false"
+     class="fixed bottom-16 right-4 rounded border-4 border-[#28201e] bg-[#f4ead2] text-[#28201e] shadow-[6px_6px_0_rgba(0,0,0,0.25)] p-3 text-sm
+            transition duration-200 opacity-0 translate-y-4 pointer-events-none
+            data-[open=true]:opacity-100 data-[open=true]:translate-y-0 data-[open=true]:pointer-events-auto">
+  <div class="flex flex-wrap gap-x-3 gap-y-1">
+        <span class="flex items-center gap-1.5"><canvas data-leaf="active" class="h-5 w-5 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>active</span>
+        <span class="flex items-center gap-1.5"><canvas data-leaf="parked" class="h-5 w-5 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>parked</span>
+        <span class="flex items-center gap-1.5"><canvas data-leaf="complete" class="h-5 w-5 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>done</span>
+        <span class="flex items-center gap-1.5"><canvas data-leaf="abandoned" class="h-5 w-5 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>abandoned</span>
+  </div>
+  <div class="mt-2 flex flex-wrap gap-x-3 gap-y-1">
+        <span class="flex items-center gap-1.5"><canvas data-swatch="mechanical" class="h-5 w-5 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>CAD</span>
+        <span class="flex items-center gap-1.5"><canvas data-swatch="coding" class="h-5 w-5 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>code</span>
+        <span class="flex items-center gap-1.5"><canvas data-swatch="work" class="h-5 w-5 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>work</span>
+  </div>
+</div>
 
 <div id="card" data-open="false"
      class="fixed bottom-4 left-4 w-[22rem] max-w-[calc(100vw-2rem)] rounded border-4 border-[#28201e] bg-[#f4ead2] text-[#28201e] shadow-[6px_6px_0_rgba(0,0,0,0.25)]
@@ -34,6 +45,72 @@
   </div>
 </div>
 
-<script src="{{ url_for('static', filename='src/pixeltree.js') }}" defer></script>
-<script type="module" src="{{ url_for('static', filename='src/projects.js') }}"></script>
+
+<!-- intro: four short slides, then the world. Same look as the project cards. -->
+<div id="intro" class="fixed inset-0 z-20 flex items-center justify-center bg-black/30 p-4">
+  <div class="w-[30rem] max-w-full max-h-[calc(100vh-2rem)] overflow-y-auto rounded border-4 border-[#28201e] bg-[#f4ead2] text-[#28201e] shadow-[6px_6px_0_rgba(0,0,0,0.25)] p-6">
+
+    <section data-slide="welcome">
+      <h1 class="text-2xl font-bold">Welcome to Abram's portfolio</h1>
+      <p class="mt-2">Every tree in this forest is something I've built.</p>
+      <div class="mt-6 flex flex-wrap items-center justify-between gap-3">
+        <button type="button" data-list class="text-sm underline decoration-2 underline-offset-2 hover:text-[#aa3220]">i am boring, just show me a list</button>
+        <button type="button" data-next class="rounded border-4 border-[#28201e] bg-[#28201e] px-4 py-1.5 font-bold text-[#f4ead2] shadow-[4px_4px_0_rgba(0,0,0,0.25)] hover:bg-[#4a3a34]">next →</button>
+      </div>
+    </section>
+
+    <section data-slide="layout" hidden>
+      <h2 class="text-xl font-bold">Reading the forest</h2>
+      <p class="mt-2">Bigger tree, more work. The leaves say where it stands, the trails say what kind of work it was.</p>
+      <div class="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-sm">
+        <span class="flex items-center gap-1.5"><canvas data-leaf="active" class="h-5 w-5 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>active</span>
+        <span class="flex items-center gap-1.5"><canvas data-leaf="parked" class="h-5 w-5 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>parked</span>
+        <span class="flex items-center gap-1.5"><canvas data-leaf="complete" class="h-5 w-5 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>done</span>
+        <span class="flex items-center gap-1.5"><canvas data-leaf="abandoned" class="h-5 w-5 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>abandoned</span>
+      </div>
+      <div class="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-sm">
+        <span class="flex items-center gap-1.5"><canvas data-swatch="mechanical" class="h-5 w-5 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>CAD</span>
+        <span class="flex items-center gap-1.5"><canvas data-swatch="coding" class="h-5 w-5 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>code</span>
+        <span class="flex items-center gap-1.5"><canvas data-swatch="work" class="h-5 w-5 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>work</span>
+      </div>
+      <div class="mt-6 flex justify-between gap-3">
+        <button type="button" data-back class="rounded border-4 border-[#28201e] bg-[#f4ead2] px-4 py-1.5 font-bold shadow-[4px_4px_0_rgba(0,0,0,0.25)] hover:bg-white">← back</button>
+        <button type="button" data-next class="rounded border-4 border-[#28201e] bg-[#28201e] px-4 py-1.5 font-bold text-[#f4ead2] shadow-[4px_4px_0_rgba(0,0,0,0.25)] hover:bg-[#4a3a34]">next →</button>
+      </div>
+    </section>
+
+    <section data-slide="character" hidden>
+      <h2 class="text-xl font-bold">Choose your character</h2>
+      <div id="characters" class="mt-4 grid grid-cols-4 gap-2"></div>
+      <div class="mt-6 flex justify-between gap-3">
+        <button type="button" data-back class="rounded border-4 border-[#28201e] bg-[#f4ead2] px-4 py-1.5 font-bold shadow-[4px_4px_0_rgba(0,0,0,0.25)] hover:bg-white">← back</button>
+        <button type="button" data-next class="rounded border-4 border-[#28201e] bg-[#28201e] px-4 py-1.5 font-bold text-[#f4ead2] shadow-[4px_4px_0_rgba(0,0,0,0.25)] hover:bg-[#4a3a34]">next →</button>
+      </div>
+    </section>
+
+    <section data-slide="controls" hidden>
+      <h2 class="text-xl font-bold">How to explore</h2>
+      <p class="mt-2"><b>WASD</b> to walk. Walk up to a tree to see its project.</p>
+      <div class="mt-6 flex justify-between gap-3">
+        <button type="button" data-back class="rounded border-4 border-[#28201e] bg-[#f4ead2] px-4 py-1.5 font-bold shadow-[4px_4px_0_rgba(0,0,0,0.25)] hover:bg-white">← back</button>
+        <button type="button" data-start class="rounded border-4 border-[#28201e] bg-[#28201e] px-4 py-1.5 font-bold text-[#f4ead2] shadow-[4px_4px_0_rgba(0,0,0,0.25)] hover:bg-[#4a3a34]">start exploring →</button>
+      </div>
+    </section>
+  </div>
+</div>
+
+<!-- the "just show me a list" view -->
+<div id="list" hidden class="fixed inset-0 z-30 overflow-y-auto bg-slate-900 px-4 py-8">
+  <div class="mx-auto max-w-3xl">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <h1 class="text-2xl font-bold text-slate-100">Abram's projects</h1>
+      <button type="button" data-forest class="rounded border-4 border-[#28201e] bg-[#f4ead2] px-4 py-1.5 font-bold shadow-[4px_4px_0_rgba(0,0,0,0.25)] hover:bg-white text-[#28201e]">← take me to the forest</button>
+    </div>
+    <p class="mt-2 text-slate-400">Newest first.</p>
+    <div id="list-items" class="mt-6 space-y-4"></div>
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='src/pixeltree.js', v=asset_version('src/pixeltree.js')) }}" defer></script>
+<script type="module" src="{{ url_for('static', filename='src/projects.js', v=asset_version('src/projects.js')) }}"></script>
 {% endblock %}

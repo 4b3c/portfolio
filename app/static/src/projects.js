@@ -301,46 +301,6 @@ import { FONT } from './font.js';
   });
   showSlide(0);
 
-  // A small min-heap of (item, priority), for A*.
-  class Heap {
-    constructor() { this.items = []; this.prio = []; }
-    get size() { return this.items.length; }
-    push(item, p) {
-      const { items, prio } = this;
-      let i = items.length;
-      items.push(item);
-      prio.push(p);
-      while (i > 0) {
-        const parent = (i - 1) >> 1;
-        if (prio[parent] <= prio[i]) break;
-        [items[i], items[parent]] = [items[parent], items[i]];
-        [prio[i], prio[parent]] = [prio[parent], prio[i]];
-        i = parent;
-      }
-    }
-    pop() {
-      const { items, prio } = this;
-      const top = items[0];
-      const lastItem = items.pop();
-      const lastPrio = prio.pop();
-      if (items.length) {
-        items[0] = lastItem;
-        prio[0] = lastPrio;
-        let i = 0;
-        for (;;) {
-          const l = 2 * i + 1, r = l + 1;
-          let m = i;
-          if (l < items.length && prio[l] < prio[m]) m = l;
-          if (r < items.length && prio[r] < prio[m]) m = r;
-          if (m === i) break;
-          [items[i], items[m]] = [items[m], items[i]];
-          [prio[i], prio[m]] = [prio[m], prio[i]];
-          i = m;
-        }
-      }
-      return top;
-    }
-  }
   const loaded = fetch(canvas.dataset.projects).then((r) => r.json());
   loaded.then(start);
 
@@ -371,91 +331,39 @@ import { FONT } from './font.js';
       if (spots.size === projects.length) break;
     }
 
-    // Trunks and sign posts block trails. Trails pass beside trees rather than
-    // ending at them: each kind a tree belongs to gets its own side of the trunk
-    // to pass on, so a tree with two kinds stands where two trails meet, and one
-    // with three has trails running around it. `near` marks the ring of tiles
-    // around each trunk, so a trail can keep its distance from trees that aren't
-    // its kind (otherwise it looks like it belongs to them too).
-    const material = new Int8Array(COLS * ROWS).fill(-1);
-    const blocked = new Uint8Array(COLS * ROWS);
-    const near = new Int16Array(COLS * ROWS).fill(-1);
-    const SIDES = [[-1, 0], [0, 1], [1, 1]];  // left of the trunk, below it, below-right
-    const passBy = new Map();                  // project -> { kind: tile the trail passes through }
-    projects.forEach((p, k) => {
+    // --- trails -------------------------------------------------------------
+    // Trails are drawn in art pixels, not tiles, so they can curve. Each kind is
+    // one trail: a smooth curve in from the edge of the world, through the spawn
+    // point, past each of its trees and out to the edge again, so it never
+    // dead-ends. Each kind a tree belongs to passes it on its own side, so a tree with
+    // two kinds stands where two trails meet, and Charlotte has three around it.
+    const N = TILE / PIXEL;                      // art pixels per tile
+    const AW = COLS * N, AH = ROWS * N;
+    const art = new Int8Array(AW * AH).fill(-1); // material of each art pixel
+    const hasTrail = new Uint8Array(COLS * ROWS);
+    const TRAIL_WIDTH = 5.5;                     // half-width, art pixels
+    const MEANDER = 9;                           // how far a trail swings between nearby trees
+    const TRUNK_ROOM = 20;                       // trails keep this far from other trees' trunks
+
+    // trunk bases in art pixels
+    const trunks = projects.map((p) => {
       const [c, r] = spots.get(p);
-      for (let dr = -1; dr <= 1; dr++) {
-        for (let dc = -1; dc <= 1; dc++) if (inWorld(c + dc, r + dr)) near[at(c + dc, r + dr)] = k;
-      }
-      blocked[at(c, r)] = 1;
-      blocked[at(c + 2, r)] = 1;          // sign post
+      return [c * N + N / 2, r * N + N - 4];
+    });
+    const SIDES = [[-15, 1], [0, 12], [15, 8]];  // left of the trunk, below it, below-right
+    const passBy = new Map();
+    projects.forEach((p, k) => {
+      const [x, y] = trunks[k];
       const turn = randint(0, SIDES.length - 1);
       passBy.set(p, Object.fromEntries(p.paths.map((kind, i) => {
-        const [dc, dr] = SIDES[(turn + i) % SIDES.length];
-        return [kind, [c + dc, r + dr]];
+        const [dx, dy] = SIDES[(turn + i) % SIDES.length];
+        return [kind, [x + dx, y + dy]];
       })));
     });
 
-    // --- trails -------------------------------------------------------------
-    // A little random cost on every tile makes trails wander instead of running
-    // in straight lines. It's re-rolled on every load, like the tree layout.
-    const wander = new Float32Array(COLS * ROWS).map(() => Math.random() * 1.2);
-
-    // Cheapest 4-way route between two tiles (A*). Following a trail of the same
-    // kind is cheap, so trails merge. Stepping onto another kind's trail is
-    // expensive, so different kinds only meet at short crossings instead of
-    // running together (where one would hide the other). `behind` is the leg
-    // just laid: stepping back onto it costs extra, so a trail carries on past a
-    // tree instead of doubling back the way it came.
-    function route(from, to, kind, behind) {
-      const mine = MAT_INDEX[kind];
-      const cost = (i) => {
-        if (blocked[i]) return Infinity;
-        if (behind.has(i)) return 4;
-        const m = material[i];
-        if (m === mine) return 0.35;
-        if (m !== -1) return 6;
-        const k = near[i];
-        const foreign = k !== -1 && !projects[k].paths.includes(kind);
-        return 1 + wander[i] + (foreign ? 6 : 0);
-      };
-      const goal = at(...to);
-      const guess = (i) => (Math.abs((i % COLS) - to[0]) + Math.abs(Math.floor(i / COLS) - to[1])) * 0.35;
-      const best = new Float32Array(COLS * ROWS).fill(Infinity);
-      const came = new Int32Array(COLS * ROWS).fill(-1);
-      const open = new Heap();
-      const startI = at(...from);
-      best[startI] = 0;
-      open.push(startI, guess(startI));
-      while (open.size) {
-        const i = open.pop();
-        if (i === goal) break;
-        const c = i % COLS, r = Math.floor(i / COLS);
-        for (const [dc, dr] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-          if (!inWorld(c + dc, r + dr)) continue;
-          const j = at(c + dc, r + dr);
-          const g = best[i] + cost(j);
-          if (g < best[j]) {
-            best[j] = g;
-            came[j] = i;
-            open.push(j, g + guess(j));
-          }
-        }
-      }
-      const leg = new Set();
-      if (best[goal] === Infinity) return leg;
-      for (let i = goal; i !== -1; i = came[i]) {
-        if (material[i] === -1) material[i] = mine;
-        if (i !== goal) leg.add(i);
-      }
-      return leg;
-    }
-
-    // Each kind is one trail. It leaves the spawn point (the trailhead), passes
-    // all its trees, and runs on past the last one to the edge of the world, so
-    // it never dead-ends at a tree. The order is the shortest walk we can find:
-    // nearest tree first, then 2-opt (reverse any stretch that makes it shorter),
-    // which also untangles the trail where it would cross itself.
+    // The order a trail visits its trees: nearest first, then 2-opt (reverse
+    // any stretch that makes the walk shorter), which untangles the trail
+    // where it would otherwise loop back across itself.
     const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
     function walkOrder(head, stops) {
       const order = [head];
@@ -483,47 +391,101 @@ import { FONT } from './font.js';
       return order;
     }
 
+    // A Catmull-Rom curve through the points, sampled about every art pixel.
+    // Between two trees the trail swings gently to one side and back (zero at
+    // each tree, so it still passes where it should).
+    function curve(points) {
+      const out = [];
+      const pts = [points[0], ...points, points[points.length - 1]];
+      const phase = Math.random() * Math.PI * 2;
+      for (let i = 1; i < pts.length - 2; i++) {
+        const [p0, p1, p2, p3] = [pts[i - 1], pts[i], pts[i + 1], pts[i + 2]];
+        const steps = Math.ceil(dist(p1, p2) * 1.5) + 1;
+        const swing = MEANDER * Math.sin(phase + i * 2.1) * Math.min(3, dist(p1, p2) / 60);  // longer stretches swing wider
+        for (let s = 0; s < steps; s++) {
+          const t = s / steps, t2 = t * t, t3 = t2 * t;
+          const axis = (k) => 0.5 * ((2 * p1[k]) + (-p0[k] + p2[k]) * t +
+            (2 * p0[k] - 5 * p1[k] + 4 * p2[k] - p3[k]) * t2 + (-p0[k] + 3 * p1[k] - 3 * p2[k] + p3[k]) * t3);
+          const [dx, dy] = [p2[0] - p1[0], p2[1] - p1[1]];
+          const len = Math.hypot(dx, dy) || 1;
+          const off = swing * Math.sin(Math.PI * t);
+          out.push([axis(0) - (dy / len) * off, axis(1) + (dx / len) * off]);
+        }
+      }
+      return out;
+    }
+
+    // Lay a trail of this kind along the curve: a disc at every sample, a
+    // little wider or narrower as it goes. First trail laid keeps a pixel.
+    function lay(points, kind) {
+      const mine = MAT_INDEX[kind];
+      const ok = new Set(projects.map((p, k) => (p.paths.includes(kind) ? k : -1)));
+      points.forEach(([x, y], s) => {
+        // step around trunks of trees that aren't this kind's
+        trunks.forEach(([tx, ty], k) => {
+          if (ok.has(k)) return;
+          const d = Math.hypot(x - tx, y - ty);
+          if (d < TRUNK_ROOM && d > 0) { x = tx + ((x - tx) / d) * TRUNK_ROOM; y = ty + ((y - ty) / d) * TRUNK_ROOM; }
+        });
+        const w = TRAIL_WIDTH + Math.sin(s / 23) * 0.8 + Math.sin(s / 7.3) * 0.4;
+        const R = Math.ceil(w);
+        for (let oy = -R; oy <= R; oy++) {
+          for (let ox = -R; ox <= R; ox++) {
+            const px = Math.round(x) + ox, py = Math.round(y) + oy;
+            if (px < 0 || py < 0 || px >= AW || py >= AH) continue;
+            if (ox * ox + oy * oy > w * w) continue;
+            const i = py * AW + px;
+            if (art[i] === -1) art[i] = mine;
+            hasTrail[Math.floor(py / N) * COLS + Math.floor(px / N)] = 1;
+          }
+        }
+      });
+    }
+
+    // From `from`, heading along `dir`, the point just past the edge of the world.
+    function toEdge(from, dir) {
+      const len = Math.hypot(...dir) || 1;
+      const [ux, uy] = [dir[0] / len, dir[1] / len];
+      const tx = ux > 0 ? (AW - from[0]) / ux : ux < 0 ? -from[0] / ux : Infinity;
+      const ty = uy > 0 ? (AH - from[1]) / uy : uy < 0 ? -from[1] / uy : Infinity;
+      const t = Math.min(tx, ty) + 30;
+      return [from[0] + ux * t, from[1] + uy * t];
+    }
+
     KINDS.forEach((kind, k) => {
       const stops = projects.filter((p) => p.paths.includes(kind)).map((p) => passBy.get(p)[kind]);
       if (!stops.length) return;
-      const order = walkOrder([SPAWN[0] - 1 + k, SPAWN[1] + 1], stops);
-      let behind = new Set();
-      for (let i = 1; i < order.length; i++) behind = route(order[i - 1], order[i], kind, behind);
-      const [prev, here] = order.slice(-2);
-      // carry on the way it was heading, to whichever edge that reaches first
-      const [dx, dy] = [here[0] - prev[0], here[1] - prev[1]];
-      const exit = Math.abs(dx) > Math.abs(dy)
-        ? [dx > 0 ? COLS - 1 : 0, clamp(here[1] + randint(-4, 4), 0, ROWS - 1)]
-        : [clamp(here[0] + randint(-4, 4), 0, COLS - 1), dy > 0 ? ROWS - 1 : 0];
-      route(here, exit, kind, behind);
+      const head = [SPAWN[0] * N + (k - 1) * 14, SPAWN[1] * N + N];
+      const order = walkOrder(head, stops);
+      // carry on the way it was heading, out to the edge of the world
+      const [prev, last] = order.slice(-2);
+      const exit = toEdge(last, [last[0] - prev[0], last[1] - prev[1]]);
+      // and comes in from the edge behind the spawn point, so it doesn't stop there either
+      const entry = toEdge(head, [head[0] - order[1][0], head[1] - order[1][1]]);
+      lay(curve([entry, ...order, exit]), kind);
     });
 
     // --- path tiles -----------------------------------------------------------
     // Drawn once per tile and cached. Edges go ragged wherever a trail meets
     // grass, letting the grass tile underneath show through.
-    const isTrail = (c, r) => inWorld(c, r) && material[at(c, r)] !== -1;
+    const artAt = (x, y) => (x < 0 || y < 0 || x >= AW || y >= AH ? -1 : art[y * AW + x]);
     const trailCanvases = new Map();
     function trailTile(c, r) {
       const key = at(c, r);
       if (trailCanvases.has(key)) return trailCanvases.get(key);
-      const mat = MAT_NAMES[material[key]];
-      const n = TILE / PIXEL;
-      const img = new ImageData(n, n);
-      const grassUp = !isTrail(c, r - 1), grassDown = !isTrail(c, r + 1);
-      const grassLeft = !isTrail(c - 1, r), grassRight = !isTrail(c + 1, r);
-      for (let y = 0; y < n; y++) {
-        for (let x = 0; x < n; x++) {
-          const wx = c * n + x, wy = r * n + y;
-          // how many art pixels to the nearest grass edge
-          const edge = Math.min(
-            grassUp ? y : n, grassDown ? n - 1 - y : n,
-            grassLeft ? x : n, grassRight ? n - 1 - x : n
-          );
+      const img = new ImageData(N, N);
+      for (let y = 0; y < N; y++) {
+        for (let x = 0; x < N; x++) {
+          const wx = c * N + x, wy = r * N + y;
+          const m = artAt(wx, wy);
+          if (m === -1) continue;
+          const mat = MAT_NAMES[m];
+          const edge = artAt(wx + 1, wy) === -1 || artAt(wx - 1, wy) === -1 ||
+            artAt(wx, wy + 1) === -1 || artAt(wx, wy - 1) === -1;
           const roll = hashXY(wx + 9001, wy);
           let colour = trailPixel(mat, wx, wy);
-          if (edge === 0) colour = roll < 0.55 ? null : MATERIALS[mat].edge;
-          else if (edge === 1 && roll < 0.35) colour = MATERIALS[mat].edge;
-          if (colour) img.data.set(rgba(colour), (y * n + x) * 4);
+          if (edge) colour = roll < 0.45 ? null : MATERIALS[mat].edge;
+          if (colour) img.data.set(rgba(colour), (y * N + x) * 4);
         }
       }
       const tile = toCanvas(img);
@@ -739,7 +701,7 @@ import { FONT } from './font.js';
           const y = r * TILE - cy;
           if (grassReady) ctx.drawImage(grass, grassTile[at(c, r)] * TILE, 0, TILE, TILE, x, y, TILE, TILE);
           else ctx.fillRect(x, y, TILE, TILE);
-          if (material[at(c, r)] !== -1) ctx.drawImage(trailTile(c, r), x, y, TILE, TILE);
+          if (hasTrail[at(c, r)]) ctx.drawImage(trailTile(c, r), x, y, TILE, TILE);
         }
       }
     }

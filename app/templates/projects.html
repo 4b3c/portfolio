@@ -90,6 +90,16 @@
   </div>
 </div>
 
+<!-- phones and touch-only tablets: the forest needs a keyboard, so suggest a desktop (or the list) -->
+<div id="mobile" class="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4" style="display: none">
+  <div class="w-80 max-w-full rounded border-4 border-[#28201e] bg-[#f4ead2] p-6 text-center text-[#28201e] shadow-[6px_6px_0_rgba(0,0,0,0.25)]">
+    <canvas id="mobile-guy" class="mx-auto" style="image-rendering: pixelated"></canvas>
+    <p class="mt-4 text-lg font-bold leading-snug">Please open on a desktop for the best experience</p>
+    <p class="mt-2 text-sm opacity-70">This forest is explored with a keyboard.</p>
+    <button type="button" data-mobile-list class="mt-5 rounded border-4 border-[#28201e] bg-[#28201e] px-4 py-1.5 font-bold text-[#f4ead2] shadow-[4px_4px_0_rgba(0,0,0,0.25)]">show me the list</button>
+  </div>
+</div>
+
 <!-- the "just show me a list" view -->
 <!-- see-through, so the forest stays behind the cards -->
 <div id="list" hidden class="fixed inset-0 z-30 overflow-y-auto px-4 py-8">

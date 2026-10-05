@@ -367,6 +367,38 @@ import { FONT } from './font.js';
     showSlide(0);
   });
 
+  // --- phones --------------------------------------------------------------
+  // The forest needs a keyboard, so on a small screen or a touch-only device,
+  // show the Explorer and suggest a desktop, with the list as a way in.
+  const onPhone = window.matchMedia('(max-width: 640px), (pointer: coarse) and (not (any-pointer: fine))').matches;
+  if (onPhone) {
+    const mobile = document.getElementById('mobile');
+    const guy = document.getElementById('mobile-guy');
+    const frames = CHARACTERS[0].sprites.down;
+    const SCALE = 8;                          // twice the forest's pixel size
+    guy.width = frames[0].width;
+    guy.height = frames[0].height;
+    guy.style.width = frames[0].width * SCALE + 'px';
+    guy.style.height = frames[0].height * SCALE + 'px';
+    const guyCtx = guy.getContext('2d');
+    let step = 0;
+    const walk = () => {
+      guyCtx.clearRect(0, 0, guy.width, guy.height);
+      guyCtx.drawImage(frames[step++ % frames.length], 0, 0);
+    };
+    walk();
+    const walking = setInterval(walk, 1000 / ANIM_FPS);
+    intro.style.display = 'none';
+    document.getElementById('progress').parentElement.style.display = 'none';  // counter and help are for the forest
+    mobile.style.display = '';             // not `hidden`: its Tailwind `flex` class would override that
+    mobile.querySelector('[data-mobile-list]').addEventListener('click', () => {
+      clearInterval(walking);
+      mobile.style.display = 'none';
+      loaded.then(renderList);
+      list.hidden = false;
+    });
+  }
+
   // Enter moves the intro along
   window.addEventListener('keydown', (e) => {
     if (!introOpen || !list.hidden || e.code !== 'Enter' || e.target.tagName === 'BUTTON') return;

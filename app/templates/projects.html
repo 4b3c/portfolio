@@ -9,8 +9,8 @@
 <!-- bottom right: how many projects of each kind you've visited (click one for arrows to the rest), and help (replays the intro; H does the same) -->
 <div class="fixed bottom-4 right-4 flex items-stretch gap-2 text-sm font-bold text-[#28201e]">
   <div id="progress" class="flex items-center gap-3 rounded border-4 border-[#28201e] bg-[#f4ead2] px-3 py-1 shadow-[4px_4px_0_rgba(0,0,0,0.25)]">
-    <button type="button" data-point="mechanical" title="point to the CAD projects you haven't visited" class="flex items-center gap-1.5 rounded px-1 hover:bg-white"><canvas data-swatch="mechanical" class="h-4 w-4 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>CAD <span data-progress="mechanical">0/0</span></button>
     <button type="button" data-point="coding" title="point to the code projects you haven't visited" class="flex items-center gap-1.5 rounded px-1 hover:bg-white"><canvas data-swatch="coding" class="h-4 w-4 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>code <span data-progress="coding">0/0</span></button>
+    <button type="button" data-point="mechanical" title="point to the CAD projects you haven't visited" class="flex items-center gap-1.5 rounded px-1 hover:bg-white"><canvas data-swatch="mechanical" class="h-4 w-4 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>CAD <span data-progress="mechanical">0/0</span></button>
     <button type="button" data-point="work" title="point to the work projects you haven't visited" class="flex items-center gap-1.5 rounded px-1 hover:bg-white"><canvas data-swatch="work" class="h-4 w-4 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>work <span data-progress="work">0/0</span></button>
   </div>
   <button id="help" type="button"
@@ -44,29 +44,9 @@
 
     <section data-slide="welcome">
       <h1 class="text-2xl font-bold">Welcome to Abram's portfolio</h1>
-      <p class="mt-2">Every tree in this forest is something I've built.</p>
+      <p class="mt-2">Get ready to explore!</p>
       <div class="mt-6 flex flex-wrap items-center justify-between gap-3">
-        <button type="button" data-list class="text-sm underline decoration-2 underline-offset-2 hover:text-[#aa3220]">i am boring, just show me a list</button>
-        <button type="button" data-next class="rounded border-4 border-[#28201e] bg-[#28201e] px-4 py-1.5 font-bold text-[#f4ead2] shadow-[4px_4px_0_rgba(0,0,0,0.25)] hover:bg-[#4a3a34]">next →</button>
-      </div>
-    </section>
-
-    <section data-slide="layout" hidden>
-      <h2 class="text-xl font-bold">Reading the forest</h2>
-      <p class="mt-2">Bigger tree, more work. The leaves say where it stands, the trails say what kind of work it was.</p>
-      <div class="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-sm">
-        <span class="flex items-center gap-1.5"><canvas data-leaf="active" class="h-5 w-5 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>active</span>
-        <span class="flex items-center gap-1.5"><canvas data-leaf="parked" class="h-5 w-5 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>parked</span>
-        <span class="flex items-center gap-1.5"><canvas data-leaf="complete" class="h-5 w-5 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>done</span>
-        <span class="flex items-center gap-1.5"><canvas data-leaf="abandoned" class="h-5 w-5 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>abandoned</span>
-      </div>
-      <div class="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-sm">
-        <span class="flex items-center gap-1.5"><canvas data-swatch="mechanical" class="h-5 w-5 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>CAD</span>
-        <span class="flex items-center gap-1.5"><canvas data-swatch="coding" class="h-5 w-5 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>code</span>
-        <span class="flex items-center gap-1.5"><canvas data-swatch="work" class="h-5 w-5 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>work</span>
-      </div>
-      <div class="mt-6 flex justify-between gap-3">
-        <button type="button" data-back class="rounded border-4 border-[#28201e] bg-[#f4ead2] px-4 py-1.5 font-bold shadow-[4px_4px_0_rgba(0,0,0,0.25)] hover:bg-white">← back</button>
+        <button type="button" data-list class="text-sm underline decoration-2 underline-offset-2 hover:text-[#aa3220]">I'm boring, just show me a list</button>
         <button type="button" data-next class="rounded border-4 border-[#28201e] bg-[#28201e] px-4 py-1.5 font-bold text-[#f4ead2] shadow-[4px_4px_0_rgba(0,0,0,0.25)] hover:bg-[#4a3a34]">next →</button>
       </div>
     </section>
@@ -80,9 +60,28 @@
       </div>
     </section>
 
+    <section data-slide="layout" hidden>
+      <h2 class="text-xl font-bold">The forest</h2>
+      <p class="mt-2">Each tree in the forrest represents a project. The color of the leaves represent the projects status, and the paths beside it represent what kind of project it was.</p>
+      <div class="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-sm">
+        <span class="flex items-center gap-1.5"><canvas data-leaf="active" class="h-5 w-5 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>active</span>
+        <span class="flex items-center gap-1.5"><canvas data-leaf="parked" class="h-5 w-5 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>parked</span>
+        <span class="flex items-center gap-1.5"><canvas data-leaf="complete" class="h-5 w-5 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>done</span>
+      </div>
+      <div class="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-sm">
+        <span class="flex items-center gap-1.5"><canvas data-swatch="coding" class="h-5 w-5 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>code</span>
+        <span class="flex items-center gap-1.5"><canvas data-swatch="mechanical" class="h-5 w-5 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>CAD</span>
+        <span class="flex items-center gap-1.5"><canvas data-swatch="work" class="h-5 w-5 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>work</span>
+      </div>
+      <div class="mt-6 flex justify-between gap-3">
+        <button type="button" data-back class="rounded border-4 border-[#28201e] bg-[#f4ead2] px-4 py-1.5 font-bold shadow-[4px_4px_0_rgba(0,0,0,0.25)] hover:bg-white">← back</button>
+        <button type="button" data-next class="rounded border-4 border-[#28201e] bg-[#28201e] px-4 py-1.5 font-bold text-[#f4ead2] shadow-[4px_4px_0_rgba(0,0,0,0.25)] hover:bg-[#4a3a34]">next →</button>
+      </div>
+    </section>
+
     <section data-slide="controls" hidden>
       <h2 class="text-xl font-bold">How to explore</h2>
-      <p class="mt-2"><b>WASD</b> to walk. Walk up to a tree to see its project.</p>
+      <p class="mt-2">Use the arrow keys or WASD to walk. Walk up to a tree to learn more about a project.</p>
       <div class="mt-6 flex justify-between gap-3">
         <button type="button" data-back class="rounded border-4 border-[#28201e] bg-[#f4ead2] px-4 py-1.5 font-bold shadow-[4px_4px_0_rgba(0,0,0,0.25)] hover:bg-white">← back</button>
         <button type="button" data-start class="rounded border-4 border-[#28201e] bg-[#28201e] px-4 py-1.5 font-bold text-[#f4ead2] shadow-[4px_4px_0_rgba(0,0,0,0.25)] hover:bg-[#4a3a34]">start exploring →</button>
@@ -98,7 +97,7 @@
     <div class="flex flex-wrap items-center justify-between gap-3 rounded border-4 border-[#28201e] bg-[#f4ead2] p-4 text-[#28201e] shadow-[6px_6px_0_rgba(0,0,0,0.25)]">
       <div>
         <h1 class="text-2xl font-bold">Abram's projects</h1>
-        <p class="text-sm opacity-60">Newest first.</p>
+        <p class="text-sm opacity-60">Most recently updated first.</p>
       </div>
       <button type="button" data-forest class="rounded border-4 border-[#28201e] bg-[#28201e] px-4 py-1.5 font-bold text-[#f4ead2] shadow-[4px_4px_0_rgba(0,0,0,0.25)] hover:bg-[#4a3a34]">← take me to the forest</button>
     </div>

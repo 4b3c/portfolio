@@ -317,7 +317,8 @@ import { FONT } from './font.js';
     listItems.replaceChildren();
     refit.disconnect();
     fitted = [];
-    const newest = [...projects].sort((a, b) => b.start.localeCompare(a.start));
+    // most recently worked on first (falls back to the start date)
+    const newest = [...projects].sort((a, b) => (b.updated || b.start).localeCompare(a.updated || a.start));
     for (const p of newest) {
       const item = el('article', 'overflow-hidden rounded border-4 border-[#28201e] bg-[#f4ead2] text-[#28201e] shadow-[6px_6px_0_rgba(0,0,0,0.25)] sm:flex');
       const body = el('div', 'min-w-0 flex-1 p-4 sm:self-start');

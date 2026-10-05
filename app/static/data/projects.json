@@ -9,6 +9,7 @@
     "linkText": "Check out the repo!",
     "linkUrl": "https://github.com/4b3c/Isometric-Map_game",
     "start": "2022-01",
+    "updated": "2022-06-10",
     "date": "2022",
     "size": "medium",
     "status": "parked",
@@ -31,9 +32,10 @@
     "linkText": "Check out the repo!",
     "linkUrl": "https://github.com/4b3c/mnist_machine_learning",
     "start": "2022-02",
+    "updated": "2026-07-05",
     "date": "2021 – 2022",
     "size": "small",
-    "status": "abandoned",
+    "status": "complete",
     "paths": [
       "coding"
     ],
@@ -53,6 +55,7 @@
     "linkText": "Check out the repo!",
     "linkUrl": "https://github.com/4b3c/bezier-curves",
     "start": "2022-08",
+    "updated": "2023-05-04",
     "date": "2022 – 2023",
     "size": "medium",
     "status": "complete",
@@ -75,6 +78,7 @@
     "linkText": "Check out the channel!",
     "linkUrl": "https://www.youtube.com/channel/UCbY-W4ZfbrnHluhPqqADrIA",
     "start": "2023-02",
+    "updated": "2024-01-11",
     "date": "2023",
     "size": "medium",
     "status": "complete",
@@ -91,6 +95,7 @@
     "id": "taptech",
     "title": "TapTech Studio",
     "start": "2023-05",
+    "updated": "2026-09",
     "date": "2023 – now",
     "size": "large",
     "images": [
@@ -121,6 +126,7 @@
     "linkText": "Check out the videos!",
     "linkUrl": "https://www.instagram.com/coded_desines/",
     "start": "2023-08",
+    "updated": "2023-08",
     "date": "2023",
     "size": "small",
     "status": "complete",
@@ -137,6 +143,7 @@
     "id": "mechvolta",
     "title": "MechVolta",
     "start": "2023-09",
+    "updated": "2024-05",
     "date": "2023 – 2024",
     "size": "medium",
     "images": [
@@ -145,7 +152,7 @@
     "description": "My first Luminosity Lab project, freshman year: storing electricity mechanically in small form factors, so electric cars could rely less on rare metals. It didn’t pan out, but it taught me a lot.",
     "linkText": "",
     "linkUrl": "",
-    "status": "abandoned",
+    "status": "complete",
     "paths": [
       "mechanical",
       "work"
@@ -158,22 +165,23 @@
   },
   {
     "id": "physim",
-    "title": "Gravitational Physics Sim → PBB Lab",
+    "title": "Gravitational Physics Sim",
     "images": [
       "media/GravPhySim.png"
     ],
-    "description": "A JavaFX simulation modeling orbital physics using Newton's law of gravitation and 3D vector math. I used object-oriented design and built visual representations of 3D vectors using cylinder-cone models, applying concepts from calculus and physics. It started as an honors project and led to a spot in the Photoemission and Bright Beams lab, where I rewrote their MATLAB simulation in C and Python.",
-    "linkText": "Check out the repo!",
-    "linkUrl": "https://github.com/4b3c/GravitationalPhysicsSimulation",
+    "description": "A JavaFX simulation modeling orbital physics using Newton's law of gravitation and 3D vector math. I used object-oriented design and built visual representations of 3D vectors using cylinder-cone models, applying concepts from calculus and physics. It started as an honors project and led to a spot in the Photoemission and Bright Beams lab.",
+    "linkText": "Check out the paper!",
+    "linkUrl": "https://docs.google.com/document/d/1I4lDTvtQAAA1QllpGcWRAtw9D43FZxqdHCuA2IUDI2Q/",
     "start": "2024-02",
+    "updated": "2026-05",
     "date": "2024 – now",
     "size": "large",
-    "status": "active",
+    "status": "complete",
     "paths": [
       "coding",
       "work"
     ],
-    "sign": "PBB LAB",
+    "sign": "Gravity Sim",
     "tree": {
       "seed": 928820862,
       "maxAge": 693
@@ -189,6 +197,7 @@
     "linkText": "Check out the project!",
     "linkUrl": "https://4b3c.github.io/digitalQuiver/SabL/convert.html",
     "start": "2024-04",
+    "updated": "2024-04",
     "date": "2024",
     "size": "tiny",
     "status": "complete",
@@ -212,6 +221,7 @@
     "linkText": "Check out the CAD!",
     "linkUrl": "https://cad.onshape.com/documents/ae932ce799a5eb2243f604de/w/c48c736baf26eec3e2e0e66b/e/38bae2259a29866f206b20a2?renderMode=0&uiState=67e71e46e3d6fe38a5b350ec",
     "start": "2024-07",
+    "updated": "2024-07-24",
     "date": "2024",
     "size": "medium",
     "status": "complete",
@@ -243,6 +253,7 @@
     "linkText": "Check out the CAD!",
     "linkUrl": "https://cad.onshape.com/documents/5d7b9cb4acdde16bb73fc4c7/w/094b5123dbbe6feb66b45634/e/4d78dbf04e5d538562c00eb0?renderMode=0&uiState=67e71c3815765d0c6b872c8c",
     "start": "2024-08",
+    "updated": "2026-10-02",
     "date": "2024 – now",
     "size": "huge",
     "status": "active",
@@ -253,7 +264,7 @@
     ],
     "sign": "CHARLOTTE",
     "tree": {
-      "seed": 199117766,
+      "seed": 44978342,
       "maxAge": 1007
     }
   },
@@ -261,6 +272,7 @@
     "id": "toolboard",
     "title": "Toolboard",
     "start": "2025-01",
+    "updated": "2025-02-17",
     "date": "2025",
     "size": "small",
     "images": [
@@ -269,7 +281,7 @@
     "description": "A dashboard that pulls all your tools into one place: email, to-do lists, Slack notifications and favourite links, as cards you can drag and resize. React + TypeScript on the front, Flask + Supabase on the back.",
     "linkText": "Check out the repo!",
     "linkUrl": "https://github.com/4b3c/toolboard-html",
-    "status": "abandoned",
+    "status": "parked",
     "paths": [
       "coding"
     ],
@@ -283,6 +295,7 @@
     "id": "prompter",
     "title": "Prompter",
     "start": "2025-04",
+    "updated": "2025-04-20",
     "date": "2025",
     "size": "tiny",
     "images": [],
@@ -304,6 +317,7 @@
     "id": "pantry",
     "title": "Pantry",
     "start": "2025-06",
+    "updated": "2026-10-01",
     "date": "2025 – 2026",
     "size": "huge",
     "images": [
@@ -313,7 +327,7 @@
     "description": "An iOS macro-tracking app, live on the App Store. Barcode scanning, receipt scanning through an LLM + Open Food Facts pipeline, RevenueCat subscriptions and a Supabase backend. Built from a web app all the way to its App Store debut.",
     "linkText": "Check out the app!",
     "linkUrl": "https://getpantry.app",
-    "status": "parked",
+    "status": "active",
     "paths": [
       "coding"
     ],
@@ -327,6 +341,7 @@
     "id": "orbitscape",
     "title": "Orbitscape",
     "start": "2025-08",
+    "updated": "2026-10-02",
     "date": "2025 – now",
     "size": "large",
     "images": [
@@ -351,6 +366,7 @@
     "id": "particle",
     "title": "Particle Analyzer",
     "start": "2025-09",
+    "updated": "2026-09",
     "date": "2025",
     "size": "medium",
     "images": [
@@ -359,7 +375,7 @@
     "description": "A Luminosity Lab device that charges particles and then detects them, measuring their size and other properties. I did the CAD, which taught me to design parts for machining in metal instead of 3D printing.",
     "linkText": "",
     "linkUrl": "",
-    "status": "active",
+    "status": "completed",
     "paths": [
       "mechanical",
       "work"
@@ -374,6 +390,7 @@
     "id": "jude",
     "title": "Project Jude",
     "start": "2025-10",
+    "updated": "2026-09-17",
     "date": "2025 – now",
     "size": "small",
     "images": [
@@ -382,7 +399,7 @@
     "description": "A lifesaving submarine device at the Luminosity Lab. I did the CAD for the first version and now advise the team building the next one.",
     "linkText": "",
     "linkUrl": "",
-    "status": "active",
+    "status": "parked",
     "paths": [
       "mechanical",
       "work"
@@ -405,6 +422,7 @@
     "linkText": "Check out the repo!",
     "linkUrl": "https://github.com/4b3c/zipper",
     "start": "2026-02",
+    "updated": "2026-10-02",
     "date": "2026",
     "size": "large",
     "status": "active",
@@ -421,6 +439,7 @@
     "id": "voussoir",
     "title": "Voussoir",
     "start": "2026-07",
+    "updated": "2026-07-15",
     "date": "2026",
     "size": "tiny",
     "images": [
@@ -429,7 +448,7 @@
     "description": "A referral-code marketplace concept, tested for demand before building: I designed the concept, bought the domain, built a waitlist and posted it to Reddit.",
     "linkText": "Check out the waitlist!",
     "linkUrl": "https://voussoir.app",
-    "status": "parked",
+    "status": "active",
     "paths": [
       "coding"
     ],
@@ -443,6 +462,7 @@
     "id": "ironman",
     "title": "Iron Man Helmet",
     "start": "2026-08",
+    "updated": "2026-08-25",
     "date": "2026",
     "size": "medium",
     "images": [
@@ -467,6 +487,7 @@
     "id": "gifs",
     "title": "GIFs Against Humanity",
     "start": "2026-08",
+    "updated": "2026-08-21",
     "date": "2026",
     "size": "medium",
     "images": [
@@ -489,6 +510,7 @@
     "id": "barrett",
     "title": "Barrett Thesis",
     "start": "2026-08",
+    "updated": "2026-09",
     "date": "2026 – now",
     "size": "small",
     "images": [],
@@ -511,6 +533,7 @@
     "id": "purchase",
     "title": "Purchase Request Extension",
     "start": "2026-09",
+    "updated": "2026-09-22",
     "date": "2026",
     "size": "small",
     "images": [],
@@ -539,6 +562,7 @@
     "linkText": "Check out the itch.io page!",
     "linkUrl": "https://4b3c.itch.io/procedural-pixel-art-tree-generator",
     "start": "2024-05",
+    "updated": "2025-02-09",
     "date": "2024 – now",
     "size": "medium",
     "status": "active",
@@ -562,6 +586,7 @@
     "linkText": "Check out the repo!",
     "linkUrl": "https://github.com/4b3c/TileWorld",
     "start": "2023-12",
+    "updated": "2025-06-19",
     "date": "2023 – 2025",
     "size": "medium",
     "status": "parked",
@@ -585,6 +610,7 @@
     "linkText": "",
     "linkUrl": "",
     "start": "2025-06",
+    "updated": "2025-06-23",
     "date": "2025",
     "size": "small",
     "status": "complete",
@@ -607,6 +633,7 @@
     "linkText": "Check out the repo!",
     "linkUrl": "https://github.com/4b3c/bit-tictactoe",
     "start": "2024-08",
+    "updated": "2024-08-30",
     "date": "2024",
     "size": "tiny",
     "status": "complete",

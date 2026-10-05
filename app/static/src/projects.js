@@ -462,9 +462,8 @@ import { FONT } from './font.js';
       return leg;
     }
 
-    // Each kind is one trail. It comes in from the edge of the world, through
-    // the spawn point, past all its trees and out to the edge again, so it never
-    // dead-ends. The order is the shortest walk we can find:
+    // Each kind is one trail. It starts at the spawn point (the trailhead) and
+    // passes all its trees, ending beside the last one rather than at it. The order is the shortest walk we can find:
     // nearest tree first, then 2-opt (reverse any stretch that makes it shorter),
     // which also untangles the trail where it would cross itself.
     const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
@@ -494,27 +493,11 @@ import { FONT } from './font.js';
       return order;
     }
 
-    // From tile `from`, heading along `dir`, the last tile before the edge.
-    function toEdge(from, dir) {
-      const len = Math.hypot(...dir) || 1;
-      const [ux, uy] = [dir[0] / len, dir[1] / len];
-      const tx = ux > 0 ? (COLS - 1 - from[0]) / ux : ux < 0 ? -from[0] / ux : Infinity;
-      const ty = uy > 0 ? (ROWS - 1 - from[1]) / uy : uy < 0 ? -from[1] / uy : Infinity;
-      const t = Math.min(tx, ty);
-      return [clamp(Math.round(from[0] + ux * t), 0, COLS - 1), clamp(Math.round(from[1] + uy * t), 0, ROWS - 1)];
-    }
-
     KINDS.forEach((kind, k) => {
       const stops = projects.filter((p) => p.paths.includes(kind)).map((p) => passBy.get(p)[kind]);
       if (!stops.length) return;
       const head = [SPAWN[0] - 1 + k, SPAWN[1] + 1];
-      const order = walkOrder(head, stops);
-      // comes in from the edge behind the spawn point, and after the last tree
-      // carries on the way it was heading, out to the edge again
-      const [prev, last] = order.slice(-2);
-      const entry = toEdge(head, [head[0] - order[1][0], head[1] - order[1][1]]);
-      const exit = toEdge(last, [last[0] - prev[0], last[1] - prev[1]]);
-      const walk = [entry, ...order, exit];
+      const walk = walkOrder(head, stops);
       let behind = new Set();
       for (let i = 1; i < walk.length; i++) behind = route(walk[i - 1], walk[i], kind, behind);
     });

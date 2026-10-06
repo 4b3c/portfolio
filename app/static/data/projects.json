@@ -79,7 +79,7 @@
     "linkUrl": "https://www.youtube.com/channel/UCbY-W4ZfbrnHluhPqqADrIA",
     "start": "2023-02",
     "updated": "2024-01-11",
-    "date": "2023",
+    "date": "2023 – 2024",
     "size": "medium",
     "status": "complete",
     "paths": [
@@ -174,7 +174,7 @@
     "linkUrl": "https://docs.google.com/document/d/1I4lDTvtQAAA1QllpGcWRAtw9D43FZxqdHCuA2IUDI2Q/",
     "start": "2024-02",
     "updated": "2026-05",
-    "date": "2024 – now",
+    "date": "2024 – 2026",
     "size": "large",
     "status": "complete",
     "paths": [
@@ -367,7 +367,7 @@
     "title": "Particle Analyzer",
     "start": "2025-09",
     "updated": "2026-09",
-    "date": "2025",
+    "date": "2025 – 2026",
     "size": "medium",
     "images": [
       "/static/img/projects/particle/device.png"
@@ -375,7 +375,7 @@
     "description": "A Luminosity Lab device that charges particles and then detects them, measuring their size and other properties. I did the CAD, which taught me to design parts for machining in metal instead of 3D printing.",
     "linkText": "",
     "linkUrl": "",
-    "status": "completed",
+    "status": "complete",
     "paths": [
       "mechanical",
       "work"
@@ -391,7 +391,7 @@
     "title": "Project Jude",
     "start": "2025-10",
     "updated": "2026-09-17",
-    "date": "2025 – now",
+    "date": "2025 – 2026",
     "size": "small",
     "images": [
       "/static/img/projects/jude/cad.png"
@@ -511,7 +511,7 @@
     "title": "Barrett Thesis",
     "start": "2026-08",
     "updated": "2026-09",
-    "date": "2026 – now",
+    "date": "2026",
     "size": "small",
     "images": [],
     "description": "My honors thesis: designing a low-cost, open-ended STEM kit and coding curriculum for an under-resourced classroom, with a school in Kenya as the main deployment site.",

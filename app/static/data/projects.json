@@ -74,7 +74,7 @@
     "images": [
       "/static/img/projects/wikifacts/wikifacts.png"
     ],
-    "description": "An automated pipeline that generated short videos summarizing Wikipedia articles into 5 facts. Used ChatGPT, Wikipedia API, Google Images, Amazon TTS, and OpenCV to compile videos and upload to YouTube Shorts. Gained 70+ subs and 19K+ views.",
+    "description": "An automated pipeline that generated short videos summarizing Wikipedia articles into 5 facts. Used ChatGPT, Wikipedia API, Google Images, Amazon TTS, and OpenCV to compile videos and upload to YouTube Shorts. Gained 300 subs and 150K+ views.",
     "linkText": "Check out the channel!",
     "linkUrl": "https://www.youtube.com/channel/UCbY-W4ZfbrnHluhPqqADrIA",
     "start": "2023-02",

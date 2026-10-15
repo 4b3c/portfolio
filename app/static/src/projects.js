@@ -77,6 +77,34 @@ import { FONT } from './font.js';
     text: [70, 44, 24, 255], post: [120, 80, 44, 255], outline: [40, 30, 30, 255],
   };
 
+  // --- the cabin ----------------------------------------------------------
+  // A log cabin out in the woods whose mailbox is the contact form, with a
+  // clearing in front where a sign for each of these stands. Walking up to a
+  // sign shows its card; E opens the link.
+  const SOCIALS = [
+    { sign: 'GITHUB', title: 'GitHub', note: 'All my code, old and new.', url: 'https://github.com/4b3c' },
+    { sign: 'LINKEDIN', title: 'LinkedIn', note: 'Where I work and what I study.', url: 'https://www.linkedin.com/in/abram-pierce' },
+    { sign: 'INSTAGRAM', title: 'Instagram', note: "What I'm up to.", url: 'https://www.instagram.com/abrammonia/' },
+    { sign: 'EMAIL', title: 'Email', note: 'Or write to me directly.', url: 'mailto:awpierc2@asu.edu' },
+  ];
+  const TRAILHEAD_CLEARING = [2.8, 1.9]; // the spawn clearing's radii, in tiles
+  const CABIN_CLEARING = [6, 3.5];       // the cabin's
+  const CABIN_TREE_AGE = 380;            // how big the tree beside the cabin grows
+  const SOCIAL_REACH = 80;               // how close to a sign before its card shows
+  const WELCOME_REACH = 110;             // how close to the welcome sign before its guide shows
+  const CABIN_DISTANCE = 16;             // tiles from spawn, at least: off screen when you start
+  const CABIN_REACH = 150;               // how close to the cabin before the "reach out" card shows
+  const CABIN = {
+    ridge: [190, 106, 72, 255], roofLight: [174, 88, 60, 255], roof: [158, 76, 52, 255], roofShade: [142, 66, 46, 255],
+    roofDark: [118, 54, 38, 255], eave: [92, 42, 30, 255],
+    logLight: [178, 122, 72, 255], log: [150, 98, 56, 255], logDark: [112, 72, 40, 255], logEnd: [204, 160, 104, 255],
+    logShadow: [92, 58, 32, 255],                                     // under the eave
+    frame: [70, 44, 24, 255], door: [112, 70, 40, 255], doorShadow: [84, 52, 28, 255], plank: [90, 56, 30, 255],
+    knob: [232, 192, 92, 255], glass: [150, 198, 214, 255], glassShadow: [104, 150, 170, 255], shine: [214, 236, 240, 255],
+    stoneLight: [170, 166, 156, 255], stone: [138, 136, 130, 255], stoneDark: [104, 102, 98, 255],
+    mail: [72, 104, 150, 255], mailLight: [106, 140, 184, 255], mailDark: [50, 74, 110, 255], flag: [204, 52, 40, 255],
+  };
+
   // --- trail pixel art ----------------------------------------------------
   // One art pixel of a trail at world art-pixel (wx, wy). Patterns use world
   // coordinates so they line up across tile boundaries.
@@ -161,7 +189,9 @@ import { FONT } from './font.js';
     el.getContext('2d').putImageData(img, 0, 0);
   }
 
-  // --- intro: welcome, how it works, pick a character, controls -------------
+  // --- intro: a welcome, then the world -------------------------------------
+  // Everything else (choosing a character, the map key, the controls) is on the
+  // welcome sign at spawn: see the guide below.
   const CHARACTERS = [
     { id: 'explorer', name: 'Explorer', look: EXPLORER },
     { id: 'wanderer', name: 'Wanderer', look: GIRL },
@@ -180,35 +210,69 @@ import { FONT } from './font.js';
   } catch (e) { /* storage blocked */ }
 
   const intro = document.getElementById('intro');
-  const slides = [...intro.querySelectorAll('[data-slide]')];
-  let slide = 0;
-  function showSlide(n) {
-    slide = clamp(n, 0, slides.length - 1);
-    slides.forEach((el, i) => { el.hidden = i !== slide; });
-    slides[slide].querySelector('[data-next], [data-start]')?.focus();
+  // While the welcome is up, nothing else is: no counter, contact or help
+  // buttons, and no card or guide (updateCard checks introOpen). Visibility,
+  // not display, so it doesn't undo the phone view hiding them for good.
+  const hud = ['progress', 'buttons'].map((id) => document.getElementById(id));
+  const showHud = (on) => hud.forEach((el) => { el.style.visibility = on ? '' : 'hidden'; });
+  showHud(false);
+  function showIntro() {
+    intro.style.display = '';
+    introOpen = true;
+    showHud(false);
+    intro.querySelector('[data-start]').focus();
   }
-  intro.querySelectorAll('[data-next]').forEach((b) => b.addEventListener('click', () => showSlide(slide + 1)));
-  intro.querySelectorAll('[data-back]').forEach((b) => b.addEventListener('click', () => showSlide(slide - 1)));
   function startExploring() {
     intro.style.display = 'none';        // not `hidden`: the overlay's Tailwind `flex` class overrides it
     introOpen = false;
+    showHud(true);
+    document.activeElement?.blur();      // so Enter and E go to the world, not the button
   }
   intro.querySelector('[data-start]').addEventListener('click', startExploring);
-  // the help button (or H) plays the intro again from the start
-  function replayIntro() {
-    intro.style.display = '';
-    introOpen = true;
-    showSlide(0);
-  }
-  document.getElementById('help').addEventListener('click', replayIntro);
+  // clicking the dark area outside the panel starts too
+  intro.addEventListener('click', (e) => { if (e.target === intro) startExploring(); });
+  // and so does Enter
   window.addEventListener('keydown', (e) => {
-    if (e.code === 'KeyH' && !introOpen) replayIntro();
+    if (introOpen && list.hidden && e.code === 'Enter' && e.target.tagName !== 'BUTTON') startExploring();
   });
-  // clicking the dark area outside the panel skips the intro, as the first character
-  intro.addEventListener('click', (e) => {
-    if (e.target !== intro) return;
-    pick(CHARACTERS[0]);
-    startExploring();
+
+  // --- the welcome sign's guide ------------------------------------------------
+  // Three pages in the corner, like a project's card: choose a character, the
+  // map key, the controls. It shows when you walk up to the welcome sign (see
+  // updateCard), or from anywhere with help or H, until you press it again or
+  // walk up to something else. E flips to the next page.
+  const guide = document.getElementById('guide');
+  const PAGES = ['character', 'forest', 'controls'];
+  let page = 'character';
+  let guidePinned = false;               // opened with help or H, not by the sign
+  let pinnedNear = null;                 // what you were next to when it was opened ('new' until updateCard looks)
+  function showPage(name) {
+    page = name;
+    guide.querySelectorAll('[data-page]').forEach((el) => { el.hidden = el.dataset.page !== name; });
+    guide.querySelectorAll('[data-tab]').forEach((b) => {
+      const on = b.dataset.tab === name;
+      b.style.borderColor = on ? '#28201e' : 'transparent';
+      b.style.background = on ? '#fffaf0' : '';
+      b.setAttribute('aria-pressed', String(on));
+    });
+  }
+  const nextPage = () => showPage(PAGES[(PAGES.indexOf(page) + 1) % PAGES.length]);
+  guide.querySelectorAll('[data-tab]').forEach((b) => b.addEventListener('click', () => {
+    showPage(b.dataset.tab);
+    b.blur();                            // so the arrow keys go back to walking
+  }));
+  showPage(page);
+  const toggleHelp = () => {
+    guidePinned = !guidePinned;
+    pinnedNear = 'new';
+  };
+  document.getElementById('help').addEventListener('click', (e) => {
+    toggleHelp();
+    e.currentTarget.blur();
+  });
+  window.addEventListener('keydown', (e) => {
+    if (e.code === 'KeyH' && !introOpen && !contactOpen) toggleHelp();
+    if (e.code === 'Escape') guidePinned = false;
   });
 
   // character picker: each choice shows its sprite walking toward you
@@ -216,7 +280,7 @@ import { FONT } from './font.js';
   const previews = CHARACTERS.map((c) => {
     const button = document.createElement('button');
     button.type = 'button';
-    button.className = 'flex flex-col items-center gap-2 rounded border-4 p-3 font-bold hover:bg-white';
+    button.className = 'flex flex-col items-center gap-1 rounded border-4 p-1.5 text-xs font-bold hover:bg-white';
     const preview = document.createElement('canvas');
     const frame0 = c.sprites.down[0];
     preview.width = frame0.width;
@@ -227,7 +291,10 @@ import { FONT } from './font.js';
     const label = document.createElement('span');
     label.textContent = c.name;
     button.append(preview, label);
-    button.addEventListener('click', () => pick(c));
+    button.addEventListener('click', () => {
+      pick(c);
+      button.blur();                     // so the arrow keys go back to walking
+    });
     picker.append(button);
     return { c, button, ctx: preview.getContext('2d') };
   });
@@ -244,7 +311,7 @@ import { FONT } from './font.js';
   pick(character);
   let previewFrame = 0;
   setInterval(() => {
-    if (!introOpen) return;
+    if (guide.dataset.open !== 'true' || page !== 'character') return;
     previewFrame = (previewFrame + 1) % 4;
     for (const p of previews) {
       const sprite = p.c.sprites.down[previewFrame];
@@ -252,6 +319,61 @@ import { FONT } from './font.js';
       p.ctx.drawImage(sprite, 0, 0);
     }
   }, 1000 / ANIM_FPS);
+
+  // --- the contact form (the cabin's mailbox) ---------------------------------
+  // You can't walk while it's open, so typing in it doesn't move you.
+  const contact = document.getElementById('contact');
+  const contactForm = contact.querySelector('[data-form]');
+  const contactSent = contact.querySelector('[data-sent]');
+  const contactStatus = contact.querySelector('[data-status]');
+  let contactOpen = false;
+  let mailSent = false;                  // raises the flag on the mailbox
+  function openContact() {
+    contact.style.display = '';          // not `hidden`: its Tailwind `flex` class would override that
+    contactOpen = true;
+    contactForm.hidden = false;
+    contactSent.hidden = true;
+    contactStatus.hidden = true;
+    contactForm.querySelector('input').focus();
+  }
+  function closeContact() {
+    contact.style.display = 'none';
+    contactOpen = false;
+    document.activeElement?.blur();      // so the arrow keys go back to walking
+  }
+  contact.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', closeContact));
+  contact.addEventListener('click', (e) => { if (e.target === contact) closeContact(); });
+  window.addEventListener('keydown', (e) => { if (contactOpen && e.code === 'Escape') closeContact(); });
+
+  function contactError(text) {
+    contactStatus.textContent = text;
+    contactStatus.style.color = '#aa3220';
+    contactStatus.hidden = false;
+  }
+  contactForm.addEventListener('submit', async (e) => {
+    e.preventDefault();                  // send it with fetch instead, so the page stays put
+    const send = contactForm.querySelector('[data-send]');
+    send.disabled = true;
+    send.textContent = 'sending…';
+    try {
+      const response = await fetch(contactForm.action, { method: 'POST', body: new FormData(contactForm) });
+      const reply = await response.json().catch(() => ({}));
+      if (!response.ok || !reply.ok) {
+        contactError(reply.error || "Couldn't send that. Try again in a bit?");
+        return;
+      }
+      mailSent = true;
+      contactForm.reset();
+      contactForm.hidden = true;
+      contactSent.hidden = false;
+      contactSent.querySelector('[data-close]').focus();
+    } catch (err) {
+      contactError("Couldn't reach the mailbox. Check your connection and try again?");
+    } finally {
+      send.disabled = false;
+      send.textContent = 'send ✉';
+    }
+  });
 
   // --- "just show me a list" --------------------------------------------------
   const list = document.getElementById('list');
@@ -360,8 +482,7 @@ import { FONT } from './font.js';
   list.querySelector('[data-forest]').addEventListener('click', () => {
     list.hidden = true;
     if (onPhone) { showMobile(); return; }  // no forest without a keyboard: back to the desktop suggestion
-    intro.style.display = '';
-    showSlide(0);
+    showIntro();
   });
 
   // --- phones --------------------------------------------------------------
@@ -386,7 +507,7 @@ import { FONT } from './font.js';
     walk();
     const walking = setInterval(walk, 1000 / ANIM_FPS);
     intro.style.display = 'none';
-    document.getElementById('progress').parentElement.style.display = 'none';  // counter and help are for the forest
+    hud.forEach((el) => { el.style.display = 'none'; });   // the counter and buttons are for the forest
     mobile.style.display = '';             // not `hidden`: its Tailwind `flex` class would override that
     mobile.querySelector('[data-mobile-list]').onclick = () => {  // onclick, so showing it again doesn't stack handlers
       clearInterval(walking);
@@ -398,12 +519,7 @@ import { FONT } from './font.js';
   }
   if (onPhone) showMobile();
 
-  // Enter moves the intro along
-  window.addEventListener('keydown', (e) => {
-    if (!introOpen || !list.hidden || e.code !== 'Enter' || e.target.tagName === 'BUTTON') return;
-    slides[slide].querySelector('[data-next], [data-start]')?.click();
-  });
-  showSlide(0);
+  intro.querySelector('[data-start]').focus();
 
   // A small min-heap of (item, priority), for A*.
   class Heap {
@@ -457,6 +573,88 @@ import { FONT } from './font.js';
     const at = (c, r) => r * COLS + c;
     const inWorld = (c, r) => c >= 0 && r >= 0 && c < COLS && r < ROWS;
 
+    // --- place the cabin ----------------------------------------------------
+    // Somewhere random, but well away from spawn so you have to go and find it.
+    // It's placed first so the trees leave room for it and its clearing.
+    let cc, cr;                                   // the cabin's middle tile
+    do {
+      cc = randint(CABIN_CLEARING[0] + 3, COLS - CABIN_CLEARING[0] - 4);
+      cr = randint(TOP_ROW, ROWS - CABIN_CLEARING[1] - 4);
+    } while (Math.hypot(cc - SPAWN[0], cr - SPAWN[1]) < CABIN_DISTANCE);
+    const cabin = { x: cc * TILE + TILE / 2, y: cr * TILE + TILE - 8, sprite: makeCabin() };
+    const doorX = cabin.x;                        // see makeCabin
+    const mailbox = { x: cabin.x + 150, y: cabin.y + 4, down: makeMailbox(false), up: makeMailbox(true) };
+    // a tree growing just behind one side of the cabin
+    const treeSide = Math.random() < 0.5 ? -1 : 1;
+    const cabinTreeAt = [cc + 3 * treeSide, cr - 1];
+
+    // --- clearings ----------------------------------------------------------
+    // Packed earth around spawn and in front of the cabin, in whole tiles: a
+    // rough oval, solid in the middle, that breaks up toward its edge into a
+    // scatter of tiles, more of them on the checkerboard's dark squares.
+    const EDGE = [0.75, 1.3];   // solid out to here, scattered out to here (1 is the oval itself)
+    const clearings = [
+      { c: SPAWN[0] + 0.5, r: SPAWN[1] + 0.5, rx: TRAILHEAD_CLEARING[0], ry: TRAILHEAD_CLEARING[1] },
+      { c: cc + 0.5, r: cr + 1.5, rx: CABIN_CLEARING[0], ry: CABIN_CLEARING[1] },   // mostly in front of the cabin
+    ];
+    const cabinClearing = clearings[1];
+    // how far out a tile's middle is from a clearing's: the oval is at 1
+    const depthIn = (cl, c, r) => Math.hypot((c + 0.5 - cl.c) / cl.rx, (r + 0.5 - cl.r) / cl.ry);
+    const core = new Uint8Array(COLS * ROWS);     // which clearing a tile is in (1, 2, ...), or 0
+    clearings.forEach((cl, k) => {
+      for (let r = Math.floor(cl.r - cl.ry * EDGE[1]); r <= cl.r + cl.ry * EDGE[1]; r++) {
+        for (let c = Math.floor(cl.c - cl.rx * EDGE[1]); c <= cl.c + cl.rx * EDGE[1]; c++) {
+          if (!inWorld(c, r)) continue;
+          const d = depthIn(cl, c, r);
+          const odds = (EDGE[1] - d) / (EDGE[1] - EDGE[0]) + ((c + r) % 2 ? -0.25 : 0.25);
+          if (d < EDGE[0] || (d < EDGE[1] && Math.random() < odds)) core[at(c, r)] = k + 1;
+        }
+      }
+    });
+
+    // The social signs stand scattered about the cabin's clearing: away from
+    // its middle, but not out on the grass; and not on the cabin or the
+    // mailbox, in front of the door, or on top of each other.
+    const socials = SOCIALS.map((s) => ({ ...s, sign: makeSign(s.sign) }));
+    const boxOf = (sprite, x, y, margin) => [
+      x - (sprite.width * PIXEL) / 2 - margin, y - sprite.height * PIXEL - margin,
+      x + (sprite.width * PIXEL) / 2 + margin, y + margin,
+    ];
+    const overlaps = (a, b) => a[0] < b[2] && b[0] < a[2] && a[1] < b[3] && b[1] < a[3];
+    const taken = [
+      boxOf(cabin.sprite, cabin.x, cabin.y, 16),
+      boxOf(mailbox.down, mailbox.x, mailbox.y, 16),
+      [(cabinTreeAt[0] - 0.5) * TILE, (cabinTreeAt[1] - 0.5) * TILE, (cabinTreeAt[0] + 1.5) * TILE, (cabinTreeAt[1] + 1.25) * TILE],
+      [doorX - 56, cabin.y, doorX + 56, cabin.y + 2 * TILE],   // the doorstep, and the way up to it
+    ];
+    for (const s of socials) {
+      // if a crowded clearing leaves no room, slowly stop being fussy about where
+      for (let tries = 0; ; tries++) {
+        const fussy = tries < 2000;
+        const x = Math.round(((cabinClearing.c + (Math.random() * 2 - 1) * cabinClearing.rx * EDGE[1]) * TILE) / PIXEL) * PIXEL;
+        const y = Math.round(((cabinClearing.r + (Math.random() * 2 - 1) * cabinClearing.ry * EDGE[1]) * TILE) / PIXEL) * PIXEL;
+        const [c, r] = [Math.floor(x / TILE), Math.floor(y / TILE)];
+        if (!inWorld(c, r) || core[at(c, r)] !== 2) continue;            // on the clearing's earth
+        const depth = depthIn(cabinClearing, c, r);
+        if (depth < (fussy ? 0.4 : 0) || depth > (fussy ? 1 : EDGE[1])) continue;   // toward its edge, not out on a stray tile
+        const box = boxOf(s.sign, x, y, 12);
+        if (tries < 4000 && taken.some((t) => overlaps(box, t))) continue;
+        Object.assign(s, { x, y });
+        taken.push(box);
+        break;
+      }
+    }
+
+    // Trees keep out of the clearing (with room for their own sign post, two
+    // tiles to the right) and out of the rows below it: a big tree's leaves
+    // reach up about eight rows, and would hide the signs.
+    const around = {
+      c0: Math.floor(cabinClearing.c - cabinClearing.rx * EDGE[1]), c1: Math.floor(cabinClearing.c + cabinClearing.rx * EDGE[1]),
+      r0: Math.floor(cabinClearing.r - cabinClearing.ry * EDGE[1]), r1: Math.floor(cabinClearing.r + cabinClearing.ry * EDGE[1]),
+    };
+    const nearCabin = (c, r) =>
+      c >= around.c0 - 3 && c <= around.c1 + 1 && r >= Math.min(around.r0, cr - 4) && r <= around.r1 + 8;
+
     // --- scatter the trees --------------------------------------------------
     // Biggest first, so they get the pick of the space. If a layout gets too
     // crowded to finish, start over a little less fussy about spacing.
@@ -469,7 +667,7 @@ import { FONT } from './font.js';
         for (let tries = 0; tries < 500 && !spots.has(p); tries++) {
           const c = randint(6, COLS - 8);
           const r = randint(TOP_ROW, ROWS - 4);
-          if (Math.hypot(c - SPAWN[0], r - SPAWN[1]) < SPAWN_CLEARING) continue;
+          if (Math.hypot(c - SPAWN[0], r - SPAWN[1]) < SPAWN_CLEARING || nearCabin(c, r)) continue;
           const crowded = [...spots.values()].some(([sc, sr]) =>
             ((c - sc) / (SPACING[0] * loosen)) ** 2 + ((r - sr) / (SPACING[1] * loosen)) ** 2 < 1);
           if (!crowded) spots.set(p, [c, r]);
@@ -503,21 +701,24 @@ import { FONT } from './font.js';
       })));
     });
 
-    // The trailhead: a small clearing around the spawn point with a signpost on
-    // its top row. Every trail starts in the middle of it and heads out on
-    // whichever side faces its first tree, so no trail starts on bare grass.
-    const TRAILHEAD = { cols: [-2, 2], rows: [-1, 1] };   // tiles around SPAWN
-    for (let dr = TRAILHEAD.rows[0]; dr <= TRAILHEAD.rows[1]; dr++) {
-      for (let dc = TRAILHEAD.cols[0]; dc <= TRAILHEAD.cols[1]; dc++) {
-        material[at(SPAWN[0] + dc, SPAWN[1] + dr)] = MAT_INDEX.trailhead;
-      }
-    }
+    // Clearing tiles are packed earth: trails cross them cheaply and never claim them.
+    for (let i = 0; i < core.length; i++) if (core[i]) material[i] = MAT_INDEX.trailhead;
+
+    // a signpost at the top of the spawn clearing
     const trailSign = {
       x: SPAWN[0] * TILE + TILE / 2,
       y: (SPAWN[1] - 1) * TILE + TILE - 12,
       sign: makeSign('WELCOME'),
     };
     blocked[at(SPAWN[0], SPAWN[1] - 1)] = 1;
+
+    // Trails can't run through the cabin (or behind its roof), its tree, the mailbox, or the sign posts.
+    blocked[at(...cabinTreeAt)] = 1;
+    for (let dr = -3; dr <= 0; dr++) {
+      for (let dc = -1; dc <= 1; dc++) blocked[at(cc + dc, cr + dr)] = 1;
+    }
+    blocked[at(Math.floor(mailbox.x / TILE), cr)] = 1;
+    for (const s of socials) blocked[at(Math.floor(s.x / TILE), Math.floor(s.y / TILE))] = 1;
 
     // --- trails -------------------------------------------------------------
     // A little random cost on every tile, so two loads don't route identically.
@@ -526,22 +727,35 @@ import { FONT } from './font.js';
     // Turning costs as much as a few extra tiles, so trails run in long straight
     // stretches with a few deliberate corners instead of staircasing.
     const TURN = 3;
+    // A tile right next to a trail (another kind's, or this one's own) costs
+    // extra, so trails leave a strip of grass between them instead of running
+    // side by side. Crossing straight over only pays it twice, once each side.
+    const BESIDE = 4;
     const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 
     // Cheapest 4-way route between two tiles (A* over tile and heading).
-    // Following a trail of the same kind is cheap, so trails merge. Stepping onto
-    // another kind's trail is expensive, so different kinds only meet at short
-    // crossings instead of running together (where one would hide the other).
+    // Stepping onto any trail is expensive, its own included, so a trail never
+    // merges, forks, or doubles back on itself: where the next tree is back the
+    // way it came, it loops round on fresh ground. Trails only meet at short
+    // crossings, and walking right beside one costs extra too (BESIDE). The
+    // clearings are everyone's, since every trail starts in one.
     function route(from, to, kind) {
       const mine = MAT_INDEX[kind];
+      const besideTrail = (i) => {
+        const c = i % COLS, r = Math.floor(i / COLS);
+        return DIRS.some(([dc, dr]) => {
+          if (!inWorld(c + dc, r + dr)) return false;
+          const j = at(c + dc, r + dr);
+          return material[j] !== -1 && !core[j];
+        });
+      };
       const cost = (i) => {
         if (blocked[i]) return Infinity;
-        const m = material[i];
-        if (m === mine || m === MAT_INDEX.trailhead) return 0.35;
-        if (m !== -1) return 6;
+        if (core[i]) return 0.35;
+        if (material[i] !== -1) return 6;
         const k = near[i];
         const foreign = k !== -1 && !projects[k].paths.includes(kind);
-        return 1 + wander[i] + (foreign ? 6 : 0);
+        return 1 + wander[i] + (foreign ? 6 : 0) + (besideTrail(i) ? BESIDE : 0);
       };
       const goal = at(...to);
       const guess = (i) => (Math.abs((i % COLS) - to[0]) + Math.abs(Math.floor(i / COLS) - to[1])) * 0.35;
@@ -614,10 +828,54 @@ import { FONT } from './font.js';
       if (!stops.length) return;
       const head = SPAWN;
       const walk = walkOrder(head, stops);
-      // Following its own trail is cheap, so where the next tree is back the
-      // way it came, a trail walks back along itself: one two-way path, not two.
       for (let i = 1; i < walk.length; i++) route(walk[i - 1], walk[i], kind);
     });
+    // And a pale path from the trailhead out to the cabin, routed last so it
+    // doesn't pull the project trails off course. Left to itself it would take
+    // one corner, so it goes by two: out along the longer way, across at a
+    // random point partway, then on into the clearing, like a Z.
+    {
+      // It ends on the edge of the clearing that faces spawn, so the last
+      // stretch comes straight in: through the side, or from above or below
+      // through a gap beside the cabin or between the signs, never at the roof.
+      const across = Math.abs(cc - SPAWN[0]) >= Math.abs(cr - SPAWN[1]);   // mostly sideways?
+      const step = across ? [SPAWN[0] < cc ? -1 : 1, 0] : [0, SPAWN[1] < cr ? -1 : 1];   // toward spawn
+      const edgeTiles = (strict) => {
+        const edges = [];
+        for (let r = 0; r < ROWS; r++) {
+          for (let c = 0; c < COLS; c++) {
+            const i = at(c, r), n = [c + step[0], r + step[1]];
+            if (core[i] !== 2 || blocked[i] || depthIn(cabinClearing, c, r) >= EDGE[0]) continue;   // the solid middle
+            if (!inWorld(...n) || blocked[at(...n)] || depthIn(cabinClearing, ...n) < EDGE[0]) continue;   // facing out of it
+            if (strict && (across ? r < cr : Math.abs(c - cc) <= 2)) continue;    // not behind the cabin, or right by it
+            edges.push([c, r]);
+          }
+        }
+        return edges;
+      };
+      // a narrow clearing may have no edge to spare beside the cabin: then take any edge facing spawn
+      const edges = edgeTiles(true).length ? edgeTiles(true) : edgeTiles(false);
+      const goal = edges.length ? edges[randint(0, edges.length - 1)] : [cc, cr + 1];
+      const [a, b] = across ? [0, 1] : [1, 0];   // a: the long way, b: the short way
+      const turn = Math.round(SPAWN[a] + (goal[a] - SPAWN[a]) * (0.3 + Math.random() * 0.4));
+      // if the short way is too short to see the jog, swing out a few tiles past the goal
+      let side = goal[b];
+      if (Math.abs(goal[b] - SPAWN[b]) < 4) side = clamp(goal[b] + (goal[b] >= SPAWN[b] ? 4 : -4), 2, (b ? ROWS : COLS) - 3);
+      const corner1 = [], corner2 = [];
+      corner1[a] = turn; corner1[b] = SPAWN[b];
+      corner2[a] = turn; corner2[b] = side;
+      // a corner can land on a trunk or post; use the nearest open tile instead
+      const open = ([c, r]) => {
+        for (let d = 0; d < 4; d++) {
+          for (let dr = -d; dr <= d; dr++) {
+            for (let dc = -d; dc <= d; dc++) if (inWorld(c + dc, r + dr) && !blocked[at(c + dc, r + dr)]) return [c + dc, r + dr];
+          }
+        }
+        return [c, r];
+      };
+      const stops = [SPAWN, open(corner1), open(corner2), goal];
+      for (let i = 1; i < stops.length; i++) route(stops[i - 1], stops[i], 'trailhead');
+    }
 
 
     // --- path tiles -----------------------------------------------------------
@@ -689,15 +947,145 @@ import { FONT } from './font.js';
       return toCanvas(outline(img, SIGN.outline));
     }
 
+    // A log cabin, front on, with its gable end facing you. The roof's two
+    // slopes run back from the peaked front edge to a ridge, so you see its
+    // depth (like the houses in Stardew Valley): the left slope in light, the
+    // right in shade. Under the front edge, the gable has a little window; the
+    // wall below has a door in the middle between two windows. The door's
+    // middle is the sprite's middle (doorX).
+    function makeCabin() {
+      const W = 64, H = 58;
+      const PEAK = [31.5, 14];                     // the top of the roof's front edge
+      const SLOPE = 0.75;                          // rows down per column out from the peak
+      const DEPTH = 12;                            // how far back the roof runs, in rows
+      const WALL = [5, 58];                        // the wall's columns
+      const img = new ImageData(W + 2, H + 2);     // 1px border for the outline
+      const set = (x, y, colour) => img.data.set(colour, ((y + 1) * img.width + x + 1) * 4);
+      const box = (x0, y0, x1, y1, colour) => {
+        for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) set(x, y, colour);
+      };
+      const front = (x) => Math.floor(PEAK[1] + Math.abs(x - PEAK[0]) * SLOPE);   // the roof's front edge in column x
+      const stone = (x, y, light) => (hashXY(x, y + 77) < 0.3 ? CABIN.stoneDark : light ? CABIN.stoneLight : CABIN.stone);
+
+      // the wall, gable and all, in logs, shaded just under the roof
+      for (let x = WALL[0]; x <= WALL[1]; x++) {
+        for (let y = front(x) + 3; y <= 55; y++) {
+          const shaded = y <= front(x) + 4;
+          set(x, y, shaded ? CABIN.logShadow : [CABIN.logLight, CABIN.log, CABIN.logDark][y % 3]);
+        }
+      }
+      // log ends poking out at the corners, under the eaves
+      for (let y = 40; y <= 55; y++) {
+        for (const x of [3, 4, WALL[1] + 1, WALL[1] + 2]) set(x, y, y % 3 === 2 ? CABIN.logDark : CABIN.logEnd);
+      }
+      for (let x = 3; x <= WALL[1] + 2; x++) {    // the foundation
+        set(x, 56, stone(x, 56, true));
+        set(x, 57, stone(x, 57, false));
+      }
+
+      // the roof: each slope in courses running back from the front edge, with
+      // staggered seams; a light ridge down the middle; a dark board along the front
+      for (let x = 0; x < W; x++) {
+        const lit = x < 32;
+        for (let y = front(x) - DEPTH; y < front(x); y++) {
+          const back = front(x) - 1 - y;            // rows back from the front edge
+          const course = Math.floor(back / 3);
+          let colour = lit ? CABIN.roof : CABIN.roofShade;
+          if (back % 3 === 2) colour = lit ? CABIN.roofDark : CABIN.eave;
+          else if (back % 3 === 0) colour = lit ? CABIN.roofLight : CABIN.roof;
+          else if ((x + course * 3) % 6 === 0) colour = lit ? CABIN.roofDark : CABIN.eave;
+          if (x === 31 || x === 32) colour = lit ? CABIN.ridge : CABIN.roofLight;
+          set(x, y, colour);
+        }
+        set(x, front(x), CABIN.roofDark);
+        set(x, front(x) + 1, CABIN.eave);
+        set(x, front(x) + 2, CABIN.eave);
+      }
+
+      // the chimney, standing on the lit slope: a lit front, a shaded side, a dark cap
+      for (let y = 3; y <= 17; y++) {
+        for (let x = 15; x <= 20; x++) set(x, y, y <= 4 || x >= 19 ? CABIN.stoneDark : stone(x, y, true));
+      }
+
+      // windows, set in: shade along the top and left of the glass, a glint, a sill
+      const windowAt = (x0, y0, w, h, sill) => {
+        box(x0, y0, x0 + w - 1, y0 + h - 1, CABIN.frame);
+        box(x0 + 1, y0 + 1, x0 + w - 2, y0 + h - 2, CABIN.glass);
+        box(x0 + 1, y0 + 1, x0 + w - 2, y0 + 1, CABIN.glassShadow);
+        box(x0 + 1, y0 + 1, x0 + 1, y0 + h - 2, CABIN.glassShadow);
+        const mx = x0 + Math.floor(w / 2), my = y0 + Math.floor(h / 2);
+        box(mx, y0 + 1, mx, y0 + h - 2, CABIN.frame);
+        box(x0 + 1, my, x0 + w - 2, my, CABIN.frame);
+        set(mx + 2, my - 2, CABIN.shine);
+        if (!sill) return;
+        box(x0 - 1, y0 + h, x0 + w, y0 + h, CABIN.logEnd);
+        box(x0, y0 + h + 1, x0 + w - 1, y0 + h + 1, CABIN.logShadow);
+      };
+      windowAt(9, 40, 10, 9, true);
+      windowAt(45, 40, 10, 9, true);
+      windowAt(28, 23, 8, 8, false);               // up in the gable
+
+      // the door, set in, in planks, with a brass knob and a stone step
+      box(27, 39, 36, 55, CABIN.frame);
+      box(28, 40, 35, 55, CABIN.door);
+      box(28, 40, 35, 40, CABIN.doorShadow);
+      box(28, 40, 28, 55, CABIN.doorShadow);
+      box(31, 41, 31, 55, CABIN.plank);
+      box(34, 41, 34, 55, CABIN.plank);
+      set(33, 48, CABIN.knob);
+      box(25, 56, 38, 56, CABIN.stoneLight);
+      box(24, 57, 39, 57, CABIN.stone);
+
+      return toCanvas(outline(img, SIGN.outline));
+    }
+
+    // A mailbox on a post, its red flag up once you've sent a note.
+    function makeMailbox(flagUp) {
+      const W = 10, H = 15;
+      const img = new ImageData(W + 2, H + 2);
+      const set = (x, y, colour) => img.data.set(colour, ((y + 1) * img.width + x + 1) * 4);
+      for (let y = 7; y < H; y++) {
+        set(3, y, SIGN.post);
+        set(4, y, SIGN.border);
+      }
+      for (let y = 1; y < 7; y++) {
+        for (let x = 0; x < 8; x++) {
+          if (y === 1 && (x === 0 || x === 7)) continue;          // rounded top
+          set(x, y, y === 1 ? CABIN.mailLight : y === 6 || x === 0 ? CABIN.mailDark : CABIN.mail);
+        }
+      }
+      if (flagUp) {
+        for (let y = 0; y < 6; y++) set(8, y, SIGN.border);
+        set(9, 0, CABIN.flag); set(9, 1, CABIN.flag);
+      } else {
+        set(8, 5, SIGN.border);
+        set(8, 4, CABIN.flag); set(9, 4, CABIN.flag);
+      }
+      return toCanvas(outline(img, SIGN.outline));
+    }
+
     // --- visited counter ------------------------------------------------------
     // A project counts as visited once its card has opened. Each kind shows
     // visited/total of the projects whose trail it is (starts fresh every visit).
     const visited = new Set();
+    // When a count goes up, its button pops: it grows, flashes white, and
+    // settles back, so you notice it from the corner of your eye.
     function updateProgress() {
       for (const kind of KINDS) {
         const mine = projects.filter((p) => p.paths.includes(kind));
         const seen = mine.filter((p) => visited.has(p.id)).length;
-        document.querySelector(`[data-progress="${kind}"]`).textContent = `${seen}/${mine.length}`;
+        const label = document.querySelector(`[data-progress="${kind}"]`);
+        const text = `${seen}/${mine.length}`;
+        if (label.textContent === text) continue;
+        const counted = label.textContent !== '0/0';   // not the first fill-in on load
+        label.textContent = text;
+        if (counted) {
+          label.parentElement.animate([
+            { transform: 'scale(1)' },
+            { transform: 'scale(1.35)', backgroundColor: '#ffffff', offset: 0.3 },
+            { transform: 'scale(1)' },
+          ], { duration: 700, easing: 'ease-out' });
+        }
       }
     }
     updateProgress();
@@ -733,13 +1121,23 @@ import { FONT } from './font.js';
         trunkR: 0,
       };
     });
+    // The tree beside the cabin isn't a project: no sign, no card. It grows and
+    // draws with the others (allTrees).
+    const cabinTree = {
+      x: cabinTreeAt[0] * TILE + TILE / 2,
+      y: cabinTreeAt[1] * TILE + TILE - 16,
+      tree: new Tree(randint(1, 9999999), PALETTES.green, { ...BIG_TREE, maxAge: CABIN_TREE_AGE, leaves: true }),
+      growing: true, every: randint(MIN_TICKS, MAX_TICKS), wait: randint(1, MAX_TICKS),
+      dirty: false, rendered: 0, layers: null, trunkR: 0,
+    };
+    const allTrees = [...trees, cabinTree];
     const boxLeft = (t) => t.x - BASE[0];
     const boxTop = (t) => t.y - BASE[1];
 
     let tick = 0;
     function updateTrees() {
       tick++;
-      for (const t of trees) {
+      for (const t of allTrees) {
         if (!t.growing || --t.wait > 0) continue;
         t.wait = t.every;
         if (!t.tree.grow()) { t.growing = false; continue; }
@@ -749,7 +1147,7 @@ import { FONT } from './font.js';
       }
 
       // redraw changed trees: on screen first, then whichever has waited longest
-      const todo = trees.filter((t) => t.dirty);
+      const todo = allTrees.filter((t) => t.dirty);
       todo.sort((a, b) => (onScreen(b) - onScreen(a)) || (a.rendered - b.rendered));
       const begin = performance.now();
       for (const t of todo) {
@@ -765,11 +1163,14 @@ import { FONT } from './font.js';
 
     const keys = new Set();
     window.addEventListener('keydown', (e) => {
-      if (introOpen) return;
+      if (introOpen || contactOpen) return;
       if (e.code.startsWith('Arrow') || e.code === 'Space') e.preventDefault();
       keys.add(e.code);
-      const link = nearest?.project.linkUrl;
-      if ((e.code === 'KeyE' || e.code === 'Enter') && link) window.open(link, '_blank', 'noopener');
+      if ((e.code === 'KeyE' || e.code === 'Enter') && (nearest || guidePinned)) {
+        e.preventDefault();              // or the E would land in the contact form as it opens
+        if (guide.dataset.open === 'true') nextPage();
+        else use(nearest.card);
+      }
     });
     window.addEventListener('keyup', (e) => keys.delete(e.code));
     window.addEventListener('blur', () => keys.clear());
@@ -786,8 +1187,19 @@ import { FONT } from './font.js';
       }
     }
 
+    // Pushes the player out of a box, the shortest way: for the cabin's walls.
+    function pushOutBox(x0, y0, x1, y1) {
+      if (player.x < x0 || player.x > x1 || player.y < y0 || player.y > y1) return;
+      const left = player.x - x0, right = x1 - player.x, up = player.y - y0, down = y1 - player.y;
+      const least = Math.min(left, right, up, down);
+      if (least === left) player.x = x0;
+      else if (least === right) player.x = x1;
+      else if (least === up) player.y = y0;
+      else player.y = y1;
+    }
+
     function movePlayer(dt) {
-      if (introOpen) { player.anim = 0; return; }
+      if (introOpen || contactOpen) { player.anim = 0; return; }
       const dx = held('KeyD', 'ArrowRight') - held('KeyA', 'ArrowLeft');
       const dy = held('KeyS', 'ArrowDown') - held('KeyW', 'ArrowUp');
       if (!dx && !dy) { player.anim = 0; return; }
@@ -801,20 +1213,62 @@ import { FONT } from './font.js';
       player.y += (dy / len) * speed * dt;
       player.anim += dt * ANIM_FPS * (speed / WALK_SPEED);
 
-      for (const t of trees) {
+      for (const t of allTrees) {
         if (t.trunkR) pushOut(t.x, t.y, t.trunkR + PLAYER_RADIUS);
-        pushOut(t.signX, t.signY, 6 + PLAYER_RADIUS);
+        if (t.sign) pushOut(t.signX, t.signY, 6 + PLAYER_RADIUS);
       }
       pushOut(trailSign.x, trailSign.y, 6 + PLAYER_RADIUS);
+      for (const s of socials) pushOut(s.x, s.y, 6 + PLAYER_RADIUS);
+      pushOut(mailbox.x, mailbox.y, 6 + PLAYER_RADIUS);
+      pushOutBox(cabin.x - 108 - PLAYER_RADIUS, cabin.y - 40, cabin.x + 108 + PLAYER_RADIUS, cabin.y + PLAYER_RADIUS / 2);
       player.x = clamp(player.x, 16, WORLD_W - 16);
       player.y = clamp(player.y, 48, WORLD_H - 8);
     }
 
-    // --- project card ---------------------------------------------------------
+    // --- the card -------------------------------------------------------------
+    // Everything you can walk up to: each tree shows its project, each social
+    // sign its link, and the cabin asks you to reach out. All share one card.
     const card = document.getElementById('card');
     const field = (name) => card.querySelector(`[data-${name}]`);
+    const landmarks = [
+      ...trees.map((t) => ({
+        x: t.x, y: t.y, reach: CARD_DISTANCE, project: t.project,
+        card: {
+          title: t.project.title,
+          date: `${t.project.date} · ${t.project.status}`,
+          paths: t.project.paths.map((k) => MATERIALS[k].label).join(' · '),
+          text: t.project.description,
+          linkText: t.project.linkUrl && t.project.linkText + ' ↗',
+          linkUrl: t.project.linkUrl,
+          images: t.project.images || [],
+        },
+      })),
+      ...socials.map((s) => ({
+        x: s.x, y: s.y, reach: SOCIAL_REACH,
+        card: { title: s.title, date: 'find me', text: s.note, linkUrl: s.url,
+          linkText: s.url.replace(/^(https?:\/\/(www\.)?|mailto:)/, '').replace(/\/$/, '') + ' ↗' },
+      })),
+      { x: trailSign.x, y: trailSign.y, reach: WELCOME_REACH, guide: true },   // opens the guide, not a card
+      {
+        x: cabin.x + 70, y: cabin.y, reach: CABIN_REACH,     // between the door and the mailbox
+        card: { title: 'Reach out', date: 'the cabin', contact: true, linkText: 'write me a note ✉',
+          text: "Got a question, an idea, or just want to say hi? Leave a note in the mailbox and I'll write back." },
+      },
+    ];
     let nearest = null;
     let shown = null;
+
+    // E (or clicking the card's link) follows it: the contact form, an email, or a new tab.
+    function use(c) {
+      if (c.contact) openContact();
+      else if (c.linkUrl?.startsWith('mailto:')) window.location.href = c.linkUrl;
+      else if (c.linkUrl) window.open(c.linkUrl, '_blank', 'noopener');
+    }
+    field('link').addEventListener('click', (e) => {
+      if (!shown) return;
+      e.preventDefault();
+      use(shown.card);
+    });
 
     // Projects with several images flip through them while their card is open.
     const SLIDE_MS = 2000;
@@ -823,41 +1277,52 @@ import { FONT } from './font.js';
 
     function updateCard() {
       nearest = null;
-      let best = CARD_DISTANCE;
-      for (const t of trees) {
-        const d = Math.hypot(player.x - t.x, (player.y - t.y) * 1.5);
-        if (d < best) { best = d; nearest = t; }
+      let best = Infinity;
+      for (const l of landmarks) {
+        const d = Math.hypot(player.x - l.x, (player.y - l.y) * 1.5);
+        if (d < l.reach && d < best) { best = d; nearest = l; }
       }
-      if (nearest === shown) return;
-      shown = nearest;
+      // The welcome sign opens the guide instead of a card. Help (or H) opens
+      // it anywhere, until you walk up to something else.
+      if (guidePinned) {
+        if (pinnedNear === 'new') pinnedNear = nearest;
+        else if (nearest !== pinnedNear) guidePinned = false;
+      }
+      const guideOpen = !introOpen && (guidePinned || Boolean(nearest?.guide));
+      guide.dataset.open = String(guideOpen);
+      const target = guideOpen || introOpen ? null : nearest;   // what the card shows
+      if (target === shown) return;
+      shown = target;
       clearInterval(slideshow);
-      if (!nearest) {
+      if (!target) {
         cardToken++;                     // forget any card still waiting on its image
         card.dataset.open = 'false';
         return;
       }
-      const p = nearest.project;
+      const { project } = target;
+      const c = target.card;
       const token = ++cardToken;
-      const urls = p.images || [];
+      const urls = c.images || [];
       urls.forEach((u) => { new Image().src = u; });   // start loading them all, so slideshow flips never show a gap
 
       // Fill in and open the card only once its first image is ready. Until then
       // the old card's picture would sit next to the new text for a moment.
       const show = () => {
         if (token !== cardToken) return;   // walked on to another tree (or away) meanwhile
-        field('title').textContent = p.title;
-        field('date').textContent = `${p.date} · ${p.status}`;
-        field('paths').textContent = p.paths.map((k) => MATERIALS[k].label).join(' · ');
-        field('text').textContent = p.description;
-        field('link').textContent = p.linkUrl ? p.linkText + ' ↗' : '';
-        field('link').href = p.linkUrl || '#';
-        field('key').hidden = !p.linkUrl;
+        field('title').textContent = c.title;
+        field('date').textContent = c.date;
+        field('paths').textContent = c.paths || '';
+        field('paths').hidden = !c.paths;
+        field('text').textContent = c.text;
+        field('link').textContent = c.linkText || '';
+        field('link').href = c.linkUrl || '#';
+        field('key').hidden = !c.linkText;
         // style.display, not `hidden`: the img's Tailwind `block` class overrides `hidden`
         const img = field('img');
         img.style.display = urls.length ? '' : 'none';
         if (urls.length) {
           img.src = urls[0];
-          img.alt = p.title;
+          img.alt = c.title;
         } else {
           img.removeAttribute('src');
         }
@@ -869,8 +1334,10 @@ import { FONT } from './font.js';
           }, SLIDE_MS);
         }
         card.dataset.open = 'true';
-        visited.add(p.id);
-        updateProgress();
+        if (project) {
+          visited.add(project.id);
+          updateProgress();
+        }
       };
       if (!urls.length) return show();
       const first = new Image();
@@ -938,23 +1405,22 @@ import { FONT } from './font.js';
       shadowsCtx.imageSmoothingEnabled = false;
       shadowsCtx.fillStyle = '#000';
       const things = [];
-      {
-        const sx = trailSign.x - cx, sy = trailSign.y - cy;
-        footShadow(sx, sy, [3, 5]);
-        things.push({ y: trailSign.y, draw: () => {
-          const s = trailSign.sign;
-          ctx.drawImage(s, sx - (s.width * PIXEL) / 2, sy - s.height * PIXEL + PIXEL, s.width * PIXEL, s.height * PIXEL);
+      // a sprite standing with its feet at world (x, y), with a little shadow
+      const stand = (sprite, x, y, shadow) => {
+        const sx = x - cx, sy = y - cy;
+        if (sx < -300 || sx > w + 300 || sy < -100 || sy > h + 200) return;
+        footShadow(sx, sy, shadow);
+        things.push({ y, draw: () => {
+          ctx.drawImage(sprite, sx - (sprite.width * PIXEL) / 2, sy - sprite.height * PIXEL + PIXEL,
+            sprite.width * PIXEL, sprite.height * PIXEL);
         } });
-      }
-      for (const t of trees) {
-        const sx = t.signX - cx, sy = t.signY - cy;
-        if (sx > -200 && sx < w + 200 && sy > -100 && sy < h + 100) {
-          footShadow(sx, sy, [3, 5]);
-          things.push({ y: t.signY, draw: () => {
-            const s = t.sign;
-            ctx.drawImage(s, sx - (s.width * PIXEL) / 2, sy - s.height * PIXEL + PIXEL, s.width * PIXEL, s.height * PIXEL);
-          } });
-        }
+      };
+      stand(trailSign.sign, trailSign.x, trailSign.y, [3, 5]);
+      stand(cabin.sprite, cabin.x, cabin.y, [60, 64]);
+      stand(mailSent ? mailbox.up : mailbox.down, mailbox.x, mailbox.y, [3, 5]);
+      for (const s of socials) stand(s.sign, s.x, s.y, [3, 5]);
+      for (const t of allTrees) {
+        if (t.sign) stand(t.sign, t.signX, t.signY, [3, 5]);
         if (!t.layers || !onScreen(t)) continue;
         const left = boxLeft(t) - cx;
         const top = boxTop(t) - cy;
@@ -997,12 +1463,13 @@ import { FONT } from './font.js';
       const kind = pointing.kind;
       const px = player.x - cx;
       const py = player.y - cy - 28;          // around the middle of the sprite
-      const [r, g, b] = MATERIALS[kind].base;
+      // the contact button points to the cabin, in the mailbox flag's red
+      const toCabin = kind === 'cabin';
+      const [r, g, b] = toCabin ? CABIN.flag : MATERIALS[kind].base;
       ctx.save();
       ctx.globalAlpha = Math.min(1, left / 500);
       ctx.lineJoin = 'round';
-      const targets = trees
-        .filter((t) => !visited.has(t.project.id) && t.project.paths.includes(kind))
+      const targets = (toCabin ? [cabin] : trees.filter((t) => !visited.has(t.project.id) && t.project.paths.includes(kind)))
         .map((t) => ({ angle: Math.atan2(t.y - player.y, t.x - player.x), d: Math.hypot(t.x - player.x, t.y - player.y) }))
         .sort((a, b) => a.d - b.d);
       const shown = [];

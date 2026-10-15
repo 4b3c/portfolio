@@ -5,13 +5,20 @@
         data-grass="{{ url_for('static', filename='img/grass.png') }}"
         data-projects="{{ url_for('static', filename='data/projects.json') }}"></canvas>
 
-<!-- bottom right: how many projects of each kind you've visited (click one for arrows to the rest), and help (replays the intro; H does the same) -->
-<div class="fixed bottom-4 right-4 flex items-stretch gap-2 text-sm font-bold text-[#28201e]">
-  <div id="progress" class="flex items-center gap-3 rounded border-4 border-[#28201e] bg-[#f4ead2] px-3 py-1 shadow-[4px_4px_0_rgba(0,0,0,0.25)]">
-    <button type="button" data-point="coding" title="point to the code projects you haven't visited" class="flex items-center gap-1.5 rounded px-1 hover:bg-white"><canvas data-swatch="coding" class="h-4 w-4 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>code <span data-progress="coding">0/0</span></button>
-    <button type="button" data-point="mechanical" title="point to the CAD projects you haven't visited" class="flex items-center gap-1.5 rounded px-1 hover:bg-white"><canvas data-swatch="mechanical" class="h-4 w-4 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>CAD <span data-progress="mechanical">0/0</span></button>
-    <button type="button" data-point="work" title="point to the work projects you haven't visited" class="flex items-center gap-1.5 rounded px-1 hover:bg-white"><canvas data-swatch="work" class="h-4 w-4 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>work <span data-progress="work">0/0</span></button>
-  </div>
+<!-- bottom left: how many projects of each kind you've visited (click one for arrows to the rest).
+     The project card and the welcome sign's guide open just above it. -->
+<div id="progress" class="fixed bottom-4 left-4 flex w-[22rem] max-w-[calc(100vw-2rem)] items-center justify-between gap-3 rounded border-4 border-[#28201e] bg-[#f4ead2] px-3 py-1 text-sm font-bold text-[#28201e] shadow-[4px_4px_0_rgba(0,0,0,0.25)]">
+  <button type="button" data-point="coding" title="point to the code projects you haven't visited" class="flex items-center gap-1.5 rounded px-1 hover:bg-white"><canvas data-swatch="coding" class="h-4 w-4 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>code <span data-progress="coding">0/0</span></button>
+  <button type="button" data-point="mechanical" title="point to the CAD projects you haven't visited" class="flex items-center gap-1.5 rounded px-1 hover:bg-white"><canvas data-swatch="mechanical" class="h-4 w-4 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>CAD <span data-progress="mechanical">0/0</span></button>
+  <button type="button" data-point="work" title="point to the work projects you haven't visited" class="flex items-center gap-1.5 rounded px-1 hover:bg-white"><canvas data-swatch="work" class="h-4 w-4 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>work <span data-progress="work">0/0</span></button>
+</div>
+
+<!-- bottom right: contact, and help (opens the welcome sign's guide; H does the same) -->
+<div id="buttons" class="fixed bottom-4 right-4 flex items-stretch gap-2 text-sm font-bold text-[#28201e]">
+  <button type="button" data-point="cabin" title="point the way to the cabin, where you can send me a note"
+          class="rounded border-4 border-[#28201e] bg-[#f4ead2] px-3 py-1 shadow-[4px_4px_0_rgba(0,0,0,0.25)] hover:bg-white">
+    contact
+  </button>
   <button id="help" type="button"
           class="rounded border-4 border-[#28201e] bg-[#f4ead2] px-3 py-1 shadow-[4px_4px_0_rgba(0,0,0,0.25)] hover:bg-white">
     help
@@ -19,7 +26,7 @@
 </div>
 
 <div id="card" data-open="false"
-     class="fixed bottom-4 left-4 w-[22rem] max-w-[calc(100vw-2rem)] max-h-[calc(100vh-2rem)] overflow-y-auto rounded border-4 border-[#28201e] bg-[#f4ead2] text-[#28201e] shadow-[6px_6px_0_rgba(0,0,0,0.25)]
+     class="fixed bottom-16 left-4 w-[22rem] max-w-[calc(100vw-2rem)] max-h-[calc(100vh-5rem)] overflow-y-auto rounded border-4 border-[#28201e] bg-[#f4ead2] text-[#28201e] shadow-[6px_6px_0_rgba(0,0,0,0.25)]
             transition duration-200 opacity-0 translate-y-4 pointer-events-none
             data-[open=true]:opacity-100 data-[open=true]:translate-y-0 data-[open=true]:pointer-events-auto">
   <!-- full width at the image's own shape, so its height follows; never cropped -->
@@ -37,53 +44,97 @@
 </div>
 
 
-<!-- intro: four short slides, then the world. Same look as the project cards. -->
+<!-- intro: one welcome, then the world. Everything else is on the welcome sign. -->
 <div id="intro" class="fixed inset-0 z-20 flex items-center justify-center bg-black/30 p-4">
   <div class="w-[30rem] max-w-full max-h-[calc(100vh-2rem)] overflow-y-auto rounded border-4 border-[#28201e] bg-[#f4ead2] text-[#28201e] shadow-[6px_6px_0_rgba(0,0,0,0.25)] p-6">
+    <h1 class="text-2xl font-bold">Welcome to Abram's portfolio</h1>
+    <p class="mt-2">Get ready to explore! Walk with WASD or the arrow keys. The welcome sign is right where you start: walk up to it any time to choose your character and learn how the forest works.</p>
+    <div class="mt-6 flex flex-wrap items-center justify-between gap-3">
+      <button type="button" data-list class="text-sm underline decoration-2 underline-offset-2 hover:text-[#aa3220]">I'm boring, just show me a list</button>
+      <button type="button" data-start class="rounded border-4 border-[#28201e] bg-[#28201e] px-4 py-1.5 font-bold text-[#f4ead2] shadow-[4px_4px_0_rgba(0,0,0,0.25)] hover:bg-[#4a3a34]">start exploring →</button>
+    </div>
+  </div>
+</div>
 
-    <section data-slide="welcome">
-      <h1 class="text-2xl font-bold">Welcome to Abram's portfolio</h1>
-      <p class="mt-2">Get ready to explore!</p>
-      <div class="mt-6 flex flex-wrap items-center justify-between gap-3">
-        <button type="button" data-list class="text-sm underline decoration-2 underline-offset-2 hover:text-[#aa3220]">I'm boring, just show me a list</button>
-        <button type="button" data-next class="rounded border-4 border-[#28201e] bg-[#28201e] px-4 py-1.5 font-bold text-[#f4ead2] shadow-[4px_4px_0_rgba(0,0,0,0.25)] hover:bg-[#4a3a34]">next →</button>
-      </div>
-    </section>
+<!-- the welcome sign's guide, in the corner like the project cards: shown when
+     you walk up to the sign, or with help (or H) from anywhere. E flips the page. -->
+<div id="guide" data-open="false"
+     class="fixed bottom-16 left-4 w-[22rem] max-w-[calc(100vw-2rem)] max-h-[calc(100vh-5rem)] overflow-y-auto rounded border-4 border-[#28201e] bg-[#f4ead2] p-4 text-[#28201e] shadow-[6px_6px_0_rgba(0,0,0,0.25)]
+            transition duration-200 opacity-0 translate-y-4 pointer-events-none
+            data-[open=true]:opacity-100 data-[open=true]:translate-y-0 data-[open=true]:pointer-events-auto">
+  <div class="flex items-center justify-between">
+    <p class="text-xs uppercase tracking-wide opacity-60">welcome</p>
+    <span class="text-xs opacity-60">press E for the next page</span>
+  </div>
+  <div class="mt-2 flex gap-1 text-sm font-bold">
+    <button type="button" data-tab="character" class="rounded border-2 px-2 py-0.5 hover:bg-white">character</button>
+    <button type="button" data-tab="forest" class="rounded border-2 px-2 py-0.5 hover:bg-white">the forest</button>
+    <button type="button" data-tab="controls" class="rounded border-2 px-2 py-0.5 hover:bg-white">controls</button>
+  </div>
 
-    <section data-slide="character" hidden>
-      <h2 class="text-xl font-bold">Choose your character</h2>
-      <div id="characters" class="mt-4 grid grid-cols-4 gap-2"></div>
+  <section data-page="character" class="mt-3">
+    <h2 class="font-bold">Choose your character</h2>
+    <div id="characters" class="mt-2 grid grid-cols-4 gap-1"></div>
+  </section>
+
+  <section data-page="forest" class="mt-3" hidden>
+    <h2 class="font-bold">The forest</h2>
+    <p class="mt-2 text-sm leading-relaxed">Each tree is a project. Its leaves show where the project stands, and the trails beside it show what kind of project it was.</p>
+    <div class="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-sm">
+      <span class="flex items-center gap-1.5"><canvas data-leaf="active" class="h-5 w-5 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>active</span>
+      <span class="flex items-center gap-1.5"><canvas data-leaf="parked" class="h-5 w-5 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>parked</span>
+      <span class="flex items-center gap-1.5"><canvas data-leaf="complete" class="h-5 w-5 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>done</span>
+    </div>
+    <div class="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-sm">
+      <span class="flex items-center gap-1.5"><canvas data-swatch="coding" class="h-5 w-5 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>code</span>
+      <span class="flex items-center gap-1.5"><canvas data-swatch="mechanical" class="h-5 w-5 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>CAD</span>
+      <span class="flex items-center gap-1.5"><canvas data-swatch="work" class="h-5 w-5 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>work</span>
+    </div>
+  </section>
+
+  <section data-page="controls" class="mt-3" hidden>
+    <h2 class="font-bold">How to explore</h2>
+    <ul class="mt-2 space-y-1 text-sm leading-relaxed">
+      <li><b>WASD</b> or the <b>arrow keys</b> to walk, <b>Shift</b> to run</li>
+      <li>Walk up to a tree to see its project, and press <b>E</b> to open its link</li>
+      <li>Click <b>code</b>, <b>CAD</b> or <b>work</b> (bottom right) for arrows to the projects you haven't seen</li>
+      <li>Follow the pale path to the cabin to send me a note, or click <b>contact</b> for an arrow</li>
+      <li><b>H</b> or <b>help</b> brings this back from anywhere</li>
+    </ul>
+  </section>
+</div>
+
+<!-- the cabin's mailbox: a note to me, sent by /contact. Same look as the intro. -->
+<div id="contact" class="fixed inset-0 z-20 flex items-center justify-center bg-black/30 p-4" style="display: none">
+  <div class="w-[30rem] max-w-full max-h-[calc(100vh-2rem)] overflow-y-auto rounded border-4 border-[#28201e] bg-[#f4ead2] text-[#28201e] shadow-[6px_6px_0_rgba(0,0,0,0.25)] p-6">
+    <form data-form action="{{ url_for('main.contact') }}" method="post">
+      <h2 class="text-xl font-bold">Reach out</h2>
+      <p class="mt-1 text-sm opacity-70">Leave a note in the mailbox and I'll write back.</p>
+      <label class="mt-4 block text-sm font-bold">Name
+        <input name="name" required maxlength="100" autocomplete="name"
+               class="mt-1 block w-full rounded border-4 border-[#28201e] bg-white px-2 py-1 font-normal">
+      </label>
+      <label class="mt-3 block text-sm font-bold">Email
+        <input name="email" type="email" required maxlength="200" autocomplete="email"
+               class="mt-1 block w-full rounded border-4 border-[#28201e] bg-white px-2 py-1 font-normal">
+      </label>
+      <label class="mt-3 block text-sm font-bold">Message
+        <textarea name="message" required maxlength="5000" rows="5"
+                  class="mt-1 block w-full resize-y rounded border-4 border-[#28201e] bg-white px-2 py-1 font-normal"></textarea>
+      </label>
+      <!-- a honeypot: hidden from people, so only bots fill it in -->
+      <input name="website" tabindex="-1" autocomplete="off" aria-hidden="true" style="display: none">
+      <p data-status class="mt-3 text-sm font-bold" hidden></p>
       <div class="mt-6 flex justify-between gap-3">
-        <button type="button" data-back class="rounded border-4 border-[#28201e] bg-[#f4ead2] px-4 py-1.5 font-bold shadow-[4px_4px_0_rgba(0,0,0,0.25)] hover:bg-white">← back</button>
-        <button type="button" data-next class="rounded border-4 border-[#28201e] bg-[#28201e] px-4 py-1.5 font-bold text-[#f4ead2] shadow-[4px_4px_0_rgba(0,0,0,0.25)] hover:bg-[#4a3a34]">next →</button>
+        <button type="button" data-close class="rounded border-4 border-[#28201e] bg-[#f4ead2] px-4 py-1.5 font-bold shadow-[4px_4px_0_rgba(0,0,0,0.25)] hover:bg-white">← back</button>
+        <button type="submit" data-send class="rounded border-4 border-[#28201e] bg-[#28201e] px-4 py-1.5 font-bold text-[#f4ead2] shadow-[4px_4px_0_rgba(0,0,0,0.25)] hover:bg-[#4a3a34] disabled:opacity-60">send ✉</button>
       </div>
-    </section>
-
-    <section data-slide="layout" hidden>
-      <h2 class="text-xl font-bold">The forest</h2>
-      <p class="mt-2">Each tree in the forrest represents a project. The color of the leaves represent the projects status, and the paths beside it represent what kind of project it was.</p>
-      <div class="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-sm">
-        <span class="flex items-center gap-1.5"><canvas data-leaf="active" class="h-5 w-5 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>active</span>
-        <span class="flex items-center gap-1.5"><canvas data-leaf="parked" class="h-5 w-5 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>parked</span>
-        <span class="flex items-center gap-1.5"><canvas data-leaf="complete" class="h-5 w-5 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>done</span>
-      </div>
-      <div class="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-sm">
-        <span class="flex items-center gap-1.5"><canvas data-swatch="coding" class="h-5 w-5 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>code</span>
-        <span class="flex items-center gap-1.5"><canvas data-swatch="mechanical" class="h-5 w-5 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>CAD</span>
-        <span class="flex items-center gap-1.5"><canvas data-swatch="work" class="h-5 w-5 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>work</span>
-      </div>
-      <div class="mt-6 flex justify-between gap-3">
-        <button type="button" data-back class="rounded border-4 border-[#28201e] bg-[#f4ead2] px-4 py-1.5 font-bold shadow-[4px_4px_0_rgba(0,0,0,0.25)] hover:bg-white">← back</button>
-        <button type="button" data-next class="rounded border-4 border-[#28201e] bg-[#28201e] px-4 py-1.5 font-bold text-[#f4ead2] shadow-[4px_4px_0_rgba(0,0,0,0.25)] hover:bg-[#4a3a34]">next →</button>
-      </div>
-    </section>
-
-    <section data-slide="controls" hidden>
-      <h2 class="text-xl font-bold">How to explore</h2>
-      <p class="mt-2">Use the arrow keys or WASD to walk. Walk up to a tree to learn more about a project.</p>
-      <div class="mt-6 flex justify-between gap-3">
-        <button type="button" data-back class="rounded border-4 border-[#28201e] bg-[#f4ead2] px-4 py-1.5 font-bold shadow-[4px_4px_0_rgba(0,0,0,0.25)] hover:bg-white">← back</button>
-        <button type="button" data-start class="rounded border-4 border-[#28201e] bg-[#28201e] px-4 py-1.5 font-bold text-[#f4ead2] shadow-[4px_4px_0_rgba(0,0,0,0.25)] hover:bg-[#4a3a34]">start exploring →</button>
+    </form>
+    <section data-sent hidden>
+      <h2 class="text-xl font-bold">Sent!</h2>
+      <p class="mt-2">Thanks for the note. The flag's up on the mailbox, and I'll get back to you soon.</p>
+      <div class="mt-6 flex justify-end">
+        <button type="button" data-close class="rounded border-4 border-[#28201e] bg-[#28201e] px-4 py-1.5 font-bold text-[#f4ead2] shadow-[4px_4px_0_rgba(0,0,0,0.25)] hover:bg-[#4a3a34]">back to the forest →</button>
       </div>
     </section>
   </div>

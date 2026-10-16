@@ -47,10 +47,10 @@
 <!-- intro: one welcome, then the world. Everything else is on the welcome sign. -->
 <div id="intro" class="fixed inset-0 z-20 flex items-center justify-center bg-black/30 p-4">
   <div class="w-[30rem] max-w-full max-h-[calc(100vh-2rem)] overflow-y-auto rounded border-4 border-[#28201e] bg-[#f4ead2] text-[#28201e] shadow-[6px_6px_0_rgba(0,0,0,0.25)] p-6">
-    <h1 class="text-2xl font-bold">Welcome to Abram's portfolio</h1>
-    <p class="mt-2">Get ready to explore! Walk with WASD or the arrow keys. The welcome sign is right where you start: walk up to it any time to choose your character and learn how the forest works.</p>
+    <h1 class="text-2xl font-bold">Welcome to my portfolio!</h1>
+    <p class="mt-2">Feel free to walk around the forest and check out my different projects!</p>
     <div class="mt-6 flex flex-wrap items-center justify-between gap-3">
-      <button type="button" data-list class="text-sm underline decoration-2 underline-offset-2 hover:text-[#aa3220]">I'm boring, just show me a list</button>
+      <button type="button" data-list class="text-sm underline decoration-2 underline-offset-2 hover:text-[#aa3220]">I'm boring, just show me a list.</button>
       <button type="button" data-start class="rounded border-4 border-[#28201e] bg-[#28201e] px-4 py-1.5 font-bold text-[#f4ead2] shadow-[4px_4px_0_rgba(0,0,0,0.25)] hover:bg-[#4a3a34]">start exploring →</button>
     </div>
   </div>
@@ -64,12 +64,11 @@
             data-[open=true]:opacity-100 data-[open=true]:translate-y-0 data-[open=true]:pointer-events-auto">
   <div class="flex items-center justify-between">
     <p class="text-xs uppercase tracking-wide opacity-60">welcome</p>
-    <span class="text-xs opacity-60">press E for the next page</span>
   </div>
   <div class="mt-2 flex gap-1 text-sm font-bold">
     <button type="button" data-tab="character" class="rounded border-2 px-2 py-0.5 hover:bg-white">character</button>
-    <button type="button" data-tab="forest" class="rounded border-2 px-2 py-0.5 hover:bg-white">the forest</button>
     <button type="button" data-tab="controls" class="rounded border-2 px-2 py-0.5 hover:bg-white">controls</button>
+    <button type="button" data-tab="about" class="rounded border-2 px-2 py-0.5 hover:bg-white">about</button>
   </div>
 
   <section data-page="character" class="mt-3">
@@ -77,31 +76,33 @@
     <div id="characters" class="mt-2 grid grid-cols-4 gap-1"></div>
   </section>
 
-  <section data-page="forest" class="mt-3" hidden>
-    <h2 class="font-bold">The forest</h2>
-    <p class="mt-2 text-sm leading-relaxed">Each tree is a project. Its leaves show where the project stands, and the trails beside it show what kind of project it was.</p>
+  <section data-page="controls" class="mt-3" hidden>
+    <h2 class="font-bold">Use WASD or arrow keys to walk</h2>
+    <ul class="mt-2 space-y-1 text-sm leading-relaxed">
+      <li>- Hold down shift to move faster</li>
+      <li>- Type E to interact with signs or the mailbox</li>
+      <li>- Click 'code', 'CAD' or 'work' below for arrows to undiscovered projects</li>
+      <li>- Type H to open this menu any time</li>
+    </ul>
+  </section>
+
+  <section data-page="about" class="mt-3" hidden>
+    <h2 class="font-bold">About</h2>
+    <p class="mt-2 text-sm leading-relaxed">Each tree you find represents a project, and its color shows the status of the project.</p>
     <div class="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-sm">
       <span class="flex items-center gap-1.5"><canvas data-leaf="active" class="h-5 w-5 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>active</span>
       <span class="flex items-center gap-1.5"><canvas data-leaf="parked" class="h-5 w-5 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>parked</span>
-      <span class="flex items-center gap-1.5"><canvas data-leaf="complete" class="h-5 w-5 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>done</span>
+      <span class="flex items-center gap-1.5"><canvas data-leaf="complete" class="h-5 w-5 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>complete</span>
     </div>
+    <p class="mt-2 text-sm leading-relaxed">The paths take you to code, CAD, or work related projects.</p>
     <div class="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-sm">
       <span class="flex items-center gap-1.5"><canvas data-swatch="coding" class="h-5 w-5 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>code</span>
       <span class="flex items-center gap-1.5"><canvas data-swatch="mechanical" class="h-5 w-5 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>CAD</span>
       <span class="flex items-center gap-1.5"><canvas data-swatch="work" class="h-5 w-5 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>work</span>
     </div>
+    <p class="mt-2 text-sm leading-relaxed">Go explore!</p>
   </section>
-
-  <section data-page="controls" class="mt-3" hidden>
-    <h2 class="font-bold">How to explore</h2>
-    <ul class="mt-2 space-y-1 text-sm leading-relaxed">
-      <li><b>WASD</b> or the <b>arrow keys</b> to walk, <b>Shift</b> to run</li>
-      <li>Walk up to a tree to see its project, and press <b>E</b> to open its link</li>
-      <li>Click <b>code</b>, <b>CAD</b> or <b>work</b> (bottom right) for arrows to the projects you haven't seen</li>
-      <li>Follow the pale path to the cabin to send me a note, or click <b>contact</b> for an arrow</li>
-      <li><b>H</b> or <b>help</b> brings this back from anywhere</li>
-    </ul>
-  </section>
+  
 </div>
 
 <!-- the cabin's mailbox: a note to me, sent by /contact. Same look as the intro. -->
@@ -127,7 +128,7 @@
       <p data-status class="mt-3 text-sm font-bold" hidden></p>
       <div class="mt-6 flex justify-between gap-3">
         <button type="button" data-close class="rounded border-4 border-[#28201e] bg-[#f4ead2] px-4 py-1.5 font-bold shadow-[4px_4px_0_rgba(0,0,0,0.25)] hover:bg-white">← back</button>
-        <button type="submit" data-send class="rounded border-4 border-[#28201e] bg-[#28201e] px-4 py-1.5 font-bold text-[#f4ead2] shadow-[4px_4px_0_rgba(0,0,0,0.25)] hover:bg-[#4a3a34] disabled:opacity-60">send ✉</button>
+        <button type="submit" data-send class="rounded border-4 border-[#28201e] bg-[#28201e] px-4 py-1.5 font-bold text-[#f4ead2] shadow-[4px_4px_0_rgba(0,0,0,0.25)] hover:bg-[#4a3a34] disabled:opacity-60">send</button>
       </div>
     </form>
     <section data-sent hidden>

@@ -242,7 +242,7 @@ import { FONT } from './font.js';
   // updateCard), or from anywhere with help or H, until you press it again or
   // walk up to something else. E flips to the next page.
   const guide = document.getElementById('guide');
-  const PAGES = ['character', 'forest', 'controls'];
+  const PAGES = ['character', 'controls', 'about'];
   let page = 'character';
   let guidePinned = false;               // opened with help or H, not by the sign
   let pinnedNear = null;                 // what you were next to when it was opened ('new' until updateCard looks)
@@ -371,7 +371,7 @@ import { FONT } from './font.js';
       contactError("Couldn't reach the mailbox. Check your connection and try again?");
     } finally {
       send.disabled = false;
-      send.textContent = 'send ✉';
+      send.textContent = 'send';
     }
   });
 
@@ -1251,7 +1251,7 @@ import { FONT } from './font.js';
       { x: trailSign.x, y: trailSign.y, reach: WELCOME_REACH, guide: true },   // opens the guide, not a card
       {
         x: cabin.x + 70, y: cabin.y, reach: CABIN_REACH,     // between the door and the mailbox
-        card: { title: 'Reach out', date: 'the cabin', contact: true, linkText: 'write me a note ✉',
+        card: { title: 'Reach out', date: 'the cabin', contact: true, linkText: 'send me a message ↗',
           text: "Got a question, an idea, or just want to say hi? Leave a note in the mailbox and I'll write back." },
       },
     ];

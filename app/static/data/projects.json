@@ -33,7 +33,7 @@
     "linkUrl": "https://github.com/4b3c/mnist_machine_learning",
     "start": "2022-02",
     "updated": "2026-07-05",
-    "date": "2021 – 2022",
+    "date": "2021 - 2022",
     "size": "small",
     "status": "complete",
     "paths": [
@@ -56,7 +56,7 @@
     "linkUrl": "https://github.com/4b3c/bezier-curves",
     "start": "2022-08",
     "updated": "2023-05-04",
-    "date": "2022 – 2023",
+    "date": "2022 - 2023",
     "size": "medium",
     "status": "complete",
     "paths": [
@@ -79,7 +79,7 @@
     "linkUrl": "https://www.youtube.com/channel/UCbY-W4ZfbrnHluhPqqADrIA",
     "start": "2023-02",
     "updated": "2024-01-11",
-    "date": "2023 – 2024",
+    "date": "2023 - 2024",
     "size": "medium",
     "status": "complete",
     "paths": [
@@ -96,7 +96,7 @@
     "title": "TapTech Studio",
     "start": "2023-05",
     "updated": "2026-09",
-    "date": "2023 – now",
+    "date": "2023 - now",
     "size": "large",
     "images": [
       "/static/img/projects/taptech/orders.png",
@@ -144,12 +144,12 @@
     "title": "MechVolta",
     "start": "2023-09",
     "updated": "2024-05",
-    "date": "2023 – 2024",
+    "date": "2023 - 2024",
     "size": "medium",
     "images": [
       "/static/img/projects/mechvolta/cad.png"
     ],
-    "description": "My first Luminosity Lab project, freshman year: storing electricity mechanically in small form factors, so electric cars could rely less on rare metals. It didn’t pan out, but it taught me a lot.",
+    "description": "My first Luminosity Lab project, freshman year: storing electricity mechanically in small form factors, so electric cars could rely less on rare metals. It didn't pan out, but it taught me a lot.",
     "linkText": "",
     "linkUrl": "",
     "status": "complete",
@@ -174,7 +174,7 @@
     "linkUrl": "https://docs.google.com/document/d/1I4lDTvtQAAA1QllpGcWRAtw9D43FZxqdHCuA2IUDI2Q/",
     "start": "2024-02",
     "updated": "2026-05",
-    "date": "2024 – 2026",
+    "date": "2024 - 2026",
     "size": "large",
     "status": "complete",
     "paths": [
@@ -254,7 +254,7 @@
     "linkUrl": "https://cad.onshape.com/documents/5d7b9cb4acdde16bb73fc4c7/w/094b5123dbbe6feb66b45634/e/4d78dbf04e5d538562c00eb0?renderMode=0&uiState=67e71c3815765d0c6b872c8c",
     "start": "2024-08",
     "updated": "2026-10-02",
-    "date": "2024 – now",
+    "date": "2024 - now",
     "size": "huge",
     "status": "active",
     "paths": [
@@ -318,7 +318,7 @@
     "title": "Pantry",
     "start": "2025-06",
     "updated": "2026-10-01",
-    "date": "2025 – 2026",
+    "date": "2025 - 2026",
     "size": "huge",
     "images": [
       "/static/img/projects/pantry/landing.png",
@@ -342,13 +342,13 @@
     "title": "Orbitscape",
     "start": "2025-08",
     "updated": "2026-10-02",
-    "date": "2025 – now",
+    "date": "2025 - now",
     "size": "large",
     "images": [
       "/static/img/projects/orbitscape/landing.png",
       "/static/img/projects/orbitscape/app.png"
     ],
-    "description": "A browser-native orbit visualization platform from the Luminosity Lab, now launched as a startup with a twelve-person team. I’m building the mission-planning frontend that generates scripts for the simulation engine.",
+    "description": "A browser-native orbit visualization platform from the Luminosity Lab, now launched as a startup with a twelve-person team. I'm building the mission-planning frontend that generates scripts for the simulation engine.",
     "linkText": "Check out Orbitscape!",
     "linkUrl": "https://orbitscape.space",
     "status": "active",
@@ -367,7 +367,7 @@
     "title": "Particle Analyzer",
     "start": "2025-09",
     "updated": "2026-09",
-    "date": "2025 – 2026",
+    "date": "2025 - 2026",
     "size": "medium",
     "images": [
       "/static/img/projects/particle/device.png"
@@ -391,7 +391,7 @@
     "title": "Project Jude",
     "start": "2025-10",
     "updated": "2026-09-17",
-    "date": "2025 – 2026",
+    "date": "2025 - 2026",
     "size": "small",
     "images": [
       "/static/img/projects/jude/cad.png"
@@ -537,7 +537,7 @@
     "date": "2026",
     "size": "small",
     "images": [],
-    "description": "A Chrome extension for the Luminosity Lab’s purchasing workflow: open a purchase request, click once, and the Airtable form fills itself, replacing about sixteen fields of retyping.",
+    "description": "A Chrome extension for the Luminosity Lab's purchasing workflow: open a purchase request, click once, and the Airtable form fills itself, replacing about sixteen fields of retyping.",
     "linkText": "",
     "linkUrl": "",
     "status": "active",
@@ -563,7 +563,7 @@
     "linkUrl": "https://4b3c.itch.io/procedural-pixel-art-tree-generator",
     "start": "2024-05",
     "updated": "2025-02-09",
-    "date": "2024 – now",
+    "date": "2024 - now",
     "size": "medium",
     "status": "active",
     "paths": [
@@ -587,7 +587,7 @@
     "linkUrl": "https://github.com/4b3c/TileWorld",
     "start": "2023-12",
     "updated": "2025-06-19",
-    "date": "2023 – 2025",
+    "date": "2023 - 2025",
     "size": "medium",
     "status": "parked",
     "paths": [

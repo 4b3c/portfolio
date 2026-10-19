@@ -13,7 +13,7 @@
     "date": "2022",
     "size": "medium",
     "status": "parked",
-    "paths": [
+    "tags": [
       "coding"
     ],
     "sign": "ISO GAME",
@@ -28,7 +28,7 @@
     "images": [
       "/static/img/projects/mnist/mnist.png"
     ],
-    "description": "My first dive into machine learning. Wrote a neural network from scratch to classify hand-drawn digits using the MNIST dataset. Focused on understanding the fundamentals of forward propagation and backpropagation.",
+    "description": "For my high school capstone, I decided to learn fully connected neural networks by creating one from scratch. Along the way I learned how forward and backward propagation actually work. I trained it to classify hand-drawn digits using the MNIST dataset.",
     "linkText": "Check out the repo!",
     "linkUrl": "https://github.com/4b3c/mnist_machine_learning",
     "start": "2022-02",
@@ -36,7 +36,7 @@
     "date": "2021 - 2022",
     "size": "small",
     "status": "complete",
-    "paths": [
+    "tags": [
       "coding"
     ],
     "sign": "MNIST",
@@ -59,7 +59,7 @@
     "date": "2022 - 2023",
     "size": "medium",
     "status": "complete",
-    "paths": [
+    "tags": [
       "coding"
     ],
     "sign": "BEZIER",
@@ -74,7 +74,7 @@
     "images": [
       "/static/img/projects/wikifacts/wikifacts.png"
     ],
-    "description": "An automated pipeline that generated short videos summarizing Wikipedia articles into 5 facts. Used ChatGPT, Wikipedia API, Google Images, Amazon TTS, and OpenCV to compile videos and upload to YouTube Shorts. Gained 300 subs and 150K+ views.",
+    "description": "An automated pipeline that generated short videos summarizing articles into 5 facts. The project I used to get familiar with working with LLM APIs. It used ChatGPT, Wikipedia, Google Images, Amazon TTS, and OpenCV to compile videos and upload to YouTube Shorts. Gained over 150K+ views.",
     "linkText": "Check out the channel!",
     "linkUrl": "https://www.youtube.com/channel/UCbY-W4ZfbrnHluhPqqADrIA",
     "start": "2023-02",
@@ -82,7 +82,7 @@
     "date": "2023 - 2024",
     "size": "medium",
     "status": "complete",
-    "paths": [
+    "tags": [
       "coding"
     ],
     "sign": "WIKIFACTS",
@@ -102,11 +102,11 @@
       "/static/img/projects/taptech/orders.png",
       "/static/img/projects/taptech/tap-demo.png"
     ],
-    "description": "NFC products, from wooden necklaces with NFC tags inside to 3D-printed keychains, like a Spotify-logo keychain that opens a song when you tap it. For a Luminosity Lab event I made 300 keychains, each with its own URL that its owner could point at their LinkedIn or anything else.",
+    "description": "An NFC products company I run. I create personalized 3D-printed keychains, each with an NFC URL that its owner could point at their LinkedIn or favorite Spotify playlist.",
     "linkText": "Check out the site!",
     "linkUrl": "https://taptechstudio.com",
     "status": "active",
-    "paths": [
+    "tags": [
       "mechanical",
       "coding"
     ],
@@ -122,7 +122,7 @@
     "images": [
       "/static/img/projects/waves/abstract_wave_art.jpg"
     ],
-    "description": "Inspired by water caustics and wave patterns. This Python project layers and rotates mathematical waveforms (e^sin(x)) to generate intricate light-shadow maps. I used cv2 for rotation, optimized performance, and shared the generative art via an Instagram page.",
+    "description": "I was super inspired by water caustics and wave patterns when I decided to create this project. It layers and rotates a mathematical wave (e^sin(x)), using its derivative for shadows, to generate light maps. I shared some of the generative art results on an Instagram page.",
     "linkText": "Check out the videos!",
     "linkUrl": "https://www.instagram.com/coded_desines/",
     "start": "2023-08",
@@ -130,7 +130,7 @@
     "date": "2023",
     "size": "small",
     "status": "complete",
-    "paths": [
+    "tags": [
       "coding"
     ],
     "sign": "WAVES",
@@ -149,11 +149,11 @@
     "images": [
       "/static/img/projects/mechvolta/cad.png"
     ],
-    "description": "My first Luminosity Lab project, freshman year: storing electricity mechanically in small form factors, so electric cars could rely less on rare metals. It didn't pan out, but it taught me a lot.",
+    "description": "My first Luminosity Lab project, freshman year: storing electricity mechanically in using motors, springs and a generator.",
     "linkText": "",
     "linkUrl": "",
     "status": "complete",
-    "paths": [
+    "tags": [
       "mechanical",
       "work"
     ],
@@ -169,7 +169,7 @@
     "images": [
       "/static/img/projects/physim/GravPhySim.png"
     ],
-    "description": "A JavaFX simulation modeling orbital physics using Newton's law of gravitation and 3D vector math. I used object-oriented design and built visual representations of 3D vectors using cylinder-cone models, applying concepts from calculus and physics. It started as an honors project and led to a spot in the Photoemission and Bright Beams lab.",
+    "description": "A JavaFX simulation modeling orbital physics using Newton's law of gravitation. I built it for honors credit in my programming and physics classes, and it led to a spot in the Photoemission and Bright Beams lab.",
     "linkText": "Check out the paper!",
     "linkUrl": "https://docs.google.com/document/d/1I4lDTvtQAAA1QllpGcWRAtw9D43FZxqdHCuA2IUDI2Q/",
     "start": "2024-02",
@@ -177,7 +177,7 @@
     "date": "2024 - 2026",
     "size": "large",
     "status": "complete",
-    "paths": [
+    "tags": [
       "coding",
       "work"
     ],
@@ -193,7 +193,7 @@
     "images": [
       "/static/img/projects/sabL/sabL.png"
     ],
-    "description": "A conceptual system of universal measurement units not based on Earth-centric standards like the second or meter. Built from a conversation about how units should be derived from universal constants instead of arbitrary Earth measurements.",
+    "description": "A conceptual system of universal measurement units not based on Earth-centric standards like the second or meter.",
     "linkText": "Check out the project!",
     "linkUrl": "/static/sabl/convert.html",
     "start": "2024-04",
@@ -201,7 +201,7 @@
     "date": "2024",
     "size": "tiny",
     "status": "complete",
-    "paths": [
+    "tags": [
       "coding"
     ],
     "sign": "SABL",
@@ -217,7 +217,7 @@
       "/static/img/projects/esp32car/main.jpeg",
       "/static/img/projects/esp32car/building.jpeg"
     ],
-    "description": "I designed this car that hosts a website on the ESP32. The website allows you to control the car using a keyboard on any device on the same network. Modeled, printed, wired and programmed solo in C and C++, and moved the controls from HTTP requests to WebSockets to cut latency.",
+    "description": "I designed this car that hosts a website on an ESP32. The website allows you to control the car using a keyboard on any device on the same network. Modeled, printed, wired and programmed solo in C, used a websocket for low latency controls.",
     "linkText": "Check out the CAD!",
     "linkUrl": "https://cad.onshape.com/documents/ae932ce799a5eb2243f604de/w/c48c736baf26eec3e2e0e66b/e/38bae2259a29866f206b20a2?renderMode=0&uiState=67e71e46e3d6fe38a5b350ec",
     "start": "2024-07",
@@ -225,7 +225,7 @@
     "date": "2024",
     "size": "medium",
     "status": "complete",
-    "paths": [
+    "tags": [
       "mechanical",
       "coding"
     ],
@@ -249,7 +249,7 @@
       "/static/img/projects/charlotte/building.jpeg",
       "/static/img/projects/charlotte/presenting.jpeg"
     ],
-    "description": "I designed this robot using the CHARLOTTE robot as a reference. The original CHARLOTTE was made for the NASA Big Idea Competition in 2022, and won the Systems Engineering Award. Mini CHARLOTTE is fully 3D-printed, uses a Raspberri Pi and 12 Robotis motors to control the 3 3DOF legs, and the 3 1DOF legs.",
+    "description": "I designed this robot using the CHARLOTTE robot as a reference. The original CHARLOTTE was made for the NASA Big Idea Competition in 2022, and won the Systems Engineering Award. Mini CHARLOTTE is fully 3D-printed, uses a Raspberry Pi and 12 Robotis motors to control the 3 3DOF legs, and the 3 1DOF legs.",
     "linkText": "Check out the CAD!",
     "linkUrl": "https://cad.onshape.com/documents/5d7b9cb4acdde16bb73fc4c7/w/094b5123dbbe6feb66b45634/e/4d78dbf04e5d538562c00eb0?renderMode=0&uiState=67e71c3815765d0c6b872c8c",
     "start": "2024-08",
@@ -257,7 +257,7 @@
     "date": "2024 - now",
     "size": "huge",
     "status": "active",
-    "paths": [
+    "tags": [
       "mechanical",
       "coding",
       "work"
@@ -282,7 +282,7 @@
     "linkText": "Check out the repo!",
     "linkUrl": "https://github.com/4b3c/toolboard-html",
     "status": "parked",
-    "paths": [
+    "tags": [
       "coding"
     ],
     "sign": "TOOLBOARD",
@@ -299,11 +299,11 @@
     "date": "2025",
     "size": "tiny",
     "images": [],
-    "description": "An experiment in measuring prompts. It changes a prompt in small ways, like swapping words, and measures the effect on the output, to learn what makes a prompt powerful instead of guessing. Python engine, TypeScript UI, Flask backend.",
+    "description": "An experiment in measuring prompts. It changes a prompt in small ways, like swapping words, and measures the effect on the output, to see what actually makes a prompt work.",
     "linkText": "",
     "linkUrl": "",
     "status": "abandoned",
-    "paths": [
+    "tags": [
       "coding"
     ],
     "sign": "PROMPTER",
@@ -324,11 +324,11 @@
       "/static/img/projects/pantry/landing.png",
       "/static/img/projects/pantry/my-pantry.png"
     ],
-    "description": "An iOS macro-tracking app, live on the App Store. Barcode scanning, receipt scanning through an LLM + Open Food Facts pipeline, RevenueCat subscriptions and a Supabase backend. Built from a web app all the way to its App Store debut.",
+    "description": "An iOS pantry inventory app, live on the App Store. Features barcode and receipt scanning with a database of 400k+ food items. Expiration reminders, meal suggestions, macro tracking and a lot more. Uses RevenueCat subscriptions and a Supabase backend, hosted on my VPS along with my other projects.",
     "linkText": "Check out the app!",
     "linkUrl": "https://getpantry.app",
     "status": "active",
-    "paths": [
+    "tags": [
       "coding"
     ],
     "sign": "PANTRY",
@@ -348,11 +348,11 @@
       "/static/img/projects/orbitscape/landing.png",
       "/static/img/projects/orbitscape/app.png"
     ],
-    "description": "A browser-native orbit visualization platform from the Luminosity Lab, now launched as a startup with a twelve-person team. I'm building the mission-planning frontend that generates scripts for the simulation engine.",
+    "description": "A space mission visualization platform I co-lead at the Luminosity Lab, now launched as a startup with a twelve-person team.",
     "linkText": "Check out Orbitscape!",
     "linkUrl": "https://orbitscape.space",
     "status": "active",
-    "paths": [
+    "tags": [
       "coding",
       "work"
     ],
@@ -372,11 +372,11 @@
     "images": [
       "/static/img/projects/particle/device.png"
     ],
-    "description": "A Luminosity Lab device that charges particles and then detects them, measuring their size and other properties. I did the CAD, which taught me to design parts for machining in metal instead of 3D printing.",
+    "description": "A Luminosity Lab device that charges particles and then detects them, measuring their size and other properties. I worked on the CAD, and learned to design parts for machining in metal rather than 3D printing.",
     "linkText": "",
     "linkUrl": "",
     "status": "complete",
-    "paths": [
+    "tags": [
       "mechanical",
       "work"
     ],
@@ -400,7 +400,7 @@
     "linkText": "",
     "linkUrl": "",
     "status": "parked",
-    "paths": [
+    "tags": [
       "mechanical",
       "work"
     ],
@@ -412,13 +412,13 @@
   },
   {
     "id": "zipper",
-    "title": "Zipper: Discord/Terminal AI Assistant",
+    "title": "Zipper: Discord AI Assistant",
     "images": [
       "/static/img/projects/zipper/brain.png",
       "/static/img/projects/zipper/discord.png",
       "/static/img/projects/zipper/terminal.png"
     ],
-    "description": "A personal assistant chatbot that can be used on Discord and in the terminal. It can answer questions, but most importantly has the ability to run bash commands on my computer. I can control my computer from my phone using it, and it can explain terminal outputs to me. Rebuilt in 2026 around Claude: each Discord thread is its own conversation, working in a folder of notes kept in git.",
+    "description": "An AI personal assistant running on my VPS. The first iterations were built for the purpose of building itself, recently it has become a self-upadating knowledge graph, it injests information from various inputs to keep the notes current, send me reminders and keep a todo list always up to date.",
     "linkText": "Check out the repo!",
     "linkUrl": "https://github.com/4b3c/zipper",
     "start": "2026-02",
@@ -426,7 +426,7 @@
     "date": "2026",
     "size": "large",
     "status": "active",
-    "paths": [
+    "tags": [
       "coding"
     ],
     "sign": "ZIPPER",
@@ -445,11 +445,11 @@
     "images": [
       "/static/img/projects/voussoir/landing.png"
     ],
-    "description": "A referral-code marketplace concept, tested for demand before building: I designed the concept, bought the domain, built a waitlist and posted it to Reddit.",
+    "description": "A referral-code marketplace concept. Everyone earns the ability to post referral links by using other people's links, basically inducing demand.",
     "linkText": "Check out the waitlist!",
     "linkUrl": "https://voussoir.app",
     "status": "active",
-    "paths": [
+    "tags": [
       "coding"
     ],
     "sign": "VOUSSOIR",
@@ -470,11 +470,11 @@
       "/static/img/projects/ironman/render-side.png",
       "/static/img/projects/ironman/lines.png"
     ],
-    "description": "A multi-piece helmet surface-modeled in Onshape and printed on a Bambu P1S, with heat-set inserts joining the panels. A deliberate step outside my usual parametric CAD.",
+    "description": "A 500-feature surface-modeled Iron Man helmet created in Onshape and printed on my Bambu P1S. Learned surface modeling just for this project, then motorized it with servos and an ESP32.",
     "linkText": "",
     "linkUrl": "",
     "status": "active",
-    "paths": [
+    "tags": [
       "mechanical"
     ],
     "sign": "HELMET",
@@ -493,11 +493,11 @@
     "images": [
       "/static/img/projects/gifs/landing.png"
     ],
-    "description": "A party game where the answers are GIFs. Everyone plays on their own phone, with an optional TV as the shared screen. No accounts or downloads: open the site, type a four-letter code, pick a nickname. Flask backend, 100 curated prompts.",
+    "description": "A party game where the answers are GIFs. Everyone plays on their own phone, with an optional TV as the shared screen. No accounts or downloads: open the site, type a four-letter code, pick a nickname.",
     "linkText": "Play it!",
     "linkUrl": "https://gifs-against-humanity.com",
     "status": "active",
-    "paths": [
+    "tags": [
       "coding"
     ],
     "sign": "GIFS",
@@ -518,7 +518,7 @@
     "linkText": "",
     "linkUrl": "",
     "status": "active",
-    "paths": [
+    "tags": [
       "mechanical",
       "coding"
     ],
@@ -530,35 +530,12 @@
     "hidden": true
   },
   {
-    "id": "purchase",
-    "title": "Purchase Request Extension",
-    "start": "2026-09",
-    "updated": "2026-09-22",
-    "date": "2026",
-    "size": "small",
-    "images": [],
-    "description": "A Chrome extension for the Luminosity Lab's purchasing workflow: open a purchase request, click once, and the Airtable form fills itself, replacing about sixteen fields of retyping.",
-    "linkText": "",
-    "linkUrl": "",
-    "status": "active",
-    "paths": [
-      "coding",
-      "work"
-    ],
-    "sign": "REQUESTS",
-    "tree": {
-      "seed": 1976045064,
-      "maxAge": 270
-    },
-    "hidden": true
-  },
-  {
     "id": "proctrees",
     "title": "Procedural Pixel Art Trees",
     "images": [
       "/static/img/projects/proctrees/tree.png"
     ],
-    "description": "I'm bad at pixel art, so I wrote a program to make it for me. It grows a random tree branch by branch and animates it growing, then turns it into pixel art with outlines, leaves and a shadow, ready to save as an image or a video. Every tree in this forest is grown by a JavaScript port of it.",
+    "description": "I'm bad at pixel art, so I wrote a program to create art automatically. Inspired by real binary trees, I turned it into a graphic and grew random trees with growing animations. Every tree in this forest is grown by this algorithm.",
     "linkText": "Check out the itch.io page!",
     "linkUrl": "https://4b3c.itch.io/procedural-pixel-art-tree-generator",
     "start": "2024-05",
@@ -566,7 +543,7 @@
     "date": "2024 - now",
     "size": "medium",
     "status": "active",
-    "paths": [
+    "tags": [
       "coding"
     ],
     "sign": "TREES",
@@ -590,7 +567,7 @@
     "date": "2023 - 2025",
     "size": "medium",
     "status": "parked",
-    "paths": [
+    "tags": [
       "coding"
     ],
     "sign": "TILEWORLD",
@@ -606,7 +583,7 @@
       "/static/img/projects/stonkle/landing.png",
       "/static/img/projects/stonkle/round.png"
     ],
-    "description": "A stock-guessing game. You see the first three months of a random stock's chart, with the company and year hidden, and choose buy or sell. Then the next three months are revealed and you score points for being right, levelling up as you go. Flask and pandas on eight years of Yahoo Finance data.",
+    "description": "A stock-guessing game. You see the first three months of a random stock's chart, and choose buy or sell. The the next three months are revealed and you score points for being right, levelling up as you go.",
     "linkText": "",
     "linkUrl": "",
     "start": "2025-06",
@@ -614,7 +591,7 @@
     "date": "2025",
     "size": "small",
     "status": "complete",
-    "paths": [
+    "tags": [
       "coding"
     ],
     "sign": "STONKLE",
@@ -637,7 +614,7 @@
     "date": "2024",
     "size": "tiny",
     "status": "complete",
-    "paths": [
+    "tags": [
       "coding"
     ],
     "sign": "TICTACTOE",

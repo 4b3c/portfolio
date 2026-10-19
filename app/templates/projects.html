@@ -3,18 +3,17 @@
 {% block content %}
 <canvas id="projects" class="fixed inset-0 -z-10"
         data-grass="{{ url_for('static', filename='img/grass.png') }}"
-        data-projects="{{ url_for('static', filename='data/projects.json') }}"></canvas>
+        data-projects="{{ url_for('static', filename='data/projects.json') }}"
+        data-blocks="{{ url_for('static', filename='img/tetris/shapes.png') }}"></canvas>
 
-<!-- bottom left: how many projects of each kind you've visited (click one for arrows to the rest).
-     The project card and the welcome sign's guide open just above it. -->
-<div id="progress" class="fixed bottom-4 left-4 flex w-[22rem] max-w-[calc(100vw-2rem)] items-center justify-between gap-3 rounded border-4 border-[#28201e] bg-[#f4ead2] px-3 py-1 text-sm font-bold text-[#28201e] shadow-[4px_4px_0_rgba(0,0,0,0.25)]">
-  <button type="button" data-point="coding" title="point to the code projects you haven't visited" class="flex items-center gap-1.5 rounded px-1 hover:bg-white"><canvas data-swatch="coding" class="h-4 w-4 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>code <span data-progress="coding">0/0</span></button>
-  <button type="button" data-point="mechanical" title="point to the CAD projects you haven't visited" class="flex items-center gap-1.5 rounded px-1 hover:bg-white"><canvas data-swatch="mechanical" class="h-4 w-4 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>CAD <span data-progress="mechanical">0/0</span></button>
-  <button type="button" data-point="work" title="point to the work projects you haven't visited" class="flex items-center gap-1.5 rounded px-1 hover:bg-white"><canvas data-swatch="work" class="h-4 w-4 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>work <span data-progress="work">0/0</span></button>
-</div>
-
-<!-- bottom right: contact, and help (opens the welcome sign's guide; H does the same) -->
+<!-- bottom right: how many projects you've visited (click for arrows to the rest), contact,
+     and help (opens the welcome sign's guide; H does the same). The project card and the
+     guide open in the bottom left. -->
 <div id="buttons" class="fixed bottom-4 right-4 flex items-stretch gap-2 text-sm font-bold text-[#28201e]">
+  <button type="button" data-point="projects" title="point to the projects you haven't visited"
+          class="rounded border-4 border-[#28201e] bg-[#f4ead2] px-3 py-1 shadow-[4px_4px_0_rgba(0,0,0,0.25)] hover:bg-white">
+    projects <span data-progress>0/0</span>
+  </button>
   <button type="button" data-point="cabin" title="point the way to the cabin, where you can send me a note"
           class="rounded border-4 border-[#28201e] bg-[#f4ead2] px-3 py-1 shadow-[4px_4px_0_rgba(0,0,0,0.25)] hover:bg-white">
     contact
@@ -26,7 +25,7 @@
 </div>
 
 <div id="card" data-open="false"
-     class="fixed bottom-16 left-4 w-[22rem] max-w-[calc(100vw-2rem)] max-h-[calc(100vh-5rem)] overflow-y-auto rounded border-4 border-[#28201e] bg-[#f4ead2] text-[#28201e] shadow-[6px_6px_0_rgba(0,0,0,0.25)]
+     class="fixed bottom-4 left-4 w-[22rem] max-w-[calc(100vw-2rem)] max-h-[calc(100vh-2rem)] overflow-y-auto rounded border-4 border-[#28201e] bg-[#f4ead2] text-[#28201e] shadow-[6px_6px_0_rgba(0,0,0,0.25)]
             transition duration-200 opacity-0 translate-y-4 pointer-events-none
             data-[open=true]:opacity-100 data-[open=true]:translate-y-0 data-[open=true]:pointer-events-auto">
   <!-- full width at the image's own shape, so its height follows; never cropped -->
@@ -34,8 +33,8 @@
   <div class="p-4">
     <p data-date class="text-xs uppercase tracking-wide opacity-60"></p>
     <h2 data-title class="mt-0.5 font-bold leading-snug"></h2>
-    <p data-paths class="mt-1 text-xs opacity-70"></p>
-    <p data-text class="mt-2 text-sm leading-relaxed"></p>
+    <p data-tags class="mt-1 text-xs opacity-70"></p>
+    <p data-text class="mt-2 whitespace-pre-line text-sm leading-relaxed"></p>
     <div class="mt-3 flex items-center justify-between text-sm">
       <a data-link target="_blank" rel="noopener" class="font-semibold underline decoration-2 underline-offset-2 hover:text-[#aa3220]"></a>
       <span data-key class="text-xs opacity-60">press E</span>
@@ -59,7 +58,7 @@
 <!-- the welcome sign's guide, in the corner like the project cards: shown when
      you walk up to the sign, or with help (or H) from anywhere. E flips the page. -->
 <div id="guide" data-open="false"
-     class="fixed bottom-16 left-4 w-[22rem] max-w-[calc(100vw-2rem)] max-h-[calc(100vh-5rem)] overflow-y-auto rounded border-4 border-[#28201e] bg-[#f4ead2] p-4 text-[#28201e] shadow-[6px_6px_0_rgba(0,0,0,0.25)]
+     class="fixed bottom-4 left-4 w-[22rem] max-w-[calc(100vw-2rem)] max-h-[calc(100vh-2rem)] overflow-y-auto rounded border-4 border-[#28201e] bg-[#f4ead2] p-4 text-[#28201e] shadow-[6px_6px_0_rgba(0,0,0,0.25)]
             transition duration-200 opacity-0 translate-y-4 pointer-events-none
             data-[open=true]:opacity-100 data-[open=true]:translate-y-0 data-[open=true]:pointer-events-auto">
   <div class="flex items-center justify-between">
@@ -80,8 +79,8 @@
     <h2 class="font-bold">Use WASD or arrow keys to walk</h2>
     <ul class="mt-2 space-y-1 text-sm leading-relaxed">
       <li>- Hold down shift to move faster</li>
-      <li>- Type E to interact with signs or the mailbox</li>
-      <li>- Click 'code', 'CAD' or 'work' below for arrows to undiscovered projects</li>
+      <li>- Type E to interact with signs and the mailbox; walk through the cabin door to go in</li>
+      <li>- Click 'projects' below for arrows to undiscovered projects</li>
       <li>- Type H to open this menu any time</li>
     </ul>
   </section>
@@ -94,12 +93,7 @@
       <span class="flex items-center gap-1.5"><canvas data-leaf="parked" class="h-5 w-5 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>parked</span>
       <span class="flex items-center gap-1.5"><canvas data-leaf="complete" class="h-5 w-5 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>complete</span>
     </div>
-    <p class="mt-2 text-sm leading-relaxed">The paths take you to code, CAD, or work related projects.</p>
-    <div class="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-sm">
-      <span class="flex items-center gap-1.5"><canvas data-swatch="coding" class="h-5 w-5 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>code</span>
-      <span class="flex items-center gap-1.5"><canvas data-swatch="mechanical" class="h-5 w-5 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>CAD</span>
-      <span class="flex items-center gap-1.5"><canvas data-swatch="work" class="h-5 w-5 shrink-0 border-2 border-[#28201e]" style="image-rendering: pixelated"></canvas>work</span>
-    </div>
+    <p class="mt-2 text-sm leading-relaxed">The stone path runs past every project. The oldest are to the west, the newest to the east.</p>
     <p class="mt-2 text-sm leading-relaxed">Go explore!</p>
   </section>
   
@@ -138,6 +132,35 @@
         <button type="button" data-close class="rounded border-4 border-[#28201e] bg-[#28201e] px-4 py-1.5 font-bold text-[#f4ead2] shadow-[4px_4px_0_rgba(0,0,0,0.25)] hover:bg-[#4a3a34]">back to the forest →</button>
       </div>
     </section>
+  </div>
+</div>
+
+<!-- the arcade machine in the cabin: Don't Get Squished (tetris.js). Same look as the contact form. -->
+<div id="arcade" class="fixed inset-0 z-20 flex items-center justify-center bg-black/50 p-4" style="display: none">
+  <div class="flex max-h-full max-w-full items-start gap-5 overflow-y-auto rounded border-4 border-[#28201e] bg-[#f4ead2] p-5 text-[#28201e] shadow-[6px_6px_0_rgba(0,0,0,0.25)]">
+    <canvas data-board class="block shrink-0 border-4 border-[#28201e]"
+            style="image-rendering: pixelated; height: min(514px, calc(100vh - 6rem)); width: auto"></canvas>
+    <div class="flex w-56 flex-col self-stretch">
+      <h2 class="text-xl font-bold">Don't get squished</h2>
+      <p class="mt-1 text-sm opacity-70">A bot plays Tetris. You're the little guy on the board.</p>
+      <dl class="mt-4 grid grid-cols-2 gap-y-1 text-sm">
+        <dt class="opacity-70">score</dt><dd data-score class="font-bold">0</dd>
+        <dt class="opacity-70">survived</dt><dd data-time class="font-bold">0.0s</dd>
+        <dt class="opacity-70">best</dt><dd data-best class="font-bold">-</dd>
+        <dt class="opacity-70">bot</dt><dd class="font-bold"><span data-bot>on</span> (B)</dd>
+      </dl>
+      <ul class="mt-4 space-y-1 text-sm leading-relaxed">
+        <li>- A and D (or arrows) to run</li>
+        <li>- W (or up, or space) to jump</li>
+        <li>- B to take over the Tetris yourself: arrows move, up rotates, down drops</li>
+        <li>- Esc to leave</li>
+      </ul>
+      <section data-over class="mt-4" hidden>
+        <p data-message class="text-lg font-bold"></p>
+        <button type="button" data-again class="mt-2 rounded border-4 border-[#28201e] bg-[#28201e] px-4 py-1.5 font-bold text-[#f4ead2] shadow-[4px_4px_0_rgba(0,0,0,0.25)] hover:bg-[#4a3a34]">play again (Enter)</button>
+      </section>
+      <button type="button" data-close class="mt-auto self-start rounded border-4 border-[#28201e] bg-[#f4ead2] px-4 py-1.5 font-bold shadow-[4px_4px_0_rgba(0,0,0,0.25)] hover:bg-white">← back to the cabin</button>
+    </div>
   </div>
 </div>
 

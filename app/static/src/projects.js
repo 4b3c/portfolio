@@ -1,8 +1,9 @@
-// A walkable world of projects: one tree per project, scattered at random on every
-// load. Three kinds of trail join the trees that share a kind of work: dirt for
-// CAD and hardware, stone for coding, gravel for work (Luminosity Lab, PBB Lab).
+// A walkable world of projects: one tree per project, oldest in the west and
+// newest in the east, each at a random height on every load. One cobblestone
+// trail winds past them all, through the clearing you start in.
 // Walking up to a tree shows that project's card.
 import { FONT } from './font.js';
+import { makeArcade } from './tetris.js';
 
 (function () {
   const {
@@ -16,7 +17,11 @@ import { FONT } from './font.js';
   const ROWS = 52;
   const SPAWN = [COLS / 2, ROWS / 2];    // where the player starts
   const SPAWN_CLEARING = 7;              // no trees within this many tiles of it
-  const SPACING = [8, 5];                // trunks stay at least this far apart (cols, rows)
+  // How much room each size of tree keeps around its trunk (cols, rows): two
+  // trunks stay at least their two rooms apart. Two mediums keep 8 x 5.
+  const ROOM = {
+    huge: [6.5, 4], large: [5, 3], medium: [4, 2.5], small: [3, 2], tiny: [2.5, 1.5],
+  };
   const TOP_ROW = 13;                    // the tallest trees need ~11 rows of sky above them
 
   // Bigger trees than the forest page: longer branches that shrink more slowly
@@ -53,23 +58,28 @@ import { FONT } from './font.js';
   const CAMERA_EASE = 8;
 
   // --- trails -------------------------------------------------------------
-  // Each kind of work gets its own material.
   const MATERIALS = {
-    mechanical: { style: 'dirt', label: 'CAD & hardware',
-      base: [200, 165, 105], edge: [176, 140, 84], dark: [170, 134, 80], light: [224, 194, 136] },
     // rounded cobbles set in earth, at grass level
-    coding: { style: 'cobble', label: 'coding',
+    path: { style: 'cobble',
       base: [152, 152, 148], dark: [136, 136, 132], light: [172, 172, 166], gap: [118, 110, 94],
       edge: [128, 120, 102] },  // earthy, like the soil between the stones, not a grey shadow
-    work: { style: 'gravel', label: 'work',
-      base: [176, 168, 150], edge: [154, 146, 130], dark: [160, 152, 136], light: [192, 186, 170], darker: [140, 132, 118] },
-    // the pale packed-earth clearing at spawn that every trail starts from
-    trailhead: { style: 'dirt', label: 'trailhead',
+    // the pale packed earth of the clearings at spawn and the cabin
+    trailhead: { style: 'dirt',
       base: [222, 206, 160], edge: [198, 180, 132], dark: [200, 182, 136], light: [236, 224, 186] },
   };
-  const KINDS = ['work', 'mechanical', 'coding'];  // routed in this order; earlier ones keep shared tiles
   const MAT_INDEX = Object.fromEntries(Object.keys(MATERIALS).map((k, i) => [k, i]));
   const MAT_NAMES = Object.keys(MATERIALS);
+  const TRAIL_REACH = [3, 4];            // the trail passes within this many tiles of each trunk (picked per tree)
+
+  // Each project is tagged with the kinds of work in it, in projects.json.
+  const TAGS = { coding: 'coding', mechanical: 'CAD & hardware', work: 'work' };
+  // The last year I worked on a project seriously: the end of its date range
+  // ("2023 - 2024" is 2024), or for one still going ("2024 - now"), the year
+  // it was last updated.
+  const lastYear = (p) => {
+    const end = p.date.split('-').pop().trim();
+    return end === 'now' ? (p.updated || p.start).slice(0, 4) : end;
+  };
 
   // --- signs --------------------------------------------------------------
   const SIGN = {
@@ -93,7 +103,6 @@ import { FONT } from './font.js';
   const SOCIAL_REACH = 80;               // how close to a sign before its card shows
   const WELCOME_REACH = 110;             // how close to the welcome sign before its guide shows
   const CABIN_DISTANCE = 16;             // tiles from spawn, at least: off screen when you start
-  const CABIN_REACH = 150;               // how close to the cabin before the "reach out" card shows
   const CABIN = {
     ridge: [190, 106, 72, 255], roofLight: [174, 88, 60, 255], roof: [158, 76, 52, 255], roofShade: [142, 66, 46, 255],
     roofDark: [118, 54, 38, 255], eave: [92, 42, 30, 255],
@@ -103,6 +112,50 @@ import { FONT } from './font.js';
     knob: [232, 192, 92, 255], glass: [150, 198, 214, 255], glassShadow: [104, 150, 170, 255], shine: [214, 236, 240, 255],
     stoneLight: [170, 166, 156, 255], stone: [138, 136, 130, 255], stoneDark: [104, 102, 98, 255],
     mail: [72, 104, 150, 255], mailLight: [106, 140, 184, 255], mailDark: [50, 74, 110, 255], flag: [204, 52, 40, 255],
+  };
+  const DOOR_HALF = 4;                   // half the door's width, in art pixels: walking up into it goes inside
+  const MAILBOX_REACH = 90;              // how close to the mailbox before the "reach out" card shows
+
+  // --- inside the cabin ---------------------------------------------------
+  // My workshop, front on like the cabin: the back wall's logs with a window,
+  // a plank floor, and the doorway at the bottom. Each thing in it has
+  // a card about me; the arcade machine plays Don't Get Squished (tetris.js).
+  // Sizes are in art pixels.
+  const CABIN_ROOM = { w: 160, h: 104, wall: 40, door: [72, 87] };   // wall: the back wall's height; door: the doorway's columns
+  const FADE_S = 0.18;                   // the fade to black going in or out, each way
+  const INSIDE = {
+    plank: [186, 136, 84, 255], plankLight: [200, 152, 98, 255], plankDark: [164, 116, 68, 255], seam: [118, 78, 44, 255],
+    rug: [78, 80, 86, 255], rugLight: [98, 100, 108, 255], rugEdge: [52, 54, 60, 255], mat: [120, 98, 60, 255],   // a rubber shop mat
+    notes: [[244, 226, 140, 255], [236, 172, 172, 255], [170, 202, 236, 255], [244, 240, 230, 255]],
+    books: [[170, 50, 30, 255], [60, 110, 160, 255], [70, 130, 70, 255], [210, 170, 70, 255], [120, 70, 130, 255], [220, 214, 196, 255]],
+    screen: [20, 22, 30, 255], monitor: [52, 52, 62, 255], glow: [110, 180, 210, 255],
+    rgb: [[230, 60, 160, 255], [80, 200, 240, 255], [140, 90, 240, 255]], board: [40, 130, 70, 255], led: [250, 80, 60, 255],
+    cabinet: [64, 44, 96, 255], cabinetLight: [96, 66, 136, 255], cabinetDark: [42, 28, 66, 255], marquee: [232, 192, 92, 255],
+    button: [40, 160, 220, 255],
+    grass: [130, 170, 70, 255],
+  };
+  const TETRIS_COLOURS = [[230, 190, 0, 255], [10, 180, 60, 255], [210, 0, 0, 255], [0, 180, 200, 255]];
+
+  // What each thing in the room says about me.
+  const ABOUT = {
+    bio: {
+      title: 'About me', date: 'the bookshelf',
+      text: "Thanks for peeping my website. Here's a little about me. I love creating things, whether its a website, a CAD model, a circuit, or tying all three together.\n\nI started tinkering as a kid in Kenya, building fans for my room, powered by a solar panel, building a mini hydropics system with water bottles and minows I caught in a lake (RIP) (they did not last long), or my LEGO city I worked on every day for years. Eventually I moved back to the states, saved up, and bought a LEGO mindstorms kit, which introduced me to technology in the most tangible way I had ever experienced. I learned programming, gear ratios, structural integrity, and this sparked my love for science and technology.\n\nMy dream is to continue building until I have the means to integrate STEM education infrastructure around the world. My side quest dream is to be a part of building more walkable and sustainable cities, and high speed railway across the US.\n\nAnyways, I hope you enjoyed checking out my website. Don't hesitate to reach out. Cya",
+    },
+    pc: {
+      title: 'My PC specs', date: 'the desk',
+      text: [
+        'CPU: AMD Ryzen 7 9700X',
+        'GPU: AMD Radeon RX 9060 XT, 16 GB VRAM',
+        'RAM: 32 GB',
+        'Motherboard: Gigabyte B650',
+        'OS: Fedora',
+      ].join('\n'),
+    },
+    arcade: {
+      title: 'I also love video games', date: 'the arcade machine',
+      text: "Factorio, Minecraft, Cities: Skylines are my favorite. Here's a surprise mini game. A JS port of a C++ game I made.",
+    },
   };
 
   // --- trail pixel art ----------------------------------------------------
@@ -131,11 +184,6 @@ import { FONT } from './font.js';
 
   function trailPixel(mat, wx, wy) {
     const m = MATERIALS[mat];
-    if (m.style === 'gravel') {
-      const n = hashXY(wx, wy);
-      // mostly plain, with sparse, soft specks
-      return n < 0.03 ? m.darker : n < 0.15 ? m.dark : n < 0.24 ? m.light : m.base;
-    }
     if (m.style === 'cobble') {
       // Every 6x6 block of art pixels holds one stone centre, jiggled about, and
       // each pixel belongs to the nearest centre. Where the pixel to the right or
@@ -164,15 +212,6 @@ import { FONT } from './font.js';
   grass.src = canvas.dataset.grass;
 
   // --- map key -------------------------------------------------------------
-  // Swatches are drawn with the same pixel art as the world, so they match.
-  for (const el of document.querySelectorAll('[data-swatch]')) {
-    const img = new ImageData(8, 8);
-    for (let y = 0; y < 8; y++) {
-      for (let x = 0; x < 8; x++) img.data.set(rgba(trailPixel(el.dataset.swatch, x + 40, y + 40)), (y * 8 + x) * 4);
-    }
-    el.width = el.height = 8;
-    el.getContext('2d').putImageData(img, 0, 0);
-  }
   for (const el of document.querySelectorAll('[data-leaf]')) {
     const status = STATUS[el.dataset.leaf];
     const p = PALETTES[status.palette];
@@ -213,7 +252,7 @@ import { FONT } from './font.js';
   // While the welcome is up, nothing else is: no counter, contact or help
   // buttons, and no card or guide (updateCard checks introOpen). Visibility,
   // not display, so it doesn't undo the phone view hiding them for good.
-  const hud = ['progress', 'buttons'].map((id) => document.getElementById(id));
+  const hud = ['buttons'].map((id) => document.getElementById(id));
   const showHud = (on) => hud.forEach((el) => { el.style.visibility = on ? '' : 'hidden'; });
   showHud(false);
   function showIntro() {
@@ -375,6 +414,10 @@ import { FONT } from './font.js';
     }
   });
 
+  // --- the arcade machine (in the cabin) ---------------------------------------
+  // Don't Get Squished, in its own overlay. You can't walk while it's open.
+  const arcade = makeArcade(document.getElementById('arcade'), canvas.dataset.blocks);
+
   // --- "just show me a list" --------------------------------------------------
   const list = document.getElementById('list');
   const listItems = document.getElementById('list-items');
@@ -456,9 +499,9 @@ import { FONT } from './font.js';
         refit.observe(body);
       }
       body.append(
-        el('p', 'text-xs uppercase tracking-wide opacity-60', `${p.date} · ${p.status}`),
+        el('p', 'text-xs uppercase tracking-wide opacity-60', lastYear(p)),
         el('h2', 'mt-0.5 font-bold leading-snug', p.title),
-        el('p', 'mt-1 text-xs opacity-70', p.paths.map((k) => MATERIALS[k].label).join(' · ')),
+        el('p', 'mt-1 text-xs opacity-70', p.tags.map((k) => TAGS[k]).join(' · ')),
         el('p', 'mt-2 text-sm leading-relaxed', p.description),
       );
       if (p.linkUrl) {
@@ -656,50 +699,47 @@ import { FONT } from './font.js';
       c >= around.c0 - 3 && c <= around.c1 + 1 && r >= Math.min(around.r0, cr - 4) && r <= around.r1 + 8;
 
     // --- scatter the trees --------------------------------------------------
-    // Biggest first, so they get the pick of the space. If a layout gets too
-    // crowded to finish, start over a little less fussy about spacing.
+    // Oldest on the left, newest on the right, roughly: in order of start date,
+    // each project gets its own column, spread evenly across the map (evenly,
+    // not by the calendar, or the busy recent years would pile up), then nudged
+    // up to X_SHUFFLE columns either way so the order isn't perfect. The row is
+    // random. Biggest first, so they get the pick of the space, and each size
+    // keeps its own room (ROOM): two trees stand at least their two rooms apart,
+    // so big trees spread out and small ones fill in between. If a layout gets
+    // too crowded to finish, start over a little less fussy about spacing.
+    const X_SHUFFLE = 10;
+    const byDate = [...projects].sort((a, b) => a.start.localeCompare(b.start));
+    const [X0, X1] = [6, COLS - 8];
+    const column = new Map(byDate.map((p, i) => [p, Math.round(X0 + ((i + 0.5) / byDate.length) * (X1 - X0))]));
     const SIZE_ORDER = ['huge', 'large', 'medium', 'small', 'tiny'];
     const order = [...projects].sort((a, b) => SIZE_ORDER.indexOf(a.size) - SIZE_ORDER.indexOf(b.size));
     let spots;
     for (let loosen = 1; ; loosen *= 0.92) {
       spots = new Map();
       for (const p of order) {
+        const room = ROOM[p.size] || ROOM.medium;
         for (let tries = 0; tries < 500 && !spots.has(p); tries++) {
-          const c = randint(6, COLS - 8);
+          const c = clamp(column.get(p) + randint(-X_SHUFFLE, X_SHUFFLE), X0, X1);
           const r = randint(TOP_ROW, ROWS - 4);
           if (Math.hypot(c - SPAWN[0], r - SPAWN[1]) < SPAWN_CLEARING || nearCabin(c, r)) continue;
-          const crowded = [...spots.values()].some(([sc, sr]) =>
-            ((c - sc) / (SPACING[0] * loosen)) ** 2 + ((r - sr) / (SPACING[1] * loosen)) ** 2 < 1);
+          const crowded = [...spots].some(([q, [sc, sr]]) => {
+            const other = ROOM[q.size] || ROOM.medium;
+            return ((c - sc) / ((room[0] + other[0]) * loosen)) ** 2 + ((r - sr) / ((room[1] + other[1]) * loosen)) ** 2 < 1;
+          });
           if (!crowded) spots.set(p, [c, r]);
         }
       }
       if (spots.size === projects.length) break;
     }
 
-    // Trunks and sign posts block trails. Trails pass beside trees rather than
-    // ending at them: each kind a tree belongs to gets its own side of the trunk
-    // to pass on, so a tree with two kinds stands where two trails meet, and one
-    // with three has trails running around it. `near` marks the ring of tiles
-    // around each trunk, so a trail can keep its distance from trees that aren't
-    // its kind (otherwise it looks like it belongs to them too).
+    // Trunks and sign posts block trails.
     const material = new Int8Array(COLS * ROWS).fill(-1);
     const blocked = new Uint8Array(COLS * ROWS);
-    const near = new Int16Array(COLS * ROWS).fill(-1);
-    const SIDES = [[-1, 0], [0, 1], [1, 1]];  // left of the trunk, below it, below-right
-    const passBy = new Map();                  // project -> { kind: tile the trail passes through }
-    projects.forEach((p, k) => {
+    for (const p of projects) {
       const [c, r] = spots.get(p);
-      for (let dr = -1; dr <= 1; dr++) {
-        for (let dc = -1; dc <= 1; dc++) if (inWorld(c + dc, r + dr)) near[at(c + dc, r + dr)] = k;
-      }
       blocked[at(c, r)] = 1;
       blocked[at(c + 2, r)] = 1;          // sign post
-      const turn = randint(0, SIDES.length - 1);
-      passBy.set(p, Object.fromEntries(p.paths.map((kind, i) => {
-        const [dc, dr] = SIDES[(turn + i) % SIDES.length];
-        return [kind, [c + dc, r + dr]];
-      })));
-    });
+    }
 
     // Clearing tiles are packed earth: trails cross them cheaply and never claim them.
     for (let i = 0; i < core.length; i++) if (core[i]) material[i] = MAT_INDEX.trailhead;
@@ -727,20 +767,18 @@ import { FONT } from './font.js';
     // Turning costs as much as a few extra tiles, so trails run in long straight
     // stretches with a few deliberate corners instead of staircasing.
     const TURN = 3;
-    // A tile right next to a trail (another kind's, or this one's own) costs
-    // extra, so trails leave a strip of grass between them instead of running
-    // side by side. Crossing straight over only pays it twice, once each side.
+    // A tile right next to the trail costs extra, so where it loops back it
+    // leaves a strip of grass instead of running alongside itself. Crossing straight over only pays it twice, once each side.
     const BESIDE = 4;
     const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 
-    // Cheapest 4-way route between two tiles (A* over tile and heading).
-    // Stepping onto any trail is expensive, its own included, so a trail never
-    // merges, forks, or doubles back on itself: where the next tree is back the
-    // way it came, it loops round on fresh ground. Trails only meet at short
-    // crossings, and walking right beside one costs extra too (BESIDE). The
-    // clearings are everyone's, since every trail starts in one.
-    function route(from, to, kind) {
-      const mine = MAT_INDEX[kind];
+    // Cheapest 4-way route from a tile to anywhere within `reach` tiles of
+    // another (A* over tile and heading); returns the tile it got to. Stepping
+    // onto the trail is expensive, so it never merges, forks, or doubles back on
+    // itself: where the next tree is back the way it came, it loops round on
+    // fresh ground. It only meets itself at short crossings, and walking right
+    // beside it costs extra too (BESIDE). The clearings are cheap to cross.
+    function route(from, to, reach = 0) {
       const besideTrail = (i) => {
         const c = i % COLS, r = Math.floor(i / COLS);
         return DIRS.some(([dc, dr]) => {
@@ -753,12 +791,10 @@ import { FONT } from './font.js';
         if (blocked[i]) return Infinity;
         if (core[i]) return 0.35;
         if (material[i] !== -1) return 6;
-        const k = near[i];
-        const foreign = k !== -1 && !projects[k].paths.includes(kind);
-        return 1 + wander[i] + (foreign ? 6 : 0) + (besideTrail(i) ? BESIDE : 0);
+        return 1 + wander[i] + (besideTrail(i) ? BESIDE : 0);
       };
-      const goal = at(...to);
-      const guess = (i) => (Math.abs((i % COLS) - to[0]) + Math.abs(Math.floor(i / COLS) - to[1])) * 0.35;
+      const away = (i) => Math.hypot((i % COLS) - to[0], Math.floor(i / COLS) - to[1]);
+      const guess = (i) => Math.max(0, away(i) - reach) * 0.35;
       // state = tile * 4 + heading
       const best = new Float32Array(COLS * ROWS * 4).fill(Infinity);
       const came = new Int32Array(COLS * ROWS * 4).fill(-1);
@@ -772,7 +808,7 @@ import { FONT } from './font.js';
       while (open.size) {
         const st = open.pop();
         const i = st >> 2, d = st & 3;
-        if (i === goal) { end = st; break; }
+        if (away(i) <= reach) { end = st; break; }
         const c = i % COLS, r = Math.floor(i / COLS);
         DIRS.forEach(([dc, dr], nd) => {
           if (!inWorld(c + dc, r + dr)) return;
@@ -786,51 +822,46 @@ import { FONT } from './font.js';
           }
         });
       }
+      if (end === -1) return from;
       for (let st = end; st !== -1; st = came[st]) {
         const i = st >> 2;
-        if (material[i] === -1) material[i] = mine;
+        if (material[i] === -1) material[i] = MAT_INDEX.path;
       }
+      return [(end >> 2) % COLS, Math.floor((end >> 2) / COLS)];
     }
 
-    // Each kind is one trail. It starts at the spawn point (the trailhead) and
-    // passes all its trees, ending beside the last one rather than at it. The order is the shortest walk we can find:
-    // nearest tree first, then 2-opt (reverse any stretch that makes it shorter),
-    // which also untangles the trail where it would cross itself.
+    // The trail: join the two closest stops (the trees and the spawn clearing),
+    // then the next two closest, and so on, skipping a stop already joined on
+    // both sides, or a pair already on the same piece of trail (that would
+    // close a loop). What's left is one trail through them all, walked from one
+    // end. It comes within a few tiles of each trunk (TRAIL_REACH) and carries
+    // on from wherever it got to.
     const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
-    function walkOrder(head, stops) {
-      const order = [head];
-      const left = [...stops];
-      while (left.length) {
-        const here = order[order.length - 1];
-        let n = 0;
-        left.forEach((s, i) => { if (dist(s, here) < dist(left[n], here)) n = i; });
-        order.push(...left.splice(n, 1));
-      }
-      for (let better = true; better;) {
-        better = false;
-        for (let i = 1; i < order.length - 1; i++) {
-          for (let j = i + 1; j < order.length; j++) {
-            const after = order[j + 1];
-            const before = dist(order[i - 1], order[i]) + (after ? dist(order[j], after) : 0);
-            const swapped = dist(order[i - 1], order[j]) + (after ? dist(order[i], after) : 0);
-            if (swapped < before - 0.01) {
-              order.splice(i, j - i + 1, ...order.slice(i, j + 1).reverse());
-              better = true;
-            }
-          }
-        }
-      }
-      return order;
+    const stops = [{ at: SPAWN, reach: 0 }, ...projects.map((p) => ({ at: spots.get(p), reach: randint(...TRAIL_REACH) }))];
+    const pairs = [];
+    stops.forEach((a, i) => stops.forEach((b, j) => { if (i < j) pairs.push([i, j, dist(a.at, b.at)]); }));
+    pairs.sort((x, y) => x[2] - y[2]);
+    const links = stops.map(() => []);
+    const piece = stops.map((_, i) => i);         // which piece of trail each stop is on so far
+    const pieceOf = (i) => (piece[i] === i ? i : (piece[i] = pieceOf(piece[i])));
+    for (const [i, j] of pairs) {
+      if (links[i].length === 2 || links[j].length === 2 || pieceOf(i) === pieceOf(j)) continue;
+      links[i].push(j);
+      links[j].push(i);
+      piece[pieceOf(i)] = pieceOf(j);
     }
+    const walk = [];
+    for (let s = links.findIndex((l) => l.length < 2), prev = -1; s !== undefined;) {
+      walk.push(stops[s]);
+      [prev, s] = [s, links[s].find((n) => n !== prev)];
+    }
+    // it begins a few tiles out from its first stop, on the side away from the next
+    const [first, next] = walk;
+    const out = next && next.at[0] > first.at[0] ? -1 : 1;
+    let here = [clamp(first.at[0] + out * first.reach, 0, COLS - 1), first.at[1]];
+    for (const s of walk) here = route(here, s.at, s.reach);
 
-    KINDS.forEach((kind, k) => {
-      const stops = projects.filter((p) => p.paths.includes(kind)).map((p) => passBy.get(p)[kind]);
-      if (!stops.length) return;
-      const head = SPAWN;
-      const walk = walkOrder(head, stops);
-      for (let i = 1; i < walk.length; i++) route(walk[i - 1], walk[i], kind);
-    });
-    // And a pale path from the trailhead out to the cabin, routed last so it
+    // And a path from the trailhead out to the cabin, routed last so it
     // doesn't pull the project trails off course. Left to itself it would take
     // one corner, so it goes by two: out along the longer way, across at a
     // random point partway, then on into the clearing, like a Z.
@@ -874,7 +905,7 @@ import { FONT } from './font.js';
         return [c, r];
       };
       const stops = [SPAWN, open(corner1), open(corner2), goal];
-      for (let i = 1; i < stops.length; i++) route(stops[i - 1], stops[i], 'trailhead');
+      for (let i = 1; i < stops.length; i++) route(stops[i - 1], stops[i]);
     }
 
 
@@ -1064,34 +1095,175 @@ import { FONT } from './font.js';
       return toCanvas(outline(img, SIGN.outline));
     }
 
-    // --- visited counter ------------------------------------------------------
-    // A project counts as visited once its card has opened. Each kind shows
-    // visited/total of the projects whose trail it is (starts fresh every visit).
-    const visited = new Set();
-    // When a count goes up, its button pops: it grows, flashes white, and
-    // settles back, so you notice it from the corner of your eye.
-    function updateProgress() {
-      for (const kind of KINDS) {
-        const mine = projects.filter((p) => p.paths.includes(kind));
-        const seen = mine.filter((p) => visited.has(p.id)).length;
-        const label = document.querySelector(`[data-progress="${kind}"]`);
-        const text = `${seen}/${mine.length}`;
-        if (label.textContent === text) continue;
-        const counted = label.textContent !== '0/0';   // not the first fill-in on load
-        label.textContent = text;
-        if (counted) {
-          label.parentElement.animate([
-            { transform: 'scale(1)' },
-            { transform: 'scale(1.35)', backgroundColor: '#ffffff', offset: 0.3 },
-            { transform: 'scale(1)' },
-          ], { duration: 700, easing: 'ease-out' });
+    // The inside of the cabin, everything that doesn't stand on the floor: the
+    // back wall in logs with a window;
+    // the plank floor with a rug; the side walls; and the front wall with the
+    // doorway, grass showing through it.
+    function makeRoom() {
+      const { w: W, h: H, wall: WALL, door: DOOR } = CABIN_ROOM;
+      const img = new ImageData(W, H);
+      const set = (x, y, colour) => img.data.set(colour, (y * W + x) * 4);
+      const box = (x0, y0, x1, y1, colour) => {
+        for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) set(x, y, colour);
+      };
+
+      // the back wall's logs, shaded under the ceiling, and a baseboard
+      for (let y = 0; y < WALL; y++) {
+        for (let x = 0; x < W; x++) set(x, y, y < 3 ? CABIN.logShadow : [CABIN.logLight, CABIN.log, CABIN.logDark][y % 3]);
+      }
+      box(0, WALL, W - 1, WALL + 1, CABIN.frame);
+
+      // the floor: planks six rows wide, their ends staggered, with the odd darker board
+      for (let y = WALL + 2; y < H; y++) {
+        const plank = Math.floor((y - WALL - 2) / 6);
+        for (let x = 0; x < W; x++) {
+          const end = (x + plank * 11) % 27 === 0;
+          const shade = hashXY(Math.floor((x + plank * 11) / 27), plank);
+          let colour = shade < 0.25 ? INSIDE.plankDark : shade > 0.8 ? INSIDE.plankLight : INSIDE.plank;
+          if ((y - WALL - 2) % 6 === 5 || end) colour = INSIDE.seam;
+          set(x, y, colour);
         }
       }
+
+      // a rug in the middle, with a border and a band of light near its edge
+      const rug = [52, 58, 107, 86];
+      for (let y = rug[1]; y <= rug[3]; y++) {
+        for (let x = rug[0]; x <= rug[2]; x++) {
+          const inset = Math.min(x - rug[0], rug[2] - x, y - rug[1], rug[3] - y);
+          set(x, y, inset === 0 ? INSIDE.rugEdge : inset === 2 ? INSIDE.rugLight : INSIDE.rug);
+        }
+      }
+      box(DOOR[0] + 2, H - 9, DOOR[1] - 2, H - 5, INSIDE.mat);   // the doormat
+
+      // the side walls, and the front wall either side of the doorway
+      box(0, 0, 3, H - 1, CABIN.logDark);
+      box(W - 4, 0, W - 1, H - 1, CABIN.logDark);
+      box(4, 3, 4, H - 1, CABIN.logShadow);
+      box(W - 5, 3, W - 5, H - 1, CABIN.logShadow);
+      for (let y = H - 4; y < H; y++) {
+        for (let x = 0; x < W; x++) set(x, y, x >= DOOR[0] && x <= DOOR[1] ? INSIDE.grass : y === H - 4 ? CABIN.logLight : CABIN.log);
+      }
+      box(DOOR[0] - 1, H - 4, DOOR[0] - 1, H - 1, CABIN.frame);
+      box(DOOR[1] + 1, H - 4, DOOR[1] + 1, H - 1, CABIN.frame);
+
+      // the window, set in like the cabin's, in the middle of the back wall
+      const wx = 70, wy = 9, ww = 20, wh = 15;
+      box(wx, wy, wx + ww - 1, wy + wh - 1, CABIN.frame);
+      box(wx + 1, wy + 1, wx + ww - 2, wy + wh - 2, CABIN.glass);
+      box(wx + 1, wy + 1, wx + ww - 2, wy + 1, CABIN.glassShadow);
+      box(wx + 1, wy + 1, wx + 1, wy + wh - 2, CABIN.glassShadow);
+      box(wx + ww / 2, wy + 1, wx + ww / 2, wy + wh - 2, CABIN.frame);
+      box(wx + 1, wy + 7, wx + ww - 2, wy + 7, CABIN.frame);
+      set(wx + ww / 2 + 3, wy + 4, CABIN.shine);
+      set(wx + ww / 2 + 4, wy + 3, CABIN.shine);
+      box(wx - 1, wy + wh, wx + ww, wy + wh, CABIN.logEnd);
+
+      return toCanvas(img);
+    }
+
+    // A bookshelf: three shelves of books, all different heights and colours.
+    function makeBookshelf() {
+      const W = 24, H = 36;
+      const img = new ImageData(W + 2, H + 2);
+      const set = (x, y, colour) => img.data.set(colour, ((y + 1) * img.width + x + 1) * 4);
+      for (let y = 0; y < H; y++) {
+        for (let x = 0; x < W; x++) {
+          const side = x < 2 || x >= W - 2 || y < 2;
+          set(x, y, side ? CABIN.log : y % 11 >= 9 ? CABIN.logLight : CABIN.doorShadow);
+        }
+      }
+      for (let shelf = 0; shelf < 3; shelf++) {
+        const floor = shelf * 11 + 8;     // the row each shelf's books stand on
+        let x = 2 + Math.floor(hashXY(shelf, 3) * 2);
+        for (let i = 0; x < W - 3; i++) {
+          const wide = 2 + (hashXY(shelf, i) < 0.4 ? 1 : 0);
+          const tall = 5 + Math.floor(hashXY(i, shelf + 9) * 3);
+          const colour = INSIDE.books[Math.floor(hashXY(i * 3, shelf * 7) * INSIDE.books.length)];
+          for (let y = floor - tall + 1; y <= floor; y++) {
+            for (let dx = 0; dx < wide; dx++) set(x + dx, y, y === floor - tall + 2 ? CABIN.logEnd : colour);
+          }
+          x += wide + (hashXY(i, shelf) < 0.2 ? 1 : 0);
+        }
+      }
+      return toCanvas(outline(img, SIGN.outline));
+    }
+
+    // My desk: the monitor, the PC I built with its fans lit up, and a
+    // breadboard with an LED on it.
+    function makeDesk() {
+      const W = 32, H = 24;
+      const img = new ImageData(W + 2, H + 2);
+      const set = (x, y, colour) => img.data.set(colour, ((y + 1) * img.width + x + 1) * 4);
+      const box = (x0, y0, x1, y1, colour) => {
+        for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) set(x, y, colour);
+      };
+      // the monitor on its stand
+      box(9, 0, 22, 9, INSIDE.monitor);
+      box(10, 1, 21, 8, INSIDE.screen);
+      for (let y = 2; y <= 7; y += 2) box(11, y, 11 + 3 + Math.floor(hashXY(y, 4) * 7), y, INSIDE.glow);   // lines of code
+      box(15, 10, 16, 11, INSIDE.monitor);
+      box(13, 11, 18, 11, INSIDE.monitor);
+      // the tower, its glass side showing three lit fans
+      box(24, 0, 31, 11, INSIDE.monitor);
+      box(25, 1, 29, 10, INSIDE.screen);
+      [2, 5, 8].forEach((y, i) => box(26, y, 28, y + 1, INSIDE.rgb[i]));
+      set(30, 2, INSIDE.glow);                              // the power light
+      // the breadboard, with an LED and a couple of wires
+      box(0, 9, 6, 11, INSIDE.board);
+      set(2, 8, INSIDE.led);
+      set(1, 10, INSIDE.rgb[1]);
+      set(4, 10, INSIDE.notes[0]);
+      // the desktop, and the front with drawers on legs
+      box(0, 12, W - 1, 13, CABIN.logEnd);
+      box(0, 14, W - 1, 14, CABIN.logLight);
+      box(1, 15, W - 2, 19, CABIN.log);
+      box(2, 15, 2, H - 1, CABIN.logDark);
+      box(W - 3, 15, W - 3, H - 1, CABIN.logDark);
+      box(19, 16, 27, 18, CABIN.logLight);                  // a drawer
+      set(23, 17, CABIN.knob);
+      return toCanvas(outline(img, SIGN.outline));
+    }
+
+    // An arcade machine with a game of Tetris on its screen.
+    function makeArcadeMachine() {
+      const W = 18, H = 34;
+      const img = new ImageData(W + 2, H + 2);
+      const set = (x, y, colour) => img.data.set(colour, ((y + 1) * img.width + x + 1) * 4);
+      const box = (x0, y0, x1, y1, colour) => {
+        for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) set(x, y, colour);
+      };
+      box(0, 0, W - 1, H - 1, INSIDE.cabinet);
+      box(0, 0, 1, H - 1, INSIDE.cabinetLight);             // the lit side
+      box(W - 2, 0, W - 1, H - 1, INSIDE.cabinetDark);
+      box(2, 2, W - 3, 6, INSIDE.marquee);                  // the sign on top
+      box(5, 4, W - 6, 4, CABIN.flag);
+      box(3, 9, W - 4, 19, INSIDE.cabinetDark);
+      box(4, 10, W - 5, 18, INSIDE.screen);
+      // a few pieces stacked up on the screen
+      [[5, 17, 0], [6, 17, 0], [7, 17, 1], [8, 17, 1], [8, 16, 1], [10, 17, 3], [11, 17, 3], [12, 17, 2], [11, 16, 2],
+        [7, 12, 3], [8, 12, 3], [8, 13, 3]].forEach(([x, y, k]) => set(x, y, TETRIS_COLOURS[k]));
+      box(1, 21, W - 2, 23, INSIDE.cabinetLight);           // the control panel
+      set(5, 21, CABIN.flag);                               // the joystick
+      set(5, 22, INSIDE.cabinetDark);
+      set(10, 22, INSIDE.button);
+      set(12, 22, INSIDE.marquee);
+      box(3, 26, W - 4, 27, INSIDE.cabinetDark);            // the coin slot
+      set(W / 2 - 1, 26, INSIDE.marquee);
+      return toCanvas(outline(img, SIGN.outline));
+    }
+
+    // --- visited counter ------------------------------------------------------
+    // A project counts as visited once its card has opened. The counter shows
+    // visited/total (starts fresh every visit).
+    const visited = new Set();
+    const progress = document.querySelector('[data-progress]');
+    function updateProgress() {
+      progress.textContent = `${visited.size}/${projects.length}`;
     }
     updateProgress();
 
-    // Clicking a kind in the counter shows arrows around the player, one toward
-    // each project of that kind not visited yet, for a few seconds.
+    // Clicking the counter shows arrows around the player, one toward each
+    // project not visited yet, for a few seconds (and contact, toward the cabin).
     const POINT_MS = 3000;
     let pointing = { kind: null, until: 0 };
     document.querySelectorAll('[data-point]').forEach((b) => b.addEventListener('click', () => {
@@ -1158,12 +1330,49 @@ import { FONT } from './font.js';
       }
     }
 
+    // --- inside the cabin -------------------------------------------------------
+    // The room has its own coordinates, in screen pixels from its top-left. The
+    // furniture stands with its feet at (x, y), in art pixels, and keeps you off
+    // its footprint (`blocks`, art pixels: x0, y0, x1, y1).
+    const room = {
+      floor: makeRoom(),
+      w: CABIN_ROOM.w * PIXEL,
+      h: CABIN_ROOM.h * PIXEL,
+      furniture: [
+        { sprite: makeBookshelf(), x: 18, y: 47, blocks: [5, 40, 31, 47] },
+        { sprite: makeDesk(), x: 138, y: 51, blocks: [121, 40, 155, 51] },
+        { sprite: makeArcadeMachine(), x: 146, y: 92, blocks: [136, 84, 156, 92] },
+      ],
+    };
+    let inside = false;
+    // Going in or out fades to black, swaps scenes, and fades back.
+    let fade = 0;
+    let fadeThen = null;                 // what to do once it's black
+    const fadeTo = (then) => { if (!fadeThen) fadeThen = then; };
+    function goInside() {
+      fadeTo(() => {
+        inside = true;
+        player.x = ((CABIN_ROOM.door[0] + CABIN_ROOM.door[1] + 1) / 2) * PIXEL;
+        player.y = (CABIN_ROOM.h - 8) * PIXEL;
+        player.dir = 'up';
+      });
+    }
+    function goOutside() {
+      fadeTo(() => {
+        inside = false;
+        player.x = doorX;
+        player.y = cabin.y + 28;
+        player.dir = 'down';
+        firstFrame = true;               // the camera jumps straight back to the door
+      });
+    }
+
     // --- player & input -------------------------------------------------------
     const player = { x: SPAWN[0] * TILE + TILE / 2, y: SPAWN[1] * TILE + TILE / 2, dir: 'down', anim: 0 };
 
     const keys = new Set();
     window.addEventListener('keydown', (e) => {
-      if (introOpen || contactOpen) return;
+      if (introOpen || contactOpen || arcade.isOpen) return;
       if (e.code.startsWith('Arrow') || e.code === 'Space') e.preventDefault();
       keys.add(e.code);
       if ((e.code === 'KeyE' || e.code === 'Enter') && (nearest || guidePinned)) {
@@ -1199,7 +1408,7 @@ import { FONT } from './font.js';
     }
 
     function movePlayer(dt) {
-      if (introOpen || contactOpen) { player.anim = 0; return; }
+      if (introOpen || contactOpen || arcade.isOpen || fadeThen) { player.anim = 0; return; }
       const dx = held('KeyD', 'ArrowRight') - held('KeyA', 'ArrowLeft');
       const dy = held('KeyS', 'ArrowDown') - held('KeyW', 'ArrowUp');
       if (!dx && !dy) { player.anim = 0; return; }
@@ -1213,6 +1422,19 @@ import { FONT } from './font.js';
       player.y += (dy / len) * speed * dt;
       player.anim += dt * ANIM_FPS * (speed / WALK_SPEED);
 
+      if (inside) {
+        // the walls, the furniture, and out through the doorway at the bottom
+        for (const f of room.furniture) {
+          const [x0, y0, x1, y1] = f.blocks;
+          pushOutBox(x0 * PIXEL - PLAYER_RADIUS, y0 * PIXEL, x1 * PIXEL + PLAYER_RADIUS, y1 * PIXEL + PLAYER_RADIUS / 2);
+        }
+        const inDoorway = player.x > CABIN_ROOM.door[0] * PIXEL + PLAYER_RADIUS && player.x < (CABIN_ROOM.door[1] + 1) * PIXEL - PLAYER_RADIUS;
+        player.x = clamp(player.x, 5 * PIXEL + PLAYER_RADIUS, (CABIN_ROOM.w - 5) * PIXEL - PLAYER_RADIUS);
+        player.y = clamp(player.y, (CABIN_ROOM.wall + 4) * PIXEL, (inDoorway ? CABIN_ROOM.h + 4 : CABIN_ROOM.h - 5) * PIXEL);
+        if (player.y > CABIN_ROOM.h * PIXEL) goOutside();
+        return;
+      }
+
       for (const t of allTrees) {
         if (t.trunkR) pushOut(t.x, t.y, t.trunkR + PLAYER_RADIUS);
         if (t.sign) pushOut(t.signX, t.signY, 6 + PLAYER_RADIUS);
@@ -1221,22 +1443,25 @@ import { FONT } from './font.js';
       for (const s of socials) pushOut(s.x, s.y, 6 + PLAYER_RADIUS);
       pushOut(mailbox.x, mailbox.y, 6 + PLAYER_RADIUS);
       pushOutBox(cabin.x - 108 - PLAYER_RADIUS, cabin.y - 40, cabin.x + 108 + PLAYER_RADIUS, cabin.y + PLAYER_RADIUS / 2);
+      // walking up into the door goes straight in
+      if (dy < 0 && Math.abs(player.x - doorX) < DOOR_HALF * PIXEL && player.y <= cabin.y + PLAYER_RADIUS / 2) goInside();
       player.x = clamp(player.x, 16, WORLD_W - 16);
       player.y = clamp(player.y, 48, WORLD_H - 8);
     }
 
     // --- the card -------------------------------------------------------------
     // Everything you can walk up to: each tree shows its project, each social
-    // sign its link, and the cabin asks you to reach out. All share one card.
+    // sign its link, and the mailbox asks you to reach out; inside, each thing in the room says something about me. All
+    // share one card.
     const card = document.getElementById('card');
     const field = (name) => card.querySelector(`[data-${name}]`);
-    const landmarks = [
+    const outsideMarks = [
       ...trees.map((t) => ({
         x: t.x, y: t.y, reach: CARD_DISTANCE, project: t.project,
         card: {
           title: t.project.title,
-          date: `${t.project.date} · ${t.project.status}`,
-          paths: t.project.paths.map((k) => MATERIALS[k].label).join(' · '),
+          date: lastYear(t.project),
+          tags: t.project.tags.map((k) => TAGS[k]).join(' · '),
           text: t.project.description,
           linkText: t.project.linkUrl && t.project.linkText + ' ↗',
           linkUrl: t.project.linkUrl,
@@ -1250,18 +1475,27 @@ import { FONT } from './font.js';
       })),
       { x: trailSign.x, y: trailSign.y, reach: WELCOME_REACH, guide: true },   // opens the guide, not a card
       {
-        x: cabin.x + 70, y: cabin.y, reach: CABIN_REACH,     // between the door and the mailbox
-        card: { title: 'Reach out', date: 'the cabin', contact: true, linkText: 'send me a message ↗',
+        x: mailbox.x, y: mailbox.y, reach: MAILBOX_REACH,
+        card: { title: 'Reach out', date: 'the mailbox', contact: true, linkText: 'send me a message ↗',
           text: "Got a question, an idea, or just want to say hi? Leave a note in the mailbox and I'll write back." },
       },
+    ];
+    // inside, in the room's screen pixels: in front of each thing, and the doorway
+    const artAt = (x, y) => ({ x: x * PIXEL, y: y * PIXEL });
+    const insideMarks = [
+      { ...artAt(18, 52), reach: 90, card: ABOUT.bio },
+      { ...artAt(138, 56), reach: 90, card: ABOUT.pc },
+      { ...artAt(140, 96), reach: 90, card: { ...ABOUT.arcade, arcade: true, linkText: 'play →' } },
     ];
     let nearest = null;
     let shown = null;
 
-    // E (or clicking the card's link) follows it: the contact form, an email, or a new tab.
+    // E (or clicking the card's link) follows it: the arcade machine, the
+    // contact form, or a new tab (an email too, so a webmail handler like Gmail
+    // doesn't replace the forest).
     function use(c) {
-      if (c.contact) openContact();
-      else if (c.linkUrl?.startsWith('mailto:')) window.location.href = c.linkUrl;
+      if (c.arcade) { keys.clear(); arcade.open(); }
+      else if (c.contact) openContact();
       else if (c.linkUrl) window.open(c.linkUrl, '_blank', 'noopener');
     }
     field('link').addEventListener('click', (e) => {
@@ -1278,7 +1512,7 @@ import { FONT } from './font.js';
     function updateCard() {
       nearest = null;
       let best = Infinity;
-      for (const l of landmarks) {
+      for (const l of inside ? insideMarks : outsideMarks) {
         const d = Math.hypot(player.x - l.x, (player.y - l.y) * 1.5);
         if (d < l.reach && d < best) { best = d; nearest = l; }
       }
@@ -1311,8 +1545,8 @@ import { FONT } from './font.js';
         if (token !== cardToken) return;   // walked on to another tree (or away) meanwhile
         field('title').textContent = c.title;
         field('date').textContent = c.date;
-        field('paths').textContent = c.paths || '';
-        field('paths').hidden = !c.paths;
+        field('tags').textContent = c.tags || '';
+        field('tags').hidden = !c.tags;
         field('text').textContent = c.text;
         field('link').textContent = c.linkText || '';
         field('link').href = c.linkUrl || '#';
@@ -1435,12 +1669,7 @@ import { FONT } from './font.js';
       const px = Math.round((player.x - cx) * dpr) / dpr;
       const py = Math.round((player.y - cy) * dpr) / dpr;
       footShadow(px, py, [4, 6, 4]);
-      things.push({ y: player.y, draw: () => {
-        const frames = character.sprites[player.dir];
-        const sprite = frames[Math.floor(player.anim) % frames.length];
-        ctx.drawImage(sprite, px - (sprite.width * PIXEL) / 2, py - sprite.height * PIXEL + PIXEL,
-          sprite.width * PIXEL, sprite.height * PIXEL);
-      } });
+      things.push({ y: player.y, draw: () => drawPlayer(px, py) });
 
       ctx.globalAlpha = PALETTES.green.shadow_color[3] / 255;
       ctx.drawImage(shadows, 0, 0, w, h);
@@ -1451,9 +1680,46 @@ import { FONT } from './font.js';
       drawArrows(cx, cy);
     }
 
+    // the player's sprite with its feet at screen (x, y)
+    function drawPlayer(x, y) {
+      const frames = character.sprites[player.dir];
+      const sprite = frames[Math.floor(player.anim) % frames.length];
+      ctx.drawImage(sprite, x - (sprite.width * PIXEL) / 2, y - sprite.height * PIXEL + PIXEL,
+        sprite.width * PIXEL, sprite.height * PIXEL);
+    }
+
+    // Inside the cabin: the room in the middle of the screen, or following you
+    // if the screen is smaller than it, with the furniture and you in front-to-back order.
+    function drawRoom() {
+      const offset = (screen, size, at) => (screen >= size ? (screen - size) / 2 : clamp(screen / 2 - at, screen - size, 0));
+      const ox = Math.round(offset(w, room.w, player.x));
+      const oy = Math.round(offset(h, room.h, player.y));
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.imageSmoothingEnabled = false;
+      ctx.fillStyle = '#1d1612';
+      ctx.fillRect(0, 0, w, h);
+      ctx.drawImage(room.floor, ox, oy, room.w, room.h);
+
+      const things = room.furniture.map((f) => ({ y: f.y * PIXEL, draw: () => {
+        const { sprite } = f;
+        ctx.drawImage(sprite, ox + f.x * PIXEL - (sprite.width * PIXEL) / 2, oy + f.y * PIXEL - sprite.height * PIXEL + PIXEL,
+          sprite.width * PIXEL, sprite.height * PIXEL);
+      } }));
+      const px = Math.round((ox + player.x) * dpr) / dpr;
+      const py = Math.round((oy + player.y) * dpr) / dpr;
+      things.push({ y: player.y, draw: () => {
+        ctx.globalAlpha = PALETTES.green.shadow_color[3] / 255;
+        ctx.fillStyle = '#000';
+        [4, 6, 4].forEach((wide, i) => ctx.fillRect(px - (wide / 2) * PIXEL, py + (i - 2) * PIXEL + 4, wide * PIXEL, PIXEL));
+        ctx.globalAlpha = 1;
+        drawPlayer(px, py);
+      } });
+      things.sort((a, b) => a.y - b.y);
+      for (const thing of things) thing.draw();
+    }
+
     // The counter's arrows: a ring around the player pointing at the nearest few
-    // unvisited trees of the chosen kind, in that trail's colour, the closest
-    // biggest. An arrow pointing almost the same way as a nearer one is left
+    // unvisited trees, the closest biggest. An arrow pointing almost the same way as a nearer one is left
     // out, so the ring stays readable. They fade out over the last half second.
     const MAX_ARROWS = 5;
     const MIN_GAP = (15 * Math.PI) / 180;
@@ -1463,13 +1729,13 @@ import { FONT } from './font.js';
       const kind = pointing.kind;
       const px = player.x - cx;
       const py = player.y - cy - 28;          // around the middle of the sprite
-      // the contact button points to the cabin, in the mailbox flag's red
+      // the contact button points to the cabin, in the mailbox flag's red; the counter in the cards' cream
       const toCabin = kind === 'cabin';
-      const [r, g, b] = toCabin ? CABIN.flag : MATERIALS[kind].base;
+      const [r, g, b] = toCabin ? CABIN.flag : [244, 234, 210];
       ctx.save();
       ctx.globalAlpha = Math.min(1, left / 500);
       ctx.lineJoin = 'round';
-      const targets = (toCabin ? [cabin] : trees.filter((t) => !visited.has(t.project.id) && t.project.paths.includes(kind)))
+      const targets = (toCabin ? [cabin] : trees.filter((t) => !visited.has(t.project.id)))
         .map((t) => ({ angle: Math.atan2(t.y - player.y, t.x - player.x), d: Math.hypot(t.x - player.x, t.y - player.y) }))
         .sort((a, b) => a.d - b.d);
       const shown = [];
@@ -1518,7 +1784,20 @@ import { FONT } from './font.js';
 
       updateTrees();
       updateCard();
-      drawScene();
+      if (inside) drawRoom();
+      else drawScene();
+
+      // fade to black, swap scenes, fade back in
+      if (fadeThen) {
+        fade = Math.min(1, fade + dt / FADE_S);
+        if (fade === 1) { fadeThen(); fadeThen = null; }
+      } else {
+        fade = Math.max(0, fade - dt / FADE_S);
+      }
+      if (fade) {
+        ctx.fillStyle = `rgba(0, 0, 0, ${fade})`;
+        ctx.fillRect(0, 0, w, h);
+      }
       requestAnimationFrame(frame);
     }
 

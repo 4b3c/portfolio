@@ -2,7 +2,8 @@
 {% block grid_bg %}rgb(130, 170, 70){% endblock %}
 {% block content %}
 <canvas id="projects" class="fixed inset-0 -z-10"
-        data-grass="{{ url_for('static', filename='img/grass.png') }}"
+        data-grass="{{ url_for('static', filename='img/world/grass.png') }}"
+        data-sprites="{{ url_for('static', filename='img/world/') }}"
         data-projects="{{ url_for('static', filename='data/projects.json') }}"
         data-blocks="{{ url_for('static', filename='img/tetris/shapes.png') }}"></canvas>
 

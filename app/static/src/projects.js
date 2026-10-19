@@ -58,14 +58,14 @@ import { makeArcade } from './tetris.js';
   const CAMERA_EASE = 8;
 
   // --- trails -------------------------------------------------------------
+  // Each trail's look is a seamless texture in img/world/ (sprite), repeated
+  // across the world. Where a trail meets grass its edge goes ragged, in `edge`.
   const MATERIALS = {
     // rounded cobbles set in earth, at grass level
-    path: { style: 'cobble',
-      base: [152, 152, 148], dark: [136, 136, 132], light: [172, 172, 166], gap: [118, 110, 94],
+    path: { sprite: 'path',
       edge: [128, 120, 102] },  // earthy, like the soil between the stones, not a grey shadow
     // the pale packed earth of the clearings at spawn and the cabin
-    trailhead: { style: 'dirt',
-      base: [222, 206, 160], edge: [198, 180, 132], dark: [200, 182, 136], light: [236, 224, 186] },
+    trailhead: { sprite: 'clearing', edge: [198, 180, 132] },
   };
   const MAT_INDEX = Object.fromEntries(Object.keys(MATERIALS).map((k, i) => [k, i]));
   const MAT_NAMES = Object.keys(MATERIALS);
@@ -103,38 +103,20 @@ import { makeArcade } from './tetris.js';
   const SOCIAL_REACH = 80;               // how close to a sign before its card shows
   const WELCOME_REACH = 110;             // how close to the welcome sign before its guide shows
   const CABIN_DISTANCE = 16;             // tiles from spawn, at least: off screen when you start
+  // The cabin itself is img/world/cabin.png; these are the mailbox's colours.
   const CABIN = {
-    ridge: [190, 106, 72, 255], roofLight: [174, 88, 60, 255], roof: [158, 76, 52, 255], roofShade: [142, 66, 46, 255],
-    roofDark: [118, 54, 38, 255], eave: [92, 42, 30, 255],
-    logLight: [178, 122, 72, 255], log: [150, 98, 56, 255], logDark: [112, 72, 40, 255], logEnd: [204, 160, 104, 255],
-    logShadow: [92, 58, 32, 255],                                     // under the eave
-    frame: [70, 44, 24, 255], door: [112, 70, 40, 255], doorShadow: [84, 52, 28, 255], plank: [90, 56, 30, 255],
-    knob: [232, 192, 92, 255], glass: [150, 198, 214, 255], glassShadow: [104, 150, 170, 255], shine: [214, 236, 240, 255],
-    stoneLight: [170, 166, 156, 255], stone: [138, 136, 130, 255], stoneDark: [104, 102, 98, 255],
     mail: [72, 104, 150, 255], mailLight: [106, 140, 184, 255], mailDark: [50, 74, 110, 255], flag: [204, 52, 40, 255],
   };
   const DOOR_HALF = 4;                   // half the door's width, in art pixels: walking up into it goes inside
   const MAILBOX_REACH = 90;              // how close to the mailbox before the "reach out" card shows
 
   // --- inside the cabin ---------------------------------------------------
-  // My workshop, front on like the cabin: the back wall's logs with a window,
-  // a plank floor, and the doorway at the bottom. Each thing in it has
-  // a card about me; the arcade machine plays Don't Get Squished (tetris.js).
-  // Sizes are in art pixels.
-  const CABIN_ROOM = { w: 160, h: 104, wall: 40, door: [72, 87] };   // wall: the back wall's height; door: the doorway's columns
+  // A replica of my high school room, front on like the cabin: the back wall's
+  // logs with a window, a plank floor, and the doorway at the bottom
+  // (img/world/room.png). It's deeper than it is wide, like the real one. Each
+  // thing in it has a card about me. Sizes are in art pixels, and must match room.png.
+  const CABIN_ROOM = { w: 104, h: 160, wall: 36, door: [44, 59] };   // wall: the back wall's height; door: the doorway's columns
   const FADE_S = 0.18;                   // the fade to black going in or out, each way
-  const INSIDE = {
-    plank: [186, 136, 84, 255], plankLight: [200, 152, 98, 255], plankDark: [164, 116, 68, 255], seam: [118, 78, 44, 255],
-    rug: [78, 80, 86, 255], rugLight: [98, 100, 108, 255], rugEdge: [52, 54, 60, 255], mat: [120, 98, 60, 255],   // a rubber shop mat
-    notes: [[244, 226, 140, 255], [236, 172, 172, 255], [170, 202, 236, 255], [244, 240, 230, 255]],
-    books: [[170, 50, 30, 255], [60, 110, 160, 255], [70, 130, 70, 255], [210, 170, 70, 255], [120, 70, 130, 255], [220, 214, 196, 255]],
-    screen: [20, 22, 30, 255], monitor: [52, 52, 62, 255], glow: [110, 180, 210, 255],
-    rgb: [[230, 60, 160, 255], [80, 200, 240, 255], [140, 90, 240, 255]], board: [40, 130, 70, 255], led: [250, 80, 60, 255],
-    cabinet: [64, 44, 96, 255], cabinetLight: [96, 66, 136, 255], cabinetDark: [42, 28, 66, 255], marquee: [232, 192, 92, 255],
-    button: [40, 160, 220, 255],
-    grass: [130, 170, 70, 255],
-  };
-  const TETRIS_COLOURS = [[230, 190, 0, 255], [10, 180, 60, 255], [210, 0, 0, 255], [0, 180, 200, 255]];
 
   // What each thing in the room says about me.
   const ABOUT = {
@@ -152,6 +134,11 @@ import { makeArcade } from './tetris.js';
         'OS: Fedora',
       ].join('\n'),
     },
+    room: {
+      title: 'My high school room', date: 'the bed',
+      text: "This was my room in high school. I built the headboard with an aquarium in it, built the shelves, and built the PC on the desk. My capstone tank is on the desk too.",
+      images: ['/static/img/about/high-school-room.jpg'],
+    },
     arcade: {
       title: 'I also love video games', date: 'the arcade machine',
       text: "Factorio, Minecraft, Cities: Skylines are my favorite. Here's a surprise mini game. A JS port of a C++ game I made.",
@@ -167,38 +154,6 @@ import { makeArcade } from './tetris.js';
     return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
   };
 
-  const STONE = 6;  // art pixels per cobble
-  function nearestStone(wx, wy) {
-    const cx = Math.floor(wx / STONE), cy = Math.floor(wy / STONE);
-    let best = { id: 0, d: Infinity };
-    for (let oy = -1; oy <= 1; oy++) {
-      for (let ox = -1; ox <= 1; ox++) {
-        const sx = (cx + ox) * STONE + 0.5 + hashXY(cx + ox, cy + oy) * (STONE - 1);
-        const sy = (cy + oy) * STONE + 0.5 + hashXY(cy + oy + 101, cx + ox) * (STONE - 1);
-        const d = Math.hypot(wx - sx, wy - sy);
-        if (d < best.d) best = { id: (cx + ox) * 7919 + (cy + oy), d };
-      }
-    }
-    return best;
-  }
-
-  function trailPixel(mat, wx, wy) {
-    const m = MATERIALS[mat];
-    if (m.style === 'cobble') {
-      // Every 6x6 block of art pixels holds one stone centre, jiggled about, and
-      // each pixel belongs to the nearest centre. Where the pixel to the right or
-      // below belongs to a different stone, it's the 1px line of earth between
-      // them, which makes the stones round and uneven.
-      const here = nearestStone(wx, wy);
-      if (nearestStone(wx + 1, wy).id !== here.id || nearestStone(wx, wy + 1).id !== here.id) return m.gap;
-      if (here.d < 1.3) return m.light;        // a soft highlight in the middle of each stone
-      return hashXY(here.id, 37) < 0.35 ? m.dark : m.base;
-    }
-    // dirt: plain, with the odd speck
-    const n = hashXY(wx, wy);
-    return n < 0.04 ? m.dark : n < 0.06 ? m.light : m.base;
-  }
-
   const canvas = document.getElementById('projects');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
@@ -210,6 +165,17 @@ import { makeArcade } from './tetris.js';
 
   const grass = new Image();
   grass.src = canvas.dataset.grass;
+
+  // The pixel art in img/world/, one image pixel per art pixel: edit those
+  // PNGs to change how the trails, the cabin, and the inside of it look.
+  const SPRITE_NAMES = ['path', 'clearing', 'cabin', 'room', 'bookshelf', 'desk', 'arcade', 'bed'];
+  const sprites = {};
+  const spritesLoaded = Promise.all(SPRITE_NAMES.map((name) => {
+    const img = new Image();
+    img.src = `${canvas.dataset.sprites}${name}.png`;
+    sprites[name] = img;
+    return img.decode();
+  }));
 
   // --- map key -------------------------------------------------------------
   for (const el of document.querySelectorAll('[data-leaf]')) {
@@ -414,7 +380,7 @@ import { makeArcade } from './tetris.js';
     }
   });
 
-  // --- the arcade machine (in the cabin) ---------------------------------------
+  // --- the arcade machine (an easter egg in a corner of the map) ---------------
   // Don't Get Squished, in its own overlay. You can't walk while it's open.
   const arcade = makeArcade(document.getElementById('arcade'), canvas.dataset.blocks);
 
@@ -608,7 +574,8 @@ import { makeArcade } from './tetris.js';
   const loaded = fetch(canvas.dataset.projects)
     .then((r) => r.json())
     .then((list) => list.filter((p) => !p.hidden));
-  loaded.then(start);
+  // the world is laid out around the sprites' sizes, so it waits for them too
+  Promise.all([loaded, spritesLoaded]).then(([projects]) => start(projects));
 
   function start(projects) {
     const WORLD_W = COLS * TILE;
@@ -624,12 +591,22 @@ import { makeArcade } from './tetris.js';
       cc = randint(CABIN_CLEARING[0] + 3, COLS - CABIN_CLEARING[0] - 4);
       cr = randint(TOP_ROW, ROWS - CABIN_CLEARING[1] - 4);
     } while (Math.hypot(cc - SPAWN[0], cr - SPAWN[1]) < CABIN_DISTANCE);
-    const cabin = { x: cc * TILE + TILE / 2, y: cr * TILE + TILE - 8, sprite: makeCabin() };
-    const doorX = cabin.x;                        // see makeCabin
+    const cabin = { x: cc * TILE + TILE / 2, y: cr * TILE + TILE - 8, sprite: sprites.cabin };
+    const doorX = cabin.x;                        // the door is in the middle of cabin.png
     const mailbox = { x: cabin.x + 150, y: cabin.y + 4, down: makeMailbox(false), up: makeMailbox(true) };
     // a tree growing just behind one side of the cabin
     const treeSide = Math.random() < 0.5 ? -1 : 1;
     const cabinTreeAt = [cc + 3 * treeSide, cr - 1];
+
+    // --- the arcade machine ---------------------------------------------------
+    // An easter egg out on the grass in one corner of the map, picked at
+    // random (but not the one the cabin's in). Trees keep clear of it.
+    const corners = [[2, 2], [COLS - 3, 2], [2, ROWS - 2], [COLS - 3, ROWS - 2]]
+      .filter(([c, r]) => Math.hypot(c - cc, r - cr) > 14);
+    const [ac, ar] = corners[randint(0, corners.length - 1)];
+    const arcadeMachine = { x: ac * TILE + TILE / 2, y: ar * TILE + TILE - 8, sprite: sprites.arcade };
+    // a tree's trunk below it, and its crown would hide it; one just above is fine
+    const nearArcade = (c, r) => Math.abs(c - ac) <= 7 && r >= ar - 2 && r <= ar + 14;
 
     // --- clearings ----------------------------------------------------------
     // Packed earth around spawn and in front of the cabin, in whole tiles: a
@@ -721,7 +698,7 @@ import { makeArcade } from './tetris.js';
         for (let tries = 0; tries < 500 && !spots.has(p); tries++) {
           const c = clamp(column.get(p) + randint(-X_SHUFFLE, X_SHUFFLE), X0, X1);
           const r = randint(TOP_ROW, ROWS - 4);
-          if (Math.hypot(c - SPAWN[0], r - SPAWN[1]) < SPAWN_CLEARING || nearCabin(c, r)) continue;
+          if (Math.hypot(c - SPAWN[0], r - SPAWN[1]) < SPAWN_CLEARING || nearCabin(c, r) || nearArcade(c, r)) continue;
           const crowded = [...spots].some(([q, [sc, sr]]) => {
             const other = ROOM[q.size] || ROOM.medium;
             return ((c - sc) / ((room[0] + other[0]) * loosen)) ** 2 + ((r - sr) / ((room[1] + other[1]) * loosen)) ** 2 < 1;
@@ -759,6 +736,7 @@ import { makeArcade } from './tetris.js';
     }
     blocked[at(Math.floor(mailbox.x / TILE), cr)] = 1;
     for (const s of socials) blocked[at(Math.floor(s.x / TILE), Math.floor(s.y / TILE))] = 1;
+    blocked[at(ac, ar)] = 1;
 
     // --- trails -------------------------------------------------------------
     // A little random cost on every tile, so two loads don't route identically.
@@ -913,11 +891,22 @@ import { makeArcade } from './tetris.js';
     // Drawn once per tile and cached. Edges go ragged wherever a trail meets
     // grass, letting the grass tile underneath show through.
     const isTrail = (c, r) => inWorld(c, r) && material[at(c, r)] !== -1;
+    // each material's texture as raw pixels, to copy from
+    const textures = MAT_NAMES.map((mat) => {
+      const img = sprites[MATERIALS[mat].sprite];
+      const scratch = document.createElement('canvas');
+      scratch.width = img.naturalWidth;
+      scratch.height = img.naturalHeight;
+      const scratchCtx = scratch.getContext('2d');
+      scratchCtx.drawImage(img, 0, 0);
+      return scratchCtx.getImageData(0, 0, scratch.width, scratch.height);
+    });
     const trailCanvases = new Map();
     function trailTile(c, r) {
       const key = at(c, r);
       if (trailCanvases.has(key)) return trailCanvases.get(key);
       const mat = MAT_NAMES[material[key]];
+      const texture = textures[material[key]];
       const n = TILE / PIXEL;
       const img = new ImageData(n, n);
       const grassUp = !isTrail(c, r - 1), grassDown = !isTrail(c, r + 1);
@@ -931,7 +920,9 @@ import { makeArcade } from './tetris.js';
             grassLeft ? x : n, grassRight ? n - 1 - x : n
           );
           const roll = hashXY(wx + 9001, wy);
-          let colour = trailPixel(mat, wx, wy);
+          // the texture repeats across the world, so neighbouring tiles line up
+          const t = ((wy % texture.height) * texture.width + (wx % texture.width)) * 4;
+          let colour = texture.data.subarray(t, t + 4);
           if (edge === 0) colour = roll < 0.55 ? null : MATERIALS[mat].edge;
           else if (edge === 1 && roll < 0.35) colour = MATERIALS[mat].edge;
           if (colour) img.data.set(rgba(colour), (y * n + x) * 4);
@@ -978,98 +969,6 @@ import { makeArcade } from './tetris.js';
       return toCanvas(outline(img, SIGN.outline));
     }
 
-    // A log cabin, front on, with its gable end facing you. The roof's two
-    // slopes run back from the peaked front edge to a ridge, so you see its
-    // depth (like the houses in Stardew Valley): the left slope in light, the
-    // right in shade. Under the front edge, the gable has a little window; the
-    // wall below has a door in the middle between two windows. The door's
-    // middle is the sprite's middle (doorX).
-    function makeCabin() {
-      const W = 64, H = 58;
-      const PEAK = [31.5, 14];                     // the top of the roof's front edge
-      const SLOPE = 0.75;                          // rows down per column out from the peak
-      const DEPTH = 12;                            // how far back the roof runs, in rows
-      const WALL = [5, 58];                        // the wall's columns
-      const img = new ImageData(W + 2, H + 2);     // 1px border for the outline
-      const set = (x, y, colour) => img.data.set(colour, ((y + 1) * img.width + x + 1) * 4);
-      const box = (x0, y0, x1, y1, colour) => {
-        for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) set(x, y, colour);
-      };
-      const front = (x) => Math.floor(PEAK[1] + Math.abs(x - PEAK[0]) * SLOPE);   // the roof's front edge in column x
-      const stone = (x, y, light) => (hashXY(x, y + 77) < 0.3 ? CABIN.stoneDark : light ? CABIN.stoneLight : CABIN.stone);
-
-      // the wall, gable and all, in logs, shaded just under the roof
-      for (let x = WALL[0]; x <= WALL[1]; x++) {
-        for (let y = front(x) + 3; y <= 55; y++) {
-          const shaded = y <= front(x) + 4;
-          set(x, y, shaded ? CABIN.logShadow : [CABIN.logLight, CABIN.log, CABIN.logDark][y % 3]);
-        }
-      }
-      // log ends poking out at the corners, under the eaves
-      for (let y = 40; y <= 55; y++) {
-        for (const x of [3, 4, WALL[1] + 1, WALL[1] + 2]) set(x, y, y % 3 === 2 ? CABIN.logDark : CABIN.logEnd);
-      }
-      for (let x = 3; x <= WALL[1] + 2; x++) {    // the foundation
-        set(x, 56, stone(x, 56, true));
-        set(x, 57, stone(x, 57, false));
-      }
-
-      // the roof: each slope in courses running back from the front edge, with
-      // staggered seams; a light ridge down the middle; a dark board along the front
-      for (let x = 0; x < W; x++) {
-        const lit = x < 32;
-        for (let y = front(x) - DEPTH; y < front(x); y++) {
-          const back = front(x) - 1 - y;            // rows back from the front edge
-          const course = Math.floor(back / 3);
-          let colour = lit ? CABIN.roof : CABIN.roofShade;
-          if (back % 3 === 2) colour = lit ? CABIN.roofDark : CABIN.eave;
-          else if (back % 3 === 0) colour = lit ? CABIN.roofLight : CABIN.roof;
-          else if ((x + course * 3) % 6 === 0) colour = lit ? CABIN.roofDark : CABIN.eave;
-          if (x === 31 || x === 32) colour = lit ? CABIN.ridge : CABIN.roofLight;
-          set(x, y, colour);
-        }
-        set(x, front(x), CABIN.roofDark);
-        set(x, front(x) + 1, CABIN.eave);
-        set(x, front(x) + 2, CABIN.eave);
-      }
-
-      // the chimney, standing on the lit slope: a lit front, a shaded side, a dark cap
-      for (let y = 3; y <= 17; y++) {
-        for (let x = 15; x <= 20; x++) set(x, y, y <= 4 || x >= 19 ? CABIN.stoneDark : stone(x, y, true));
-      }
-
-      // windows, set in: shade along the top and left of the glass, a glint, a sill
-      const windowAt = (x0, y0, w, h, sill) => {
-        box(x0, y0, x0 + w - 1, y0 + h - 1, CABIN.frame);
-        box(x0 + 1, y0 + 1, x0 + w - 2, y0 + h - 2, CABIN.glass);
-        box(x0 + 1, y0 + 1, x0 + w - 2, y0 + 1, CABIN.glassShadow);
-        box(x0 + 1, y0 + 1, x0 + 1, y0 + h - 2, CABIN.glassShadow);
-        const mx = x0 + Math.floor(w / 2), my = y0 + Math.floor(h / 2);
-        box(mx, y0 + 1, mx, y0 + h - 2, CABIN.frame);
-        box(x0 + 1, my, x0 + w - 2, my, CABIN.frame);
-        set(mx + 2, my - 2, CABIN.shine);
-        if (!sill) return;
-        box(x0 - 1, y0 + h, x0 + w, y0 + h, CABIN.logEnd);
-        box(x0, y0 + h + 1, x0 + w - 1, y0 + h + 1, CABIN.logShadow);
-      };
-      windowAt(9, 40, 10, 9, true);
-      windowAt(45, 40, 10, 9, true);
-      windowAt(28, 23, 8, 8, false);               // up in the gable
-
-      // the door, set in, in planks, with a brass knob and a stone step
-      box(27, 39, 36, 55, CABIN.frame);
-      box(28, 40, 35, 55, CABIN.door);
-      box(28, 40, 35, 40, CABIN.doorShadow);
-      box(28, 40, 28, 55, CABIN.doorShadow);
-      box(31, 41, 31, 55, CABIN.plank);
-      box(34, 41, 34, 55, CABIN.plank);
-      set(33, 48, CABIN.knob);
-      box(25, 56, 38, 56, CABIN.stoneLight);
-      box(24, 57, 39, 57, CABIN.stone);
-
-      return toCanvas(outline(img, SIGN.outline));
-    }
-
     // A mailbox on a post, its red flag up once you've sent a note.
     function makeMailbox(flagUp) {
       const W = 10, H = 15;
@@ -1092,163 +991,6 @@ import { makeArcade } from './tetris.js';
         set(8, 5, SIGN.border);
         set(8, 4, CABIN.flag); set(9, 4, CABIN.flag);
       }
-      return toCanvas(outline(img, SIGN.outline));
-    }
-
-    // The inside of the cabin, everything that doesn't stand on the floor: the
-    // back wall in logs with a window;
-    // the plank floor with a rug; the side walls; and the front wall with the
-    // doorway, grass showing through it.
-    function makeRoom() {
-      const { w: W, h: H, wall: WALL, door: DOOR } = CABIN_ROOM;
-      const img = new ImageData(W, H);
-      const set = (x, y, colour) => img.data.set(colour, (y * W + x) * 4);
-      const box = (x0, y0, x1, y1, colour) => {
-        for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) set(x, y, colour);
-      };
-
-      // the back wall's logs, shaded under the ceiling, and a baseboard
-      for (let y = 0; y < WALL; y++) {
-        for (let x = 0; x < W; x++) set(x, y, y < 3 ? CABIN.logShadow : [CABIN.logLight, CABIN.log, CABIN.logDark][y % 3]);
-      }
-      box(0, WALL, W - 1, WALL + 1, CABIN.frame);
-
-      // the floor: planks six rows wide, their ends staggered, with the odd darker board
-      for (let y = WALL + 2; y < H; y++) {
-        const plank = Math.floor((y - WALL - 2) / 6);
-        for (let x = 0; x < W; x++) {
-          const end = (x + plank * 11) % 27 === 0;
-          const shade = hashXY(Math.floor((x + plank * 11) / 27), plank);
-          let colour = shade < 0.25 ? INSIDE.plankDark : shade > 0.8 ? INSIDE.plankLight : INSIDE.plank;
-          if ((y - WALL - 2) % 6 === 5 || end) colour = INSIDE.seam;
-          set(x, y, colour);
-        }
-      }
-
-      // a rug in the middle, with a border and a band of light near its edge
-      const rug = [52, 58, 107, 86];
-      for (let y = rug[1]; y <= rug[3]; y++) {
-        for (let x = rug[0]; x <= rug[2]; x++) {
-          const inset = Math.min(x - rug[0], rug[2] - x, y - rug[1], rug[3] - y);
-          set(x, y, inset === 0 ? INSIDE.rugEdge : inset === 2 ? INSIDE.rugLight : INSIDE.rug);
-        }
-      }
-      box(DOOR[0] + 2, H - 9, DOOR[1] - 2, H - 5, INSIDE.mat);   // the doormat
-
-      // the side walls, and the front wall either side of the doorway
-      box(0, 0, 3, H - 1, CABIN.logDark);
-      box(W - 4, 0, W - 1, H - 1, CABIN.logDark);
-      box(4, 3, 4, H - 1, CABIN.logShadow);
-      box(W - 5, 3, W - 5, H - 1, CABIN.logShadow);
-      for (let y = H - 4; y < H; y++) {
-        for (let x = 0; x < W; x++) set(x, y, x >= DOOR[0] && x <= DOOR[1] ? INSIDE.grass : y === H - 4 ? CABIN.logLight : CABIN.log);
-      }
-      box(DOOR[0] - 1, H - 4, DOOR[0] - 1, H - 1, CABIN.frame);
-      box(DOOR[1] + 1, H - 4, DOOR[1] + 1, H - 1, CABIN.frame);
-
-      // the window, set in like the cabin's, in the middle of the back wall
-      const wx = 70, wy = 9, ww = 20, wh = 15;
-      box(wx, wy, wx + ww - 1, wy + wh - 1, CABIN.frame);
-      box(wx + 1, wy + 1, wx + ww - 2, wy + wh - 2, CABIN.glass);
-      box(wx + 1, wy + 1, wx + ww - 2, wy + 1, CABIN.glassShadow);
-      box(wx + 1, wy + 1, wx + 1, wy + wh - 2, CABIN.glassShadow);
-      box(wx + ww / 2, wy + 1, wx + ww / 2, wy + wh - 2, CABIN.frame);
-      box(wx + 1, wy + 7, wx + ww - 2, wy + 7, CABIN.frame);
-      set(wx + ww / 2 + 3, wy + 4, CABIN.shine);
-      set(wx + ww / 2 + 4, wy + 3, CABIN.shine);
-      box(wx - 1, wy + wh, wx + ww, wy + wh, CABIN.logEnd);
-
-      return toCanvas(img);
-    }
-
-    // A bookshelf: three shelves of books, all different heights and colours.
-    function makeBookshelf() {
-      const W = 24, H = 36;
-      const img = new ImageData(W + 2, H + 2);
-      const set = (x, y, colour) => img.data.set(colour, ((y + 1) * img.width + x + 1) * 4);
-      for (let y = 0; y < H; y++) {
-        for (let x = 0; x < W; x++) {
-          const side = x < 2 || x >= W - 2 || y < 2;
-          set(x, y, side ? CABIN.log : y % 11 >= 9 ? CABIN.logLight : CABIN.doorShadow);
-        }
-      }
-      for (let shelf = 0; shelf < 3; shelf++) {
-        const floor = shelf * 11 + 8;     // the row each shelf's books stand on
-        let x = 2 + Math.floor(hashXY(shelf, 3) * 2);
-        for (let i = 0; x < W - 3; i++) {
-          const wide = 2 + (hashXY(shelf, i) < 0.4 ? 1 : 0);
-          const tall = 5 + Math.floor(hashXY(i, shelf + 9) * 3);
-          const colour = INSIDE.books[Math.floor(hashXY(i * 3, shelf * 7) * INSIDE.books.length)];
-          for (let y = floor - tall + 1; y <= floor; y++) {
-            for (let dx = 0; dx < wide; dx++) set(x + dx, y, y === floor - tall + 2 ? CABIN.logEnd : colour);
-          }
-          x += wide + (hashXY(i, shelf) < 0.2 ? 1 : 0);
-        }
-      }
-      return toCanvas(outline(img, SIGN.outline));
-    }
-
-    // My desk: the monitor, the PC I built with its fans lit up, and a
-    // breadboard with an LED on it.
-    function makeDesk() {
-      const W = 32, H = 24;
-      const img = new ImageData(W + 2, H + 2);
-      const set = (x, y, colour) => img.data.set(colour, ((y + 1) * img.width + x + 1) * 4);
-      const box = (x0, y0, x1, y1, colour) => {
-        for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) set(x, y, colour);
-      };
-      // the monitor on its stand
-      box(9, 0, 22, 9, INSIDE.monitor);
-      box(10, 1, 21, 8, INSIDE.screen);
-      for (let y = 2; y <= 7; y += 2) box(11, y, 11 + 3 + Math.floor(hashXY(y, 4) * 7), y, INSIDE.glow);   // lines of code
-      box(15, 10, 16, 11, INSIDE.monitor);
-      box(13, 11, 18, 11, INSIDE.monitor);
-      // the tower, its glass side showing three lit fans
-      box(24, 0, 31, 11, INSIDE.monitor);
-      box(25, 1, 29, 10, INSIDE.screen);
-      [2, 5, 8].forEach((y, i) => box(26, y, 28, y + 1, INSIDE.rgb[i]));
-      set(30, 2, INSIDE.glow);                              // the power light
-      // the breadboard, with an LED and a couple of wires
-      box(0, 9, 6, 11, INSIDE.board);
-      set(2, 8, INSIDE.led);
-      set(1, 10, INSIDE.rgb[1]);
-      set(4, 10, INSIDE.notes[0]);
-      // the desktop, and the front with drawers on legs
-      box(0, 12, W - 1, 13, CABIN.logEnd);
-      box(0, 14, W - 1, 14, CABIN.logLight);
-      box(1, 15, W - 2, 19, CABIN.log);
-      box(2, 15, 2, H - 1, CABIN.logDark);
-      box(W - 3, 15, W - 3, H - 1, CABIN.logDark);
-      box(19, 16, 27, 18, CABIN.logLight);                  // a drawer
-      set(23, 17, CABIN.knob);
-      return toCanvas(outline(img, SIGN.outline));
-    }
-
-    // An arcade machine with a game of Tetris on its screen.
-    function makeArcadeMachine() {
-      const W = 18, H = 34;
-      const img = new ImageData(W + 2, H + 2);
-      const set = (x, y, colour) => img.data.set(colour, ((y + 1) * img.width + x + 1) * 4);
-      const box = (x0, y0, x1, y1, colour) => {
-        for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) set(x, y, colour);
-      };
-      box(0, 0, W - 1, H - 1, INSIDE.cabinet);
-      box(0, 0, 1, H - 1, INSIDE.cabinetLight);             // the lit side
-      box(W - 2, 0, W - 1, H - 1, INSIDE.cabinetDark);
-      box(2, 2, W - 3, 6, INSIDE.marquee);                  // the sign on top
-      box(5, 4, W - 6, 4, CABIN.flag);
-      box(3, 9, W - 4, 19, INSIDE.cabinetDark);
-      box(4, 10, W - 5, 18, INSIDE.screen);
-      // a few pieces stacked up on the screen
-      [[5, 17, 0], [6, 17, 0], [7, 17, 1], [8, 17, 1], [8, 16, 1], [10, 17, 3], [11, 17, 3], [12, 17, 2], [11, 16, 2],
-        [7, 12, 3], [8, 12, 3], [8, 13, 3]].forEach(([x, y, k]) => set(x, y, TETRIS_COLOURS[k]));
-      box(1, 21, W - 2, 23, INSIDE.cabinetLight);           // the control panel
-      set(5, 21, CABIN.flag);                               // the joystick
-      set(5, 22, INSIDE.cabinetDark);
-      set(10, 22, INSIDE.button);
-      set(12, 22, INSIDE.marquee);
-      box(3, 26, W - 4, 27, INSIDE.cabinetDark);            // the coin slot
-      set(W / 2 - 1, 26, INSIDE.marquee);
       return toCanvas(outline(img, SIGN.outline));
     }
 
@@ -1333,15 +1075,19 @@ import { makeArcade } from './tetris.js';
     // --- inside the cabin -------------------------------------------------------
     // The room has its own coordinates, in screen pixels from its top-left. The
     // furniture stands with its feet at (x, y), in art pixels, and keeps you off
-    // its footprint (`blocks`, art pixels: x0, y0, x1, y1).
+    // its footprint (`blocks`, art pixels: x0, y0, x1, y1). Something long like
+    // the bed sorts by where its back stands (`back`), so you're in front of it
+    // when you walk alongside.
     const room = {
-      floor: makeRoom(),
+      floor: sprites.room,
       w: CABIN_ROOM.w * PIXEL,
       h: CABIN_ROOM.h * PIXEL,
       furniture: [
-        { sprite: makeBookshelf(), x: 18, y: 47, blocks: [5, 40, 31, 47] },
-        { sprite: makeDesk(), x: 138, y: 51, blocks: [121, 40, 155, 51] },
-        { sprite: makeArcadeMachine(), x: 146, y: 92, blocks: [136, 84, 156, 92] },
+        // laid out like my real room: the bed's headboard against the back wall
+        // left of the window, the desk along the right wall, its shelf above it
+        { sprite: sprites.bed, x: 18, y: 75, back: 39, blocks: [4, 36, 31, 75] },
+        { sprite: sprites.desk, x: 89, y: 90, back: 39, blocks: [78, 36, 99, 90] },
+        { sprite: sprites.bookshelf, x: 14, y: 120, blocks: [4, 112, 23, 120] },
       ],
     };
     let inside = false;
@@ -1442,7 +1188,8 @@ import { makeArcade } from './tetris.js';
       pushOut(trailSign.x, trailSign.y, 6 + PLAYER_RADIUS);
       for (const s of socials) pushOut(s.x, s.y, 6 + PLAYER_RADIUS);
       pushOut(mailbox.x, mailbox.y, 6 + PLAYER_RADIUS);
-      pushOutBox(cabin.x - 108 - PLAYER_RADIUS, cabin.y - 40, cabin.x + 108 + PLAYER_RADIUS, cabin.y + PLAYER_RADIUS / 2);
+      pushOutBox(cabin.x - 108 - PLAYER_RADIUS, cabin.y - 60, cabin.x + 108 + PLAYER_RADIUS, cabin.y + PLAYER_RADIUS / 2);
+      pushOutBox(arcadeMachine.x - 36 - PLAYER_RADIUS, arcadeMachine.y - 24, arcadeMachine.x + 36 + PLAYER_RADIUS, arcadeMachine.y + PLAYER_RADIUS / 2);
       // walking up into the door goes straight in
       if (dy < 0 && Math.abs(player.x - doorX) < DOOR_HALF * PIXEL && player.y <= cabin.y + PLAYER_RADIUS / 2) goInside();
       player.x = clamp(player.x, 16, WORLD_W - 16);
@@ -1479,13 +1226,14 @@ import { makeArcade } from './tetris.js';
         card: { title: 'Reach out', date: 'the mailbox', contact: true, linkText: 'send me a message ↗',
           text: "Got a question, an idea, or just want to say hi? Leave a note in the mailbox and I'll write back." },
       },
+      { x: arcadeMachine.x, y: arcadeMachine.y, reach: 110, card: { ...ABOUT.arcade, arcade: true, linkText: 'play →' } },
     ];
     // inside, in the room's screen pixels: in front of each thing, and the doorway
     const artAt = (x, y) => ({ x: x * PIXEL, y: y * PIXEL });
     const insideMarks = [
-      { ...artAt(18, 52), reach: 90, card: ABOUT.bio },
-      { ...artAt(138, 56), reach: 90, card: ABOUT.pc },
-      { ...artAt(140, 96), reach: 90, card: { ...ABOUT.arcade, arcade: true, linkText: 'play →' } },
+      { ...artAt(14, 125), reach: 90, card: ABOUT.bio },
+      { ...artAt(36, 62), reach: 90, card: ABOUT.room },     // beside the bed
+      { ...artAt(72, 62), reach: 90, card: ABOUT.pc },       // where the chair would be
     ];
     let nearest = null;
     let shown = null;
@@ -1651,6 +1399,7 @@ import { makeArcade } from './tetris.js';
       };
       stand(trailSign.sign, trailSign.x, trailSign.y, [3, 5]);
       stand(cabin.sprite, cabin.x, cabin.y, [60, 64]);
+      stand(arcadeMachine.sprite, arcadeMachine.x, arcadeMachine.y, [16, 18]);
       stand(mailSent ? mailbox.up : mailbox.down, mailbox.x, mailbox.y, [3, 5]);
       for (const s of socials) stand(s.sign, s.x, s.y, [3, 5]);
       for (const t of allTrees) {
@@ -1700,7 +1449,7 @@ import { makeArcade } from './tetris.js';
       ctx.fillRect(0, 0, w, h);
       ctx.drawImage(room.floor, ox, oy, room.w, room.h);
 
-      const things = room.furniture.map((f) => ({ y: f.y * PIXEL, draw: () => {
+      const things = room.furniture.map((f) => ({ y: (f.back ?? f.y) * PIXEL, draw: () => {
         const { sprite } = f;
         ctx.drawImage(sprite, ox + f.x * PIXEL - (sprite.width * PIXEL) / 2, oy + f.y * PIXEL - sprite.height * PIXEL + PIXEL,
           sprite.width * PIXEL, sprite.height * PIXEL);

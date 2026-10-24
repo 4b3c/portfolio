@@ -107,6 +107,7 @@ export function layTrails(world, projects) {
   const [first, next] = walk;
   const out = next && next.at[0] > first.at[0] ? -1 : 1;
   let here = [clamp(first.at[0] + out * first.reach, 0, COLS - 1), first.at[1]];
+  if (!world.isLand(...here)) here = first.at;   // not out at sea
   for (const s of walk) here = route(here, s.at, s.reach);
 
   // And a path from the trailhead out to the cabin, routed last so it
@@ -126,7 +127,7 @@ export function layTrails(world, projects) {
           const i = at(c, r), n = [c + step[0], r + step[1]];
           if (core[i] !== 2 || blocked[i] || depthIn(cabinClearing, c, r) >= EDGE[0]) continue;   // the solid middle
           if (!inWorld(...n) || blocked[at(...n)] || depthIn(cabinClearing, ...n) < EDGE[0]) continue;   // facing out of it
-          if (strict && (across ? r < cr : Math.abs(c - cc) <= 2)) continue;    // not behind the cabin, or right by it
+          if (strict && c + r <= cc + cr + 2) continue;    // not behind the cabin (up the screen from it), or right by it
           edges.push([c, r]);
         }
       }

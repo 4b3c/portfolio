@@ -7,6 +7,8 @@ from email.message import EmailMessage
 
 from flask import Blueprint, current_app, jsonify, redirect, render_template, request, url_for
 
+from . import visits
+
 main = Blueprint("main", __name__)
 
 @main.route("/")
@@ -81,6 +83,7 @@ def contact():
     except Exception:
         current_app.logger.exception("contact form: couldn't send a note")
         return jsonify(ok=False, error="The mailbox is stuck. Try again later?"), 500
+    visits.link(form.get("visitor"), name, email)     # now we know who that visitor is
     return jsonify(ok=True)
 
 

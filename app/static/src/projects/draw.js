@@ -1,5 +1,6 @@
 // Drawing the forest: the ground, then everything standing on it (signs,
 // the cabin, trees, you) from back to front, with their shadows underneath.
+// Back to front is up the screen to down it, by where their feet land (iso.js).
 import { PIXEL, PALETTES } from './config.js';
 import { ctx, dpr } from './dom.js';
 import { cam, view } from './camera.js';
@@ -8,6 +9,7 @@ import { player } from './player.js';
 import { drawGround } from './ground.js';
 import { boxLeft, boxTop, onScreen } from './trees.js';
 import { drawArrows } from './arrows.js';
+import { toScreen } from './iso.js';
 
 // Shadows share one layer, so where two overlap it doesn't get darker.
 const shadows = document.createElement('canvas');
@@ -47,19 +49,47 @@ export function drawScene(world) {
   shadowsCtx.imageSmoothingEnabled = false;
   shadowsCtx.fillStyle = '#000';
   const things = [];
-  // a sprite standing with its feet at world (x, y), with a little shadow
-  const stand = (sprite, x, y, shadow) => {
-    const sx = x - cx, sy = y - cy;
-    if (sx < -300 || sx > w + 300 || sy < -100 || sy > h + 200) return;
+  const { trailSign, cabin, arcadeMachine, mailbox, socials, allTrees } = world;
+  // Things are drawn in order of how far down the screen their feet are. But
+  // the cabin and the arcade machine stand on a box of ground with their feet
+  // at its front corner: something beside one of its front walls is in front
+  // of it, even with its feet higher up the screen than that corner. `half` is
+  // how far either side of its feet the thing reaches, on screen.
+  const depth = (x, y, half) => {
+    const s = toScreen(x, y);
+    let d = s.y;
+    for (const b of [cabin, arcadeMachine]) {
+      const bs = toScreen(b.x, b.y);
+      const left = bs.x - (b.foot ? b.foot[0] : b.sprite.width / 2) * PIXEL;
+      const beside = s.x + half > left && s.x - half < left + b.sprite.width * PIXEL;
+      if ((x > b.x || y > b.y) && beside) d = Math.max(d, bs.y + 0.5);
+    }
+    return d;
+  };
+  // a sprite standing with its feet at world (x, y), with a little shadow;
+  // `foot` is where its feet are in it, in art pixels, if not the bottom middle
+  const stand = (sprite, x, y, shadow, foot = [sprite.width / 2, sprite.height - 1]) => {
+    const s = toScreen(x, y);
+    const sx = s.x - cx, sy = s.y - cy;
+    if (sx < -400 || sx > w + 400 || sy < -100 || sy > h + 300) return;
     footShadow(sx, sy, shadow);
-    things.push({ y, draw: () => {
-      ctx.drawImage(sprite, sx - (sprite.width * PIXEL) / 2, sy - sprite.height * PIXEL + PIXEL,
+    things.push({ y: depth(x, y, (sprite.width * PIXEL) / 2), draw: () => {
+      ctx.drawImage(sprite, sx - foot[0] * PIXEL, sy - foot[1] * PIXEL,
         sprite.width * PIXEL, sprite.height * PIXEL);
     } });
   };
-  const { trailSign, cabin, arcadeMachine, mailbox, socials, allTrees } = world;
+  // the cabin's shadow: its box of ground, a little bigger toward the front
+  const corner = (dx, dy) => {
+    const s = toScreen(cabin.x + dx, cabin.y + dy);
+    return [Math.round(s.x - cx), Math.round(s.y - cy)];
+  };
+  shadowsCtx.beginPath();
+  for (const [dx, dy] of [[-cabin.size[0], -cabin.size[1]], [12, -cabin.size[1]], [12, 12], [-cabin.size[0], 12]]) {
+    shadowsCtx.lineTo(...corner(dx, dy));
+  }
+  shadowsCtx.fill();
   stand(trailSign.sign, trailSign.x, trailSign.y, [3, 5]);
-  stand(cabin.sprite, cabin.x, cabin.y, [60, 64]);
+  stand(cabin.sprite, cabin.x, cabin.y, [], cabin.foot);
   stand(arcadeMachine.sprite, arcadeMachine.x, arcadeMachine.y, [16, 18]);
   stand(state.mailSent ? mailbox.up : mailbox.down, mailbox.x, mailbox.y, [3, 5]);
   for (const s of socials) stand(s.sign, s.x, s.y, [3, 5]);
@@ -70,16 +100,17 @@ export function drawScene(world) {
     const top = boxTop(t) - cy;
     const { shadow, shadowY, branches, leaves } = t.layers;
     shadowsCtx.drawImage(shadow, left, top + shadowY, shadow.width * PIXEL, shadow.height * PIXEL);
-    things.push({ y: t.y, draw: () => {
+    things.push({ y: depth(t.x, t.y, 16), draw: () => {
       ctx.drawImage(branches, left, top, branches.width * PIXEL, branches.height * PIXEL);
       ctx.drawImage(leaves, left, top, leaves.width * PIXEL, leaves.height * PIXEL);
     } });
   }
   // the player is drawn where they really are, rounded only to a screen pixel
-  const px = Math.round((player.x - cx) * dpr) / dpr;
-  const py = Math.round((player.y - cy) * dpr) / dpr;
+  const p = toScreen(player.x, player.y);
+  const px = Math.round((p.x - cx) * dpr) / dpr;
+  const py = Math.round((p.y - cy) * dpr) / dpr;
   footShadow(px, py, [4, 6, 4]);
-  things.push({ y: player.y, draw: () => drawPlayer(px, py) });
+  things.push({ y: depth(player.x, player.y, 24), draw: () => drawPlayer(px, py) });
 
   ctx.globalAlpha = PALETTES.green.shadow_color[3] / 255;
   ctx.drawImage(shadows, 0, 0, w, h);

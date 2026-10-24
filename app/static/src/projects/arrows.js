@@ -4,11 +4,14 @@ import { CABIN } from './config.js';
 import { ctx } from './dom.js';
 import { player } from './player.js';
 import { visited } from './cards.js';
+import { toScreen } from './iso.js';
+import { track } from './visits.js';
 
 const POINT_MS = 3000;
 let pointing = { kind: null, until: 0 };
 document.querySelectorAll('[data-point]').forEach((b) => b.addEventListener('click', () => {
   pointing = { kind: b.dataset.point, until: performance.now() + POINT_MS };
+  track('arrows', b.dataset.point);
   b.blur();   // so the arrow keys go back to walking
 }));
 
@@ -21,8 +24,9 @@ export function drawArrows(world, cx, cy) {
   const left = pointing.until - performance.now();
   if (left <= 0) return;
   const kind = pointing.kind;
-  const px = player.x - cx;
-  const py = player.y - cy - 28;          // around the middle of the sprite
+  const p = toScreen(player.x, player.y);
+  const px = p.x - cx;
+  const py = p.y - cy - 28;               // around the middle of the sprite
   // the contact button points to the cabin, in the mailbox flag's red; the counter in the cards' cream
   const toCabin = kind === 'cabin';
   const [r, g, b] = toCabin ? CABIN.flag : [244, 234, 210];
@@ -30,7 +34,8 @@ export function drawArrows(world, cx, cy) {
   ctx.globalAlpha = Math.min(1, left / 500);
   ctx.lineJoin = 'round';
   const targets = (toCabin ? [world.cabin] : world.trees.filter((t) => !visited.has(t.project.id)))
-    .map((t) => ({ angle: Math.atan2(t.y - player.y, t.x - player.x), d: Math.hypot(t.x - player.x, t.y - player.y) }))
+    .map((t) => ({ to: toScreen(t.x - player.x, t.y - player.y), d: Math.hypot(t.x - player.x, t.y - player.y) }))
+    .map(({ to, d }) => ({ angle: Math.atan2(to.y, to.x), d }))   // the way it is on screen
     .sort((a, b) => a.d - b.d);
   const shown = [];
   for (const t of targets) {

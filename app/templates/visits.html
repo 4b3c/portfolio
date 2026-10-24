@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block grid_bg %}rgb(56, 104, 146){% endblock %}
+{% block content %}
+<!-- Who's been by (app/visits.py). Each visitor opens up into their visits, and each visit into what they did. -->
+{% set panel = "rounded border-4 border-[#28201e] bg-[#f4ead2] text-[#28201e] shadow-[6px_6px_0_rgba(0,0,0,0.25)]" %}
+<div class="{{ panel }} p-4">
+  <h1 class="text-2xl font-bold">Visits</h1>
+  <p class="text-sm opacity-70">
+    {{ totals.visitors or 0 }} visitors, {{ totals.visits or 0 }} visits, {{ totals.known or 0 }} reached out.
+    Newest first; times are the server's.
+  </p>
+  {% if tried %}
+  <h2 class="mt-3 font-bold">Most tried</h2>
+  <ul class="mt-1 grid gap-x-6 text-sm sm:grid-cols-2">
+    {% for t in tried %}
+    <li class="truncate"><span class="opacity-60">{{ t.kind }}</span> {{ t.detail }} <b>×{{ t.n }}</b></li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+</div>
+
+{% for v in visitors %}
+<details class="{{ panel }} mt-4 p-4">
+  <summary class="cursor-pointer">
+    <b>{{ v.name or "someone" }}</b>{% if v.email %} &lt;<a class="underline" href="mailto:{{ v.email }}">{{ v.email }}</a>&gt;{% endif %}
+    <span class="text-sm opacity-70">
+      · {{ v.visits }} visit{{ "s" if v.visits != 1 }} · {{ v.active_ms | duration }} on screen
+      · last {{ v.last_seen | when }}
+      {% if v.visit_list %}· {{ v.visit_list[0].browser }} on {{ v.visit_list[0].system }}, {{ v.visit_list[0].timezone }}{% endif %}
+    </span>
+  </summary>
+  <p class="mt-2 text-xs opacity-50">visitor {{ v.id }} · first seen {{ v.first_seen | when }}</p>
+  {% for x in v.visit_list %}
+  <div class="mt-3 border-t-2 border-[#28201e]/20 pt-2 text-sm">
+    <p>
+      <b>{{ x.started | when }}</b> · {{ x.active_ms | duration }}
+      · {{ x.device }}, {{ x.browser }} on {{ x.system }}, {{ x.screen }} (window {{ x.window }})
+      · {{ x.language }}, {{ x.timezone }}
+      {% if x.before %}· their visit #{{ x.before + 1 }} from this browser{% endif %}
+    </p>
+    <p class="opacity-70">from {{ x.referrer or "nowhere (typed it, or a bookmark)" }} · landed on {{ x.path }}</p>
+    {% if x.events %}
+    <ol class="mt-1 flex flex-wrap gap-1">
+      {% for e in x.events %}
+      <li class="rounded bg-white px-1.5 text-xs" title="{{ (e.at_ms / 1000) | round(1) }}s in">{{ e.kind }}{% if e.detail %}: {{ e.detail }}{% endif %}</li>
+      {% endfor %}
+    </ol>
+    {% endif %}
+  </div>
+  {% endfor %}
+</details>
+{% else %}
+<p class="{{ panel }} mt-4 p-4">No one yet.</p>
+{% endfor %}
+{% endblock %}

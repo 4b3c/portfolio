@@ -9,12 +9,16 @@ export const {
 
 // --- world ------------------------------------------------------------
 export const TILE = 64;
-export const COLS = 72;
-export const ROWS = 52;
+export const COLS = 80;
+export const ROWS = 60;
 export const WORLD_W = COLS * TILE;
 export const WORLD_H = ROWS * TILE;
 export const at = (c, r) => r * COLS + c;                          // a tile's index in the world's arrays
 export const inWorld = (c, r) => c >= 0 && r >= 0 && c < COLS && r < ROWS;
+// The forest is an island in the middle of the grid, sea all round it (layout.js).
+// Its shore is `radius` of the way from the middle to the grid's edge, pushed
+// in and out by up to about `wobble` in a few waves, different every load.
+export const ISLAND = { radius: 0.8, wobble: 0.08 };
 export const SPAWN = [COLS / 2, ROWS / 2];    // where the player starts
 export const SPAWN_CLEARING = 7;              // no trees within this many tiles of it
 // How much room each size of tree keeps around its trunk (cols, rows): two
@@ -22,7 +26,7 @@ export const SPAWN_CLEARING = 7;              // no trees within this many tiles
 export const ROOM = {
   huge: [6.5, 4], large: [5, 3], medium: [4, 2.5], small: [3, 2], tiny: [2.5, 1.5],
 };
-export const TOP_ROW = 13;                    // the tallest trees need ~11 rows of sky above them
+export const SKY = 640;                       // how far above the world's top corner the camera can go: room for the tallest trees there
 
 // Bigger trees than the forest page: longer branches that shrink more slowly
 // with age (falloff), and a bigger box to draw them in. Each project's seed and
@@ -97,17 +101,26 @@ export const SOCIALS = [
   { sign: 'INSTAGRAM', title: 'Instagram', note: "What I'm up to.", url: 'https://www.instagram.com/abrammonia/' },
   { sign: 'EMAIL', title: 'Email', note: 'Or write to me directly.', url: 'mailto:awpierc2@asu.edu' },
 ];
-export const TRAILHEAD_CLEARING = [2.8, 1.9]; // the spawn clearing's radii, in tiles
-export const CABIN_CLEARING = [6, 3.5];       // the cabin's
+export const TRAILHEAD_CLEARING = [2.5, 2.5]; // the spawn clearing's radii, in tiles: round, so they're the same from any side in isometric
+export const CABIN_CLEARING = [4, 4];         // the cabin's
 export const CABIN_TREE_AGE = 380;            // how big the tree beside the cabin grows
 export const SOCIAL_REACH = 80;               // how close to a sign before its card shows
 export const WELCOME_REACH = 110;             // how close to the welcome sign before its guide shows
 export const CABIN_DISTANCE = 16;             // tiles from spawn, at least: off screen when you start
-// The cabin itself is img/world/cabin.png; these are the mailbox's colours.
+// The cabin and the arcade machine stand on a box of ground this many world
+// px along x and y, with their feet at its front corner.
+export const CABIN_SIZE = [160, 112];
+export const ARCADE_SIZE = [36, 36];
+// The cabin itself is img/world/cabin.png, an isometric log cabin with its
+// door in the gable end, the front-right wall (+x), like the doorway inside.
+// `foot` is where the front corner of its box is in the PNG, in art pixels;
+// `door` how far along that wall (-y, from the corner) the door's middle is.
+// The rest are the mailbox's colours.
 export const CABIN = {
+  foot: [45, 65], door: 56,
   mail: [72, 104, 150, 255], mailLight: [106, 140, 184, 255], mailDark: [50, 74, 110, 255], flag: [204, 52, 40, 255],
 };
-export const DOOR_HALF = 4;                   // half the door's width, in art pixels: walking up into it goes inside
+export const DOOR_HALF = 16;                  // half the door's width, in world px: walking into it goes inside
 export const MAILBOX_REACH = 90;              // how close to the mailbox before the "reach out" card shows
 
 // --- inside the cabin ---------------------------------------------------

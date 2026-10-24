@@ -1,6 +1,7 @@
 // "Just show me a list": every project as a plain card, newest first.
 import { TAGS, lastYear } from '../config.js';
 import { projectsLoaded } from '../assets.js';
+import { track } from '../visits.js';
 
 export const list = document.getElementById('list');
 const listItems = document.getElementById('list-items');
@@ -99,6 +100,7 @@ function renderList(projects) {
       a.href = p.linkUrl;
       a.target = '_blank';
       a.rel = 'noopener';
+      a.addEventListener('click', () => track('use', p.linkUrl));
       body.append(a);
     }
     item.append(body);

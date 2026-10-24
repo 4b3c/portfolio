@@ -6,6 +6,7 @@ import { PIXEL, PALETTES, STATUS, ANIM_FPS } from '../config.js';
 import { hashXY } from '../util.js';
 import { state } from '../state.js';
 import { CHARACTERS, pickCharacter } from '../characters.js';
+import { track } from '../visits.js';
 
 export const guide = document.getElementById('guide');
 const PAGES = ['character', 'controls', 'about'];
@@ -56,6 +57,7 @@ const previews = CHARACTERS.map((c) => {
   label.textContent = c.name;
   button.append(preview, label);
   button.addEventListener('click', () => {
+    track('character', c.name);
     pick(c);
     button.blur();                     // so the arrow keys go back to walking
   });

@@ -1,9 +1,9 @@
 {% extends "base.html" %}
-{% block grid_bg %}rgb(130, 170, 70){% endblock %}
+{% block grid_bg %}rgb(56, 104, 146){% endblock %}
 {% block content %}
 <canvas id="projects" class="fixed inset-0 -z-10"
-        data-grass="{{ url_for('static', filename='img/world/grass.png') }}"
         data-sprites="{{ url_for('static', filename='img/world/') }}"
+        data-visits="{{ url_for('visits.note') }}"
         data-projects="{{ url_for('static', filename='data/projects.json') }}"
         data-blocks="{{ url_for('static', filename='img/tetris/shapes.png') }}"></canvas>
 
@@ -106,6 +106,7 @@
     <form data-form action="{{ url_for('main.contact') }}" method="post">
       <h2 class="text-xl font-bold">Reach out</h2>
       <p class="mt-1 text-sm opacity-70">Leave a note in the mailbox and I'll write back.</p>
+      <p class="mt-1 text-xs opacity-50">This site keeps simple notes on what visitors look at, just for me. Sending a note links it to your visit.</p>
       <label class="mt-4 block text-sm font-bold">Name
         <input name="name" required maxlength="100" autocomplete="name"
                class="mt-1 block w-full rounded border-4 border-[#28201e] bg-white px-2 py-1 font-normal">
@@ -136,7 +137,7 @@
   </div>
 </div>
 
-<!-- the arcade machine in the cabin: Don't Get Squished (tetris.js). Same look as the contact form. -->
+<!-- the arcade machine out in a corner of the forest: Don't Get Squished (tetris.js). Same look as the contact form. -->
 <div id="arcade" class="fixed inset-0 z-20 flex items-center justify-center bg-black/50 p-4" style="display: none">
   <div class="flex max-h-full max-w-full items-start gap-5 overflow-y-auto rounded border-4 border-[#28201e] bg-[#f4ead2] p-5 text-[#28201e] shadow-[6px_6px_0_rgba(0,0,0,0.25)]">
     <canvas data-board class="block shrink-0 border-4 border-[#28201e]"
@@ -160,7 +161,7 @@
         <p data-message class="text-lg font-bold"></p>
         <button type="button" data-again class="mt-2 rounded border-4 border-[#28201e] bg-[#28201e] px-4 py-1.5 font-bold text-[#f4ead2] shadow-[4px_4px_0_rgba(0,0,0,0.25)] hover:bg-[#4a3a34]">play again (Enter)</button>
       </section>
-      <button type="button" data-close class="mt-auto self-start rounded border-4 border-[#28201e] bg-[#f4ead2] px-4 py-1.5 font-bold shadow-[4px_4px_0_rgba(0,0,0,0.25)] hover:bg-white">← back to the cabin</button>
+      <button type="button" data-close class="mt-auto self-start rounded border-4 border-[#28201e] bg-[#f4ead2] px-4 py-1.5 font-bold shadow-[4px_4px_0_rgba(0,0,0,0.25)] hover:bg-white">← back to the forest</button>
     </div>
   </div>
 </div>
@@ -187,6 +188,39 @@
       <button type="button" data-forest class="rounded border-4 border-[#28201e] bg-[#28201e] px-4 py-1.5 font-bold text-[#f4ead2] shadow-[4px_4px_0_rgba(0,0,0,0.25)] hover:bg-[#4a3a34]">← take me to the forest</button>
     </div>
     <div id="list-items" class="mt-4 space-y-4"></div>
+
+    <!-- and after the projects, the same note to me as the cabin's mailbox (ui/contact.js) -->
+    <div id="list-contact" class="mt-4 rounded border-4 border-[#28201e] bg-[#f4ead2] p-6 text-[#28201e] shadow-[6px_6px_0_rgba(0,0,0,0.25)]">
+      <form data-form action="{{ url_for('main.contact') }}" method="post">
+        <h2 class="text-xl font-bold">Reach out</h2>
+        <p class="mt-1 text-sm opacity-70">Got a question, an idea, or just want to say hi? Leave me a note and I'll write back.</p>
+        <div class="mt-4 grid gap-3 sm:grid-cols-2">
+          <label class="block text-sm font-bold">Name
+            <input name="name" required maxlength="100" autocomplete="name"
+                   class="mt-1 block w-full rounded border-4 border-[#28201e] bg-white px-2 py-1 font-normal">
+          </label>
+          <label class="block text-sm font-bold">Email
+            <input name="email" type="email" required maxlength="200" autocomplete="email"
+                   class="mt-1 block w-full rounded border-4 border-[#28201e] bg-white px-2 py-1 font-normal">
+          </label>
+        </div>
+        <label class="mt-3 block text-sm font-bold">Message
+          <textarea name="message" required maxlength="5000" rows="5"
+                    class="mt-1 block w-full resize-y rounded border-4 border-[#28201e] bg-white px-2 py-1 font-normal"></textarea>
+        </label>
+        <!-- a honeypot: hidden from people, so only bots fill it in -->
+        <input name="website" tabindex="-1" autocomplete="off" aria-hidden="true" style="display: none">
+        <p data-status class="mt-3 text-sm font-bold" hidden></p>
+        <div class="mt-4 flex items-end justify-between gap-4">
+          <p class="text-xs opacity-60">This site keeps simple notes on what visitors look at, just for me. Sending a note links it to your visit.</p>
+          <button type="submit" data-send class="rounded border-4 border-[#28201e] bg-[#28201e] px-4 py-1.5 font-bold text-[#f4ead2] shadow-[4px_4px_0_rgba(0,0,0,0.25)] hover:bg-[#4a3a34] disabled:opacity-60">send</button>
+        </div>
+      </form>
+      <section data-sent hidden>
+        <h2 class="text-xl font-bold">Sent!</h2>
+        <p class="mt-2">Thanks for the note. I'll get back to you soon.</p>
+      </section>
+    </div>
   </div>
 </div>
 

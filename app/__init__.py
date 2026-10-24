@@ -13,7 +13,9 @@ def create_app():
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
 
     from .routes import main
+    from .visits import bp as visits
     app.register_blueprint(main)
+    app.register_blueprint(visits)
 
     # ?v=<last modified time> on script URLs, so browsers fetch a script again
     # as soon as it changes instead of running a cached copy

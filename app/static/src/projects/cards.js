@@ -10,6 +10,8 @@ import { player, keys } from './player.js';
 import { guide, nextPage } from './ui/guide.js';
 import { openContact } from './ui/contact.js';
 import { arcade } from './ui/arcade.js';
+import { toScreen } from './iso.js';
+import { track } from './visits.js';
 
 const card = document.getElementById('card');
 const field = (name) => card.querySelector(`[data-${name}]`);
@@ -65,6 +67,7 @@ export function initCards(world, projects) {
 // contact form, or a new tab (an email too, so a webmail handler like Gmail
 // doesn't replace the forest).
 function use(c) {
+  track('use', c.arcade ? 'arcade' : c.contact ? 'mailbox' : c.linkUrl);
   if (c.arcade) { keys.clear(); arcade.open(); }
   else if (c.contact) openContact();
   else if (c.linkUrl) window.open(c.linkUrl, '_blank', 'noopener');
@@ -99,7 +102,9 @@ export function updateCard() {
   nearest = null;
   let best = Infinity;
   for (const l of state.inside ? insideMarks : outsideMarks) {
-    const d = l.box ? distanceToBox(l.box) : Math.hypot(player.x - l.x, (player.y - l.y) * 1.5);
+    // outside, measured on screen (iso.js), so the reaches look the same all round
+    const off = !l.box && toScreen(player.x - l.x, player.y - l.y);
+    const d = l.box ? distanceToBox(l.box) : Math.hypot(off.x, off.y * 1.5);
     if (d < l.reach && d < best) { best = d; nearest = l; }
   }
   // The welcome sign opens the guide instead of a card. Help (or H) opens
@@ -121,6 +126,7 @@ export function updateCard() {
   }
   const { project } = target;
   const c = target.card;
+  track('card', project ? project.id : c.title);
   const token = ++cardToken;
   const urls = c.images || [];
   urls.forEach((u) => { new Image().src = u; });   // start loading them all, so slideshow flips never show a gap

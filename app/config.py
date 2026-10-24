@@ -12,3 +12,7 @@ class Config:
     MAIL_USERNAME = os.environ.get("MAIL_USERNAME")
     MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD")
     CONTACT_TO = os.environ.get("CONTACT_TO")  # where notes go; defaults to MAIL_USERNAME
+
+    # /visits, the notes on who's been by (app/visits.py), asks for this
+    # password (any username). Unset, the page isn't there at all.
+    VISITS_PASSWORD = os.environ.get("VISITS_PASSWORD")

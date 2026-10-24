@@ -6,12 +6,9 @@ export const projectsLoaded = fetch(canvas.dataset.projects)
   .then((r) => r.json())
   .then((list) => list.filter((p) => !p.hidden));
 
-export const grass = new Image();
-grass.src = canvas.dataset.grass;
-
 // The pixel art in img/world/, one image pixel per art pixel: edit those
-// PNGs to change how the trails, the cabin, and the inside of it look.
-const SPRITE_NAMES = ['path', 'clearing', 'cabin', 'arcade', 'room', 'room-front', 'bed', 'desk', 'bookshelf'];
+// PNGs to change how the grass, the trails, the cabin, and the inside of it look.
+const SPRITE_NAMES = ['grass', 'path', 'clearing', 'cabin', 'arcade', 'room', 'room-front', 'bed', 'desk', 'bookshelf'];
 export const sprites = {};
 export const spritesLoaded = Promise.all(SPRITE_NAMES.map((name) => {
   const img = new Image();

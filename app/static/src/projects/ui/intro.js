@@ -6,6 +6,7 @@ import { ANIM_FPS } from '../config.js';
 import { state } from '../state.js';
 import { CHARACTERS } from '../characters.js';
 import { list, showList } from './list.js';
+import { track } from '../visits.js';
 
 const intro = document.getElementById('intro');
 // While the welcome is up, nothing else is: no counter, contact or help
@@ -21,6 +22,7 @@ function showIntro() {
   intro.querySelector('[data-start]').focus();
 }
 function startExploring() {
+  track('explore');
   intro.style.display = 'none';        // not `hidden`: the overlay's Tailwind `flex` class overrides it
   state.introOpen = false;
   showHud(true);
@@ -37,6 +39,7 @@ window.addEventListener('keydown', (e) => {
 // --- "just show me a list", and back -------------------------------------
 const onPhone = window.matchMedia('(max-width: 640px), (pointer: coarse) and (not (any-pointer: fine))').matches;
 intro.querySelector('[data-list]').addEventListener('click', () => {
+  track('list');
   intro.style.display = 'none';        // the list is see-through, so the intro would show between cards
   showList();
 });
@@ -51,6 +54,7 @@ list.querySelector('[data-forest]').addEventListener('click', () => {
 // show the Explorer and suggest a desktop, with the list as a way in. The
 // list's "take me to the forest" comes back here too.
 function showMobile() {
+  track('phone');
   const mobile = document.getElementById('mobile');
   const guy = document.getElementById('mobile-guy');
   const frames = CHARACTERS[0].sprites.down;
@@ -73,6 +77,7 @@ function showMobile() {
   mobile.querySelector('[data-mobile-list]').onclick = () => {  // onclick, so showing it again doesn't stack handlers
     clearInterval(walking);
     mobile.style.display = 'none';
+    track('list');
     showList();
   };
 }

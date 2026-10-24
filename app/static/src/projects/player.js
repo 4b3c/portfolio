@@ -1,13 +1,14 @@
 // You: where you are, the keys you're holding, walking, bumping into things,
 // and going in and out of the cabin.
 import {
-  PIXEL, TILE, SPAWN, WORLD_W, WORLD_H, WALK_SPEED, RUN_SPEED, PLAYER_RADIUS, ANIM_FPS, DOOR_HALF, CABIN_ROOM,
+  PIXEL, TILE, SPAWN, WORLD_W, WORLD_H, WALK_SPEED, RUN_SPEED, PLAYER_RADIUS, ANIM_FPS, DOOR_HALF, CABIN, CABIN_ROOM,
 } from './config.js';
 import { clamp } from './util.js';
 import { state } from './state.js';
 import { cam } from './camera.js';
 import { fadeTo, fading } from './fade.js';
 import { arcade } from './ui/arcade.js';
+import { track } from './visits.js';
 
 // Outside, x and y are world pixels. Inside, they're the room's floor
 // coordinates (u, v), in screen pixels: see room.js.
@@ -24,6 +25,7 @@ window.addEventListener('blur', () => keys.clear());
 const held = (...codes) => codes.some((c) => keys.has(c));
 
 function goInside() {
+  track('inside');
   fadeTo(() => {
     state.inside = true;
     player.x = (CABIN_ROOM.u - 4) * PIXEL;
@@ -34,21 +36,24 @@ function goInside() {
 function goOutside(world) {
   fadeTo(() => {
     state.inside = false;
-    player.x = world.doorX;
-    player.y = world.cabin.y + 28;
-    player.dir = 'down';
+    player.x = world.door.x;
+    player.y = world.door.y;
+    player.dir = 'right';              // walking out, down-right on screen
     cam.snap = true;                   // the camera jumps straight back to the door
   });
 }
 
-// Pushes the player out of a flat oval (y distance counts double).
+// Pushes the player out of a circle on the ground. `radius` is how wide it
+// looks on screen: a circle on the ground is a flat oval there, √2 times
+// wider than the circle is (iso.js).
 function pushOut(cx, cy, radius) {
+  const r = radius * Math.SQRT1_2;
   const ox = player.x - cx;
-  const oy = (player.y - cy) * 2;
+  const oy = player.y - cy;
   const dist = Math.hypot(ox, oy);
-  if (dist < radius && dist > 0) {
-    player.x = cx + (ox / dist) * radius;
-    player.y = cy + (oy / dist) * radius / 2;
+  if (dist < r && dist > 0) {
+    player.x = cx + (ox / dist) * r;
+    player.y = cy + (oy / dist) * r;
   }
 }
 
@@ -73,16 +78,23 @@ export function movePlayer(dt, world) {
   else player.dir = dy > 0 ? 'down' : 'up';
 
   const speed = held('ShiftLeft', 'ShiftRight') ? RUN_SPEED : WALK_SPEED;
-  const len = Math.hypot(dx, dy);
-  const mx = (dx / len) * speed * dt;
-  const my = (dy / len) * speed * dt;
   player.anim += dt * ANIM_FPS * (speed / WALK_SPEED);
 
+  // The keys point across the screen, but you walk on the ground, which runs
+  // at an angle to it, outside (iso.js) and in (room.js): right is +x and -y,
+  // down is +x and +y. So two keys at once (down and right, say) walk straight
+  // along one edge of the tiles, and you go the same speed over the ground
+  // whichever way you walk: on screen, up and down is half as fast as across,
+  // since the ground is squashed to half height. `speed` is how fast you go
+  // across the screen.
+  const gx = dx + dy, gy = dy - dx;
+  const len = Math.hypot(gx, gy);
+  const stepX = (gx / len) * speed * Math.SQRT1_2 * dt;
+  const [fromX, fromY] = [player.x, player.y];
+  player.x += stepX;
+  player.y += (gy / len) * speed * Math.SQRT1_2 * dt;
+
   if (state.inside) {
-    // The keys move you across the screen, but the floor runs at an angle to
-    // it: right is half +u and half -v, down is +u and +v (see room.js).
-    player.x += (mx + 2 * my) / 2;
-    player.y += (2 * my - mx) / 2;
     // the furniture, the walls, and out through the doorway at the front right
     for (const f of world.room.furniture) {
       const [u0, v0, u1, v1] = f.blocks;
@@ -95,10 +107,14 @@ export function movePlayer(dt, world) {
     if (player.x > U + 2 * PIXEL) goOutside(world);
     return;
   }
-  player.x += mx;
-  player.y += my;
+  // Not into the sea: each way you're going (x, then y) is undone if it would
+  // take any edge of you off the island, so you slide along the shore.
+  const onLand = (x, y) => [[-1, -1], [1, -1], [-1, 1], [1, 1]].every(([sx, sy]) =>
+    world.isLand(Math.floor((x + sx * PLAYER_RADIUS) / TILE), Math.floor((y + sy * PLAYER_RADIUS) / TILE)));
+  if (!onLand(player.x, fromY)) player.x = fromX;
+  if (!onLand(player.x, player.y)) player.y = fromY;
 
-  const { allTrees, trailSign, socials, mailbox, cabin, arcadeMachine, doorX } = world;
+  const { allTrees, trailSign, socials, mailbox, cabin, arcadeMachine } = world;
   for (const t of allTrees) {
     if (t.trunkR) pushOut(t.x, t.y, t.trunkR + PLAYER_RADIUS);
     if (t.sign) pushOut(t.signX, t.signY, 6 + PLAYER_RADIUS);
@@ -106,10 +122,13 @@ export function movePlayer(dt, world) {
   pushOut(trailSign.x, trailSign.y, 6 + PLAYER_RADIUS);
   for (const s of socials) pushOut(s.x, s.y, 6 + PLAYER_RADIUS);
   pushOut(mailbox.x, mailbox.y, 6 + PLAYER_RADIUS);
-  pushOutBox(cabin.x - 108 - PLAYER_RADIUS, cabin.y - 60, cabin.x + 108 + PLAYER_RADIUS, cabin.y + PLAYER_RADIUS / 2);
-  pushOutBox(arcadeMachine.x - 36 - PLAYER_RADIUS, arcadeMachine.y - 24, arcadeMachine.x + 36 + PLAYER_RADIUS, arcadeMachine.y + PLAYER_RADIUS / 2);
-  // walking up into the door goes straight in
-  if (dy < 0 && Math.abs(player.x - doorX) < DOOR_HALF * PIXEL && player.y <= cabin.y + PLAYER_RADIUS / 2) goInside();
+  // the box of ground each stands on, its feet at the front corner
+  for (const b of [cabin, arcadeMachine]) {
+    pushOutBox(b.x - b.size[0] - PLAYER_RADIUS, b.y - b.size[1] - PLAYER_RADIUS, b.x + PLAYER_RADIUS, b.y + PLAYER_RADIUS);
+  }
+  // walking into the door, in the cabin's front-right wall (up-left on screen), goes straight in
+  const atDoor = Math.abs(player.y - (cabin.y - CABIN.door)) < DOOR_HALF && player.x <= cabin.x + PLAYER_RADIUS + 1;
+  if (stepX < 0 && atDoor) goInside();
   player.x = clamp(player.x, 16, WORLD_W - 16);
   player.y = clamp(player.y, 48, WORLD_H - 8);
 }

@@ -8,6 +8,7 @@ import {
 import { randint } from './util.js';
 import { cam, view } from './camera.js';
 import { makeSign } from './signs.js';
+import { toScreen } from './iso.js';
 
 // Adds world.trees (the projects') and world.allTrees (those and the cabin's).
 export function plantTrees(world, projects) {
@@ -18,8 +19,8 @@ export function plantTrees(world, projects) {
       project: p,
       x: c * TILE + TILE / 2,            // trunk base, in world px
       y: r * TILE + TILE - 16,
-      signX: (c + 2) * TILE + TILE / 2,  // sign post foot
-      signY: r * TILE + TILE - 12,
+      signX: (c + 1) * TILE + TILE / 2,  // sign post foot: one tile over each way, so it's beside the trunk on screen
+      signY: (r - 1) * TILE + TILE / 2,
       sign: makeSign(p.sign),
       tree: new Tree(p.tree.seed, PALETTES[status.palette],
         { ...BIG_TREE, maxAge: p.tree.maxAge, leaves: status.leaves }),
@@ -45,9 +46,9 @@ export function plantTrees(world, projects) {
   world.allTrees = [...world.trees, cabinTree];
 }
 
-// the top-left corner of a tree's drawing box, in world px
-export const boxLeft = (t) => t.x - BASE[0];
-export const boxTop = (t) => t.y - BASE[1];
+// the top-left corner of a tree's drawing box, in screen px (before the camera)
+export const boxLeft = (t) => toScreen(t.x, t.y).x - BASE[0];
+export const boxTop = (t) => toScreen(t.x, t.y).y - BASE[1];
 export const onScreen = (t) =>
   boxLeft(t) < cam.x + view.w && boxLeft(t) + BOX_W > cam.x &&
   boxTop(t) < cam.y + view.h && boxTop(t) + BOX_H > cam.y;

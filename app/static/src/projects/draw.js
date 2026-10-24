@@ -51,20 +51,16 @@ export function drawScene(world) {
   const things = [];
   const { trailSign, cabin, arcadeMachine, mailbox, socials, allTrees } = world;
   // Things are drawn in order of how far down the screen their feet are. But
-  // the cabin and the arcade machine stand on a box of ground with their feet
-  // at its front corner: something beside one of its front walls is in front
-  // of it, even with its feet higher up the screen than that corner. `half` is
-  // how far either side of its feet the thing reaches, on screen.
+  // the cabin stands on a box of ground with its feet at the front corner:
+  // something beside one of its front walls is in front of it, even with its
+  // feet higher up the screen than that corner. `half` is how far either side
+  // of its feet the thing reaches, on screen.
+  const cs = toScreen(cabin.x, cabin.y);
+  const cabinLeft = cs.x - cabin.foot[0] * PIXEL;
   const depth = (x, y, half) => {
     const s = toScreen(x, y);
-    let d = s.y;
-    for (const b of [cabin, arcadeMachine]) {
-      const bs = toScreen(b.x, b.y);
-      const left = bs.x - (b.foot ? b.foot[0] : b.sprite.width / 2) * PIXEL;
-      const beside = s.x + half > left && s.x - half < left + b.sprite.width * PIXEL;
-      if ((x > b.x || y > b.y) && beside) d = Math.max(d, bs.y + 0.5);
-    }
-    return d;
+    const beside = s.x + half > cabinLeft && s.x - half < cabinLeft + cabin.sprite.width * PIXEL;
+    return (x > cabin.x || y > cabin.y) && beside ? Math.max(s.y, cs.y + 0.5) : s.y;
   };
   // a sprite standing with its feet at world (x, y), with a little shadow;
   // `foot` is where its feet are in it, in art pixels, if not the bottom middle

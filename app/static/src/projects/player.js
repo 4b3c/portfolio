@@ -1,7 +1,7 @@
 // You: where you are, the keys you're holding, walking, bumping into things,
 // and going in and out of the cabin.
 import {
-  PIXEL, TILE, SPAWN, WORLD_W, WORLD_H, WALK_SPEED, RUN_SPEED, PLAYER_RADIUS, ANIM_FPS, DOOR_HALF, CABIN, CABIN_ROOM,
+  PIXEL, TILE, SPAWN, WORLD_W, WORLD_H, WALK_SPEED, RUN_SPEED, PLAYER_RADIUS, ANIM_FPS, DOOR_HALF, CABIN, CABIN_ROOM, ARCADE_RADIUS,
 } from './config.js';
 import { clamp } from './util.js';
 import { state } from './state.js';
@@ -122,12 +122,18 @@ export function movePlayer(dt, world) {
   pushOut(trailSign.x, trailSign.y, 6 + PLAYER_RADIUS);
   for (const s of socials) pushOut(s.x, s.y, 6 + PLAYER_RADIUS);
   pushOut(mailbox.x, mailbox.y, 6 + PLAYER_RADIUS);
-  // the box of ground each stands on, its feet at the front corner
-  for (const b of [cabin, arcadeMachine]) {
-    pushOutBox(b.x - b.size[0] - PLAYER_RADIUS, b.y - b.size[1] - PLAYER_RADIUS, b.x + PLAYER_RADIUS, b.y + PLAYER_RADIUS);
-  }
-  // walking into the door, in the cabin's front-right wall (up-left on screen), goes straight in
-  const atDoor = Math.abs(player.y - (cabin.y - CABIN.door)) < DOOR_HALF && player.x <= cabin.x + PLAYER_RADIUS + 1;
+  pushOut(arcadeMachine.x, arcadeMachine.y, ARCADE_RADIUS + PLAYER_RADIUS);
+  // the cabin: the box of ground it stands on, its feet at the front corner
+  const [sizeX, sizeY] = cabin.size;
+  pushOutBox(cabin.x - sizeX - PLAYER_RADIUS, cabin.y - sizeY - PLAYER_RADIUS, cabin.x + PLAYER_RADIUS, cabin.y + PLAYER_RADIUS);
+  // Walking into the door, in the cabin's front-right wall (up-left on screen),
+  // goes straight in. You're at the door if you're lined up with it along the
+  // wall (y) and right up against the wall (x): the box above stops you at
+  // PLAYER_RADIUS in front of it. Without the second half, anywhere in line
+  // with the door, all the way across the map behind the cabin, would count.
+  const lined = Math.abs(player.y - (cabin.y - CABIN.door)) < DOOR_HALF;
+  const against = player.x >= cabin.x && player.x <= cabin.x + PLAYER_RADIUS + 1;
+  const atDoor = lined && against;
   if (stepX < 0 && atDoor) goInside();
   player.x = clamp(player.x, 16, WORLD_W - 16);
   player.y = clamp(player.y, 48, WORLD_H - 8);

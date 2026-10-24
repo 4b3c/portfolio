@@ -4,7 +4,7 @@
 // (trails.js). Everything it decides goes in the `world` object it returns.
 import {
   PIXEL, TILE, COLS, ROWS, SPAWN, SPAWN_CLEARING, ROOM, MAT_INDEX, SOCIALS, CABIN, ISLAND,
-  TRAILHEAD_CLEARING, CABIN_CLEARING, CABIN_DISTANCE, CABIN_SIZE, ARCADE_SIZE, at, inWorld,
+  TRAILHEAD_CLEARING, CABIN_CLEARING, CABIN_DISTANCE, CABIN_SIZE, at, inWorld,
 } from './config.js';
 import { randint, clamp } from './util.js';
 import { sprites } from './assets.js';
@@ -81,7 +81,7 @@ export function buildWorld(projects) {
     }
   }
   const [ac, ar] = shoreSpots.length ? shoreSpots[randint(0, shoreSpots.length - 1)] : [SPAWN[0] + 6, SPAWN[1] - 6];
-  const arcadeMachine = { x: ac * TILE + TILE / 2, y: ar * TILE + TILE / 2, size: ARCADE_SIZE, sprite: sprites.arcade };
+  const arcadeMachine = { x: ac * TILE + TILE / 2, y: ar * TILE + TILE / 2, sprite: sprites.arcade };
   // a tree's trunk below it on screen, and its crown would hide it; one just above is fine
   const nearArcade = (c, r) => {
     const [a, d] = onScreen(c, r), [aa, ad] = onScreen(ac, ar);

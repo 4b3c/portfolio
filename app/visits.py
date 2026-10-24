@@ -112,12 +112,13 @@ def note():
 
 
 def link(visitor, name, email):
-    """A visitor sent a note through the contact form: now we know who they are."""
+    """A visitor gave their email (a note, or the link on a phone): now we know who they are."""
     if not ID.fullmatch(visitor or ""):
         return
     try:
         with db() as conn:
-            conn.execute("UPDATE visitors SET name = ?, email = ? WHERE id = ?", (name, email, visitor))
+            # a name only comes with a note, not with "email me the link": keep any we had
+            conn.execute("UPDATE visitors SET name = COALESCE(?, name), email = ? WHERE id = ?", (name, email, visitor))
     except sqlite3.Error:
         current_app.logger.exception("visits: couldn't link a note to its visitor")
 

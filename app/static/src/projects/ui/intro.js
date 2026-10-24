@@ -6,7 +6,7 @@ import { ANIM_FPS } from '../config.js';
 import { state } from '../state.js';
 import { CHARACTERS } from '../characters.js';
 import { list, showList } from './list.js';
-import { track } from '../visits.js';
+import { track, visitorId } from '../visits.js';
 
 const intro = document.getElementById('intro');
 // While the welcome is up, nothing else is: no counter, contact or help
@@ -82,5 +82,33 @@ function showMobile() {
   };
 }
 if (onPhone) showMobile();
+
+// "Email me the link": sends the site's address to them, to open on a computer.
+const sendLink = document.querySelector('#mobile [data-send-link]');
+sendLink.addEventListener('submit', async (e) => {
+  e.preventDefault();                  // send it with fetch, so the page stays put
+  const send = sendLink.querySelector('[data-send]');
+  const status = sendLink.querySelector('[data-status]');
+  const say = (text, ok) => {
+    status.textContent = text;
+    status.style.color = ok ? '' : '#aa3220';
+    status.hidden = false;
+  };
+  send.disabled = true;
+  const body = new FormData(sendLink);
+  body.append('visitor', visitorId());   // so I know who that visitor is (visits.js)
+  try {
+    const response = await fetch(sendLink.action, { method: 'POST', body });
+    const reply = await response.json().catch(() => ({}));
+    if (!response.ok || !reply.ok) { say(reply.error || "Couldn't send that. Try again in a bit?"); return; }
+    track('sent', 'link');
+    sendLink.reset();
+    say('Sent! Check your inbox on your computer.', true);
+  } catch {
+    say("Couldn't send that. Check your connection and try again?");
+  } finally {
+    send.disabled = false;
+  }
+});
 
 intro.querySelector('[data-start]').focus();

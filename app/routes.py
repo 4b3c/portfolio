@@ -53,7 +53,19 @@ def projects():
 # --- contact form (the cabin's mailbox) ---------------------------------------
 EMAIL = re.compile(r"[^@\s]+@[^@\s]+\.[^@\s]+")
 NOTES_PER_HOUR = 5        # per visitor, so one person (or bot) can't flood the inbox
-recent = {}               # ip -> times of its recent notes
+recent = {}               # (what, ip) -> times of its recent notes or links
+
+
+def too_many(what, per_hour, ip=None):
+    """True if `ip` (or everyone, with no ip) has done `what` per_hour times
+    in the last hour already; otherwise counts this time."""
+    now = time.time()
+    key = (what, ip)
+    times = [t for t in recent.get(key, []) if now - t < 3600]
+    if len(times) >= per_hour:
+        return True
+    recent[key] = times + [now]
+    return False
 
 
 @main.post("/contact")
@@ -71,12 +83,8 @@ def contact():
     if not EMAIL.fullmatch(email):
         return jsonify(ok=False, error="That email doesn't look quite right."), 400
 
-    now = time.time()
-    ip = request.remote_addr
-    times = [t for t in recent.get(ip, []) if now - t < 3600]
-    if len(times) >= NOTES_PER_HOUR:
+    if too_many("note", NOTES_PER_HOUR, request.remote_addr):
         return jsonify(ok=False, error="That's a lot of notes! Try again in a little while."), 429
-    recent[ip] = times + [now]
 
     try:
         deliver(name, email, message)
@@ -98,13 +106,60 @@ def deliver(name, email, message):
         current_app.logger.warning("MAIL_USERNAME isn't set; saved the note from %s to instance/messages.jsonl", name)
         return
 
-    note = EmailMessage()
-    note["Subject"] = f"Portfolio note from {name}"
-    note["From"] = cfg["MAIL_USERNAME"]
-    note["To"] = cfg["CONTACT_TO"] or cfg["MAIL_USERNAME"]
-    note["Reply-To"] = email      # so hitting reply answers them
-    note.set_content(f"{name} <{email}> wrote:\n\n{message}")
+    # reply-to them, so hitting reply answers them
+    send_mail(cfg["CONTACT_TO"] or cfg["MAIL_USERNAME"], f"Portfolio note from {name}",
+              f"{name} <{email}> wrote:\n\n{message}", reply_to=email)
+
+
+# --- "email me the link" (phones) ----------------------------------------------
+# The forest needs a keyboard, so on a phone you can send yourself the site's
+# address, to open later on a computer. It's always the same short email, but
+# it goes to any address someone types, so it's capped per visitor and
+# overall: nobody can use it to fill a stranger's inbox, or burn through the
+# Gmail account's sending limit.
+LINKS_PER_HOUR = 3
+LINKS_PER_HOUR_EVERYONE = 30
+
+
+@main.post("/send-link")
+def send_link():
+    form = request.form
+    if form.get("website"):       # the honeypot, as for /contact
+        return jsonify(ok=True)
+    email = form.get("email", "").strip()[:200]
+    if not EMAIL.fullmatch(email):
+        return jsonify(ok=False, error="That email doesn't look quite right."), 400
+    if too_many("link", LINKS_PER_HOUR, request.remote_addr) or too_many("link", LINKS_PER_HOUR_EVERYONE):
+        return jsonify(ok=False, error="Too many links sent just now. Try again in a little while."), 429
+
+    site = current_app.config["SITE_URL"]
+    if not current_app.config["MAIL_USERNAME"]:
+        current_app.logger.warning("MAIL_USERNAME isn't set; would have emailed %s the link", email)
+    else:
+        try:
+            send_mail(email, "Abram's portfolio, for your computer",
+                      f"Here's the link you asked for, to open on a computer:\n\n{site}\n\n"
+                      "It's a little forest you walk around with the keyboard, one tree per project. "
+                      "Hope you enjoy it!\n\nAbram",
+                      reply_to=current_app.config["CONTACT_TO"] or current_app.config["MAIL_USERNAME"])
+        except Exception:
+            current_app.logger.exception("send-link: couldn't send the link")
+            return jsonify(ok=False, error="Couldn't send that. Try again later?"), 500
+    visits.link(form.get("visitor"), None, email)
+    return jsonify(ok=True)
+
+
+# One email through the Gmail account (MAIL_USERNAME, with an app password).
+def send_mail(to, subject, body, reply_to=None):
+    cfg = current_app.config
+    mail = EmailMessage()
+    mail["Subject"] = subject
+    mail["From"] = cfg["MAIL_USERNAME"]
+    mail["To"] = to
+    if reply_to:
+        mail["Reply-To"] = reply_to
+    mail.set_content(body)
     with smtplib.SMTP(cfg["MAIL_SERVER"], cfg["MAIL_PORT"], timeout=10) as smtp:
         smtp.starttls()
         smtp.login(cfg["MAIL_USERNAME"], cfg["MAIL_PASSWORD"])
-        smtp.send_message(note)
+        smtp.send_message(mail)

@@ -107,10 +107,11 @@ export const CABIN_TREE_AGE = 380;            // how big the tree beside the cab
 export const SOCIAL_REACH = 80;               // how close to a sign before its card shows
 export const WELCOME_REACH = 110;             // how close to the welcome sign before its guide shows
 export const CABIN_DISTANCE = 16;             // tiles from spawn, at least: off screen when you start
-// The cabin and the arcade machine stand on a box of ground this many world
-// px along x and y, with their feet at its front corner.
+// The cabin stands on a box of ground this many world px along x and y, with
+// its feet at the front corner. Everything else you can bump into is a circle
+// around its feet: the arcade machine's is this wide (on screen, from the middle).
 export const CABIN_SIZE = [160, 112];
-export const ARCADE_SIZE = [36, 36];
+export const ARCADE_RADIUS = 28;
 // The cabin itself is img/world/cabin.png, an isometric log cabin with its
 // door in the gable end, the front-right wall (+x), like the doorway inside.
 // `foot` is where the front corner of its box is in the PNG, in art pixels;

@@ -167,18 +167,27 @@ export function buildWorld(projects) {
   };
 
   // --- scatter the trees --------------------------------------------------
-  // Oldest on the left, newest on the right, roughly: in order of start date,
-  // each project gets its own column, spread evenly across the map (evenly,
-  // not by the calendar, or the busy recent years would pile up), then nudged
-  // up to X_SHUFFLE columns either way so the order isn't perfect. The row is
-  // random. Biggest first, so they get the pick of the space, and each size
-  // keeps its own room (ROOM): two trees stand at least their two rooms apart,
-  // so big trees spread out and small ones fill in between. If a layout gets
-  // too crowded to finish, start over a little less fussy about spacing.
+  // Oldest on the left of the screen, newest on the right, roughly: in order
+  // of start date, each project gets its own place across the island (how far
+  // across the screen, c - r: see onScreen), spread evenly from its left end
+  // to its right (evenly, not by the calendar, or the busy recent years would
+  // pile up), then nudged up to X_SHUFFLE either way so the order isn't
+  // perfect. How far down the screen is random. Biggest first, so they get the
+  // pick of the space, and each size keeps its own room (ROOM): two trees
+  // stand at least their two rooms apart, so big trees spread out and small
+  // ones fill in between. If a layout gets too crowded to finish, start over a
+  // little less fussy about spacing.
   const X_SHUFFLE = 10;
   const byDate = [...projects].sort((a, b) => a.start.localeCompare(b.start));
-  const [X0, X1] = [6, COLS - 8];
-  const column = new Map(byDate.map((p, i) => [p, Math.round(X0 + ((i + 0.5) / byDate.length) * (X1 - X0))]));
+  // how far across the screen the island reaches, keeping off its very tips
+  let [X0, X1] = [Infinity, -Infinity];
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      if (landAround(c, r, 2)) [X0, X1] = [Math.min(X0, c - r), Math.max(X1, c - r)];
+    }
+  }
+  [X0, X1] = [X0 + 4, X1 - 4];
+  const across = new Map(byDate.map((p, i) => [p, Math.round(X0 + ((i + 0.5) / byDate.length) * (X1 - X0))]));
   const SIZE_ORDER = ['huge', 'large', 'medium', 'small', 'tiny'];
   const order = [...projects].sort((a, b) => SIZE_ORDER.indexOf(a.size) - SIZE_ORDER.indexOf(b.size));
   let spots;
@@ -187,8 +196,8 @@ export function buildWorld(projects) {
     for (const p of order) {
       const room = ROOM[p.size] || ROOM.medium;
       for (let tries = 0; tries < 500 && !spots.has(p); tries++) {
-        const c = clamp(column.get(p) + randint(-X_SHUFFLE, X_SHUFFLE), X0, X1);
         const r = randint(3, ROWS - 4);
+        const c = r + clamp(across.get(p) + randint(-X_SHUFFLE, X_SHUFFLE), X0, X1);
         if (Math.hypot(c - SPAWN[0], r - SPAWN[1]) < SPAWN_CLEARING || nearSpawn(c, r) || nearCabin(c, r) || nearArcade(c, r)) continue;
         if (!landAround(c, r, 2)) continue;     // trunk and sign post well up from the shore
         const crowded = [...spots].some(([q, [sc, sr]]) => {

@@ -278,7 +278,7 @@
     "images": [
       "/static/img/projects/toolboard/dashboard.png"
     ],
-    "description": "A dashboard that pulls all your tools into one place: email, to-do lists, Slack notifications and favourite links, as cards you can drag and resize. React + TypeScript on the front, Flask + Supabase on the back.",
+    "description": "One board for all the little tools you use on a project, like a to-do list, a calendar or your links, laid out as cards. This repo is the original version; the newer one in TypeScript is private for now.",
     "linkText": "Check out the repo!",
     "linkUrl": "https://github.com/4b3c/toolboard-html",
     "status": "parked",

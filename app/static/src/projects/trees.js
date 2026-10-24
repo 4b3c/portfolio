@@ -1,6 +1,7 @@
 // One tree per project, plus one beside the cabin. Each grows one step every
 // few ticks, and redrawing a tree is the slow part, so trees that changed wait
-// their turn: each frame redraws as many as fit in the budget, on-screen ones first.
+// their turn: each frame redraws as many on-screen ones as fit in the budget.
+// One off screen keeps growing, but isn't redrawn until it comes into view.
 import {
   TILE, BIG_TREE, BOX_W, BOX_H, BASE, STATUS, MIN_TICKS, MAX_TICKS, RENDER_BUDGET_MS, CABIN_TREE_AGE,
   PALETTES, TRUNK_WIDTH_POWER, Tree, count, renderLayers,
@@ -54,6 +55,8 @@ export const onScreen = (t) =>
   boxTop(t) < cam.y + view.h && boxTop(t) + BOX_H > cam.y;
 
 let tick = 0;
+let lastCost = 0;                // how long the last redraw took, ms
+let owed = 0;                    // ms past the budget earlier frames spent, still to make up
 export function updateTrees(allTrees) {
   tick++;
   for (const t of allTrees) {
@@ -65,14 +68,24 @@ export function updateTrees(allTrees) {
     t.dirty = true;
   }
 
-  // redraw changed trees: on screen first, then whichever has waited longest
-  const todo = allTrees.filter((t) => t.dirty);
-  todo.sort((a, b) => (onScreen(b) - onScreen(a)) || (a.rendered - b.rendered));
-  const begin = performance.now();
+  // Redraw changed trees on screen, whichever has waited longest first. One
+  // more only if it should fit in what's left of the budget, going by how long
+  // the last one took. A big tree can take longer than the whole budget: then
+  // it's still drawn, but the time over is owed, and the next frames skip
+  // redrawing until it's made up, so on average it stays in budget.
+  owed = Math.max(0, owed - RENDER_BUDGET_MS);
+  if (owed > 0) return;
+  const todo = allTrees.filter((t) => t.dirty && onScreen(t));
+  todo.sort((a, b) => a.rendered - b.rendered);
+  let spent = 0;
   for (const t of todo) {
-    if (performance.now() - begin > RENDER_BUDGET_MS) break;
+    if (spent && spent + lastCost > RENDER_BUDGET_MS) break;
+    const begin = performance.now();
     t.layers = renderLayers(t.tree);
     t.dirty = false;
     t.rendered = tick;
+    lastCost = performance.now() - begin;
+    spent += lastCost;
   }
+  owed = Math.max(0, spent - RENDER_BUDGET_MS);
 }

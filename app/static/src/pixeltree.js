@@ -256,11 +256,16 @@ window.PixelTree = (function () {
   // --- pixel art rendering ------------------------------------------------
   const full = document.createElement('canvas');
   const fullCtx = full.getContext('2d', { willReadFrequently: true });
+  const small = document.createElement('canvas');
+  const smallCtx = small.getContext('2d', { willReadFrequently: true });
 
   // Runs `draw` on a full-size scratch canvas and returns it shrunk by PIXEL,
   // sampling the top-left pixel of each block (what pygame.transform.scale does).
   // Pixels end up either fully opaque or fully transparent.
-  function drawSmall(draw, [W, H]) {
+  // `bounds` ([x0, y0, x1, y1], full-size pixels), if given, is where the drawing
+  // can be: only that much is read back, which is the slow part. Reading the
+  // whole canvas gives the same picture.
+  function drawSmall(draw, [W, H], bounds = [0, 0, W, H]) {
     if (full.width !== W || full.height !== H) {
       full.width = W;
       full.height = H;
@@ -270,11 +275,37 @@ window.PixelTree = (function () {
     draw(fullCtx);
     const SW = W / PIXEL;
     const SH = H / PIXEL;
-    const src = fullCtx.getImageData(0, 0, W, H).data;
     const out = new ImageData(SW, SH);
-    for (let y = 0; y < SH; y++) {
-      for (let x = 0; x < SW; x++) {
-        const s = (y * PIXEL * W + x * PIXEL) * 4;
+    // the art pixels inside `bounds`, and the full-size block they're read from
+    const ax0 = Math.max(0, Math.floor(bounds[0] / PIXEL)), ay0 = Math.max(0, Math.floor(bounds[1] / PIXEL));
+    const ax1 = Math.min(SW, Math.ceil(bounds[2] / PIXEL)), ay1 = Math.min(SH, Math.ceil(bounds[3] / PIXEL));
+    if (ax1 <= ax0 || ay1 <= ay0) return out;
+    // Shrink it with nearest-neighbour drawImage, which picks the full-size pixel
+    // under the middle of each small one. Shifting the source by (PIXEL - 1) / 2
+    // puts that middle on the middle of each block's top-left pixel, so it's the
+    // same pixel as before, but only a PIXEL² th of the data is read back. That
+    // shift would start the read off the canvas for a drawing touching its left
+    // or top edge, so those (rare) read every pixel, the slow way.
+    const RW = ax1 - ax0, RH = ay1 - ay0;
+    let src, stride, step;
+    if (ax0 > 0 && ay0 > 0) {
+      if (small.width < RW || small.height < RH) {
+        small.width = Math.max(small.width, RW);
+        small.height = Math.max(small.height, RH);
+      }
+      smallCtx.imageSmoothingEnabled = false;
+      smallCtx.globalCompositeOperation = 'copy';
+      const shift = (PIXEL - 1) / 2;
+      smallCtx.drawImage(full, ax0 * PIXEL - shift, ay0 * PIXEL - shift, RW * PIXEL, RH * PIXEL, 0, 0, RW, RH);
+      src = smallCtx.getImageData(0, 0, RW, RH).data;
+      [stride, step] = [RW, 1];
+    } else {
+      src = fullCtx.getImageData(ax0 * PIXEL, ay0 * PIXEL, RW * PIXEL, RH * PIXEL).data;
+      [stride, step] = [RW * PIXEL * PIXEL, PIXEL];
+    }
+    for (let y = ay0; y < ay1; y++) {
+      for (let x = ax0; x < ax1; x++) {
+        const s = ((y - ay0) * stride + (x - ax0) * step) * 4;
         const d = (y * SW + x) * 4;
         if (src[s + 3] > 127) {
           out.data[d] = src[s];
@@ -290,18 +321,19 @@ window.PixelTree = (function () {
   const solid = (img, i) => img.data[i * 4 + 3] > 0;
 
   // Paints `colour` into every empty pixel that touches a filled one (up/down/left/right).
+  // It runs on every pixel of every tree each time one grows, so it reads the
+  // alpha bytes straight out of the array (a = index of a pixel's alpha)
+  // instead of calling solid() for each neighbour.
   function outline(img, colour) {
-    const out = new ImageData(new Uint8ClampedArray(img.data), img.width, img.height);
-    for (let y = 0; y < img.height; y++) {
-      for (let x = 0; x < img.width; x++) {
-        const i = y * img.width + x;
-        if (solid(img, i)) continue;
-        const touches =
-          (x > 0 && solid(img, i - 1)) ||
-          (x < img.width - 1 && solid(img, i + 1)) ||
-          (y > 0 && solid(img, i - img.width)) ||
-          (y < img.height - 1 && solid(img, i + img.width));
-        if (touches) out.data.set(colour, i * 4);
+    const { width: w, height: h, data } = img;
+    const out = new ImageData(new Uint8ClampedArray(data), w, h);
+    const row = w * 4;
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const a = (y * w + x) * 4 + 3;
+        if (data[a]) continue;
+        if ((x > 0 && data[a - 4]) || (x < w - 1 && data[a + 4]) ||
+            (y > 0 && data[a - row]) || (y < h - 1 && data[a + row])) out.data.set(colour, a - 3);
       }
     }
     return out;
@@ -349,12 +381,34 @@ window.PixelTree = (function () {
   }
 
   // The three pixel-art layers for one tree, in art pixels.
+  // Where a tree's drawing can reach, in full-size pixels ([x0, y0, x1, y1]):
+  // every branch's ends, padded by more than its width, its flare, the
+  // round joint, and a leaf clump can add.
+  function treeBounds(root, base) {
+    const b = [base[0], base[1], base[0], base[1]];
+    const walk = (node, start) => {
+      if (!node) return;
+      const pos = endOf(start, node.length, node.angle);
+      const width = count(node) ** TRUNK_WIDTH_POWER;
+      const pad = Math.max(width * 0.6, width / 2 + (width / 2) ** (2 / 3) + 2, LEAF_SIZE / 2) + PIXEL;
+      for (const [x, y] of [start, pos]) {
+        b[0] = Math.min(b[0], x - pad); b[1] = Math.min(b[1], y - pad);
+        b[2] = Math.max(b[2], x + pad); b[3] = Math.max(b[3], y + pad);
+      }
+      walk(node.left, pos);
+      walk(node.right, pos);
+    };
+    walk(root, base);
+    return b;
+  }
+
   function renderLayers(tree) {
     const p = tree.palette;
     const { box, base } = tree.opts;
-    const branches = outline(drawSmall((c) => drawBranches(c, tree.root, base), box), p.trunk_outline);
+    const bounds = treeBounds(tree.root, base);
+    const branches = outline(drawSmall((c) => drawBranches(c, tree.root, base), box, bounds), p.trunk_outline);
     const leaves = tree.opts.leaves
-      ? outline(drawSmall((c) => drawLeaves(c, tree.root, base), box), p.leaves_outline)
+      ? outline(drawSmall((c) => drawLeaves(c, tree.root, base), box, bounds), p.leaves_outline)
       : new ImageData(branches.width, branches.height);
     // a bare tree's shadow comes from its branches instead
     const s = tree.opts.leaves ? shadow(leaves, base) : shadow(branches, base, true);

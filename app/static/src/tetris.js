@@ -1,6 +1,6 @@
 // Don't get squished: a bot plays Tetris and you're the little runner on the
 // board, dodging its pieces. A port of my C++ / raylib game, played on the
-// arcade machine in the cabin. Positions are in grid cells; the board is drawn
+// arcade machine out in the forest. Positions are in grid cells; the board is drawn
 // CELL screen pixels to a cell.
 
 const ROWS = 16;                         // how tall the board is
@@ -8,8 +8,6 @@ const COLS = 10;
 const CELL = 32;                         // an 8x8 block texture drawn at 4x
 const SPAWN = [3, 0];
 
-// While a piece is squishing the player it pushes down this many cells per second
-const SQUISH_SPEED = 0.6;
 
 const SHAPES = [
   [[0, 0, 0, 0], [0, 1, 1, 0], [0, 1, 1, 0], [0, 0, 0, 0]],   // O
@@ -214,9 +212,10 @@ const EPS = 0.001;
 const POP_MARGIN = 1 / 8 + EPS;
 const MIN_HEIGHT = 1 / 8;                // squished down to one art pixel tall means it's over
 const REGROW_SPEED = 3.0;                // how fast the player springs back to full height once free
-const MAX_FATNESS = 2.0;                 // at full squish the sprite is drawn this many times wider
+const ART = CELL / 8;                    // one art pixel, in screen pixels
 const EXPLODE_DURATION = 1.5;            // seconds
 const PARTICLE_GRAVITY = 900.0;          // screen pixels per second squared
+const FLASH_STEPS = [0.04, 0.08, 0.12];  // the burst grows a ring at each of these times, then it's gone
 
 // facing right. r = cap, s = skin, k = eye, b = shirt, f = shoes
 const SPRITE = ['.rrr.', '.rrrr', '.ssk.', 'sbbbs', '.bbb.', '.f.f.'];
@@ -384,14 +383,30 @@ class Runner {
     return this.height <= MIN_HEIGHT + EPS;
   }
 
-  // Where the sprite gets drawn: squished sprites are shorter and fatter, centered on the
-  // hitbox with feet on the ground. The top-left corner and the size of each art pixel.
-  layout() {
-    const squish = 1 - this.height / HEIGHT;    // 0 normally, nearly 1 when flattened
-    const pixelW = (CELL / 8) * (1 + (MAX_FATNESS - 1) * squish);
-    const pixelH = (this.height * CELL) / 6;
-    const left = (this.x + WIDTH / 2) * CELL - (pixelW * 5) / 2;
-    return { left, top: this.y * CELL, pixelW, pixelH };
+  // The sprite's art pixels as they're drawn right now, each { x, y, colour }:
+  // the top-left of an ART-sized square, in screen pixels. Squished, it stays
+  // pixel art: every pixel is still the same size, it's just fewer rows tall
+  // (whole art pixels, never less than the hitbox) and spreads a pixel each
+  // side for every two rows it loses. Rows go from the middle first, so the
+  // cap and feet hang on longest; flat as a pancake it's just the shirt.
+  // Feet on the ground, centred on the hitbox.
+  pixels() {
+    const tall = Math.max(1, Math.min(6, Math.ceil(this.height * 8 - EPS)));
+    const wide = 5 + 2 * Math.floor((6 - tall) / 2);
+    const rows = tall === 1 ? [3] : Array.from({ length: tall }, (_, i) => Math.round((i * 5) / (tall - 1)));
+    const feet = Math.round((this.y + this.height) * CELL);
+    const left = Math.round((this.x + WIDTH / 2) * CELL - (wide * ART) / 2);
+    const top = feet - tall * ART;
+    const out = [];
+    rows.forEach((row, y) => {
+      const line = this.spriteRow(row);
+      for (let x = 0; x < wide; x++) {
+        const col = Math.floor(((x + 0.5) * 5) / wide);    // nearest of the 5 columns
+        const c = line[this.facingRight ? col : 4 - col];
+        if (c !== '.') out.push({ x: left + x * ART, y: top + y * ART, colour: SPRITE_COLOURS[c] });
+      }
+    });
+    return out;
   }
 
   spriteRow(row) {
@@ -405,20 +420,13 @@ class Runner {
   explode() {
     this.exploding = true;
     this.explodeTime = 0;
-    // every art pixel of the (squished) sprite flies off on its own
-    const { left, top, pixelW, pixelH } = this.layout();
-    const centerX = left + (pixelW * 5) / 2;
-    this.particles = [];
-    for (let row = 0; row < 6; row++) {
-      const line = this.spriteRow(row);
-      for (let col = 0; col < 5; col++) {
-        const c = line[this.facingRight ? col : 4 - col];
-        if (c === '.') continue;
-        const x = left + (col + 0.5) * pixelW;
-        this.particles.push({ x, y: top + (row + 0.5) * pixelH,
-          vx: (x - centerX) * 12 + randomValue(-120, 120), vy: -randomValue(200, 450), colour: SPRITE_COLOURS[c] });
-      }
-    }
+    // every art pixel of the (squished) sprite flies off on its own, and
+    // blinks out at its own time, so they go one by one instead of fading
+    const centerX = (this.x + WIDTH / 2) * CELL;
+    this.particles = this.pixels().map((p) => ({
+      ...p, vx: (p.x + ART / 2 - centerX) * 12 + randomValue(-120, 120), vy: -randomValue(200, 450),
+      life: EXPLODE_DURATION * (0.4 + 0.6 * Math.random()),
+    }));
   }
 
   updateExplosion(dt) {
@@ -434,35 +442,29 @@ class Runner {
 
   draw(ctx) {
     if (this.exploding) {
-      // quick white flash where the player was, then the bits fade out as they fly
-      if (this.explodeTime < 0.1) {
+      // A white burst where the player was: a diamond ring of art pixels that
+      // jumps out a step at a time, then the bits fly, snapped to the art grid.
+      const step = FLASH_STEPS.findIndex((t) => this.explodeTime < t);
+      if (step !== -1) {
+        const cx = Math.round(((this.x + WIDTH / 2) * CELL) / ART), cy = Math.round(((this.y + this.height) * CELL) / ART) - 1;
+        const r = 2 + step * 2;
         ctx.fillStyle = '#fff';
-        ctx.beginPath();
-        ctx.arc((this.x + WIDTH / 2) * CELL, (this.y + this.height) * CELL, 10 + this.explodeTime * 300, 0, Math.PI * 2);
-        ctx.fill();
+        for (let d = -r; d <= r; d++) {
+          const e = r - Math.abs(d);
+          ctx.fillRect((cx + d) * ART, (cy + e) * ART, ART, ART);
+          ctx.fillRect((cx + d) * ART, (cy - e) * ART, ART, ART);
+        }
       }
-      ctx.globalAlpha = Math.max(0, 1 - this.explodeTime / EXPLODE_DURATION);
-      const size = CELL / 8;
       for (const p of this.particles) {
+        if (this.explodeTime > p.life) continue;
         ctx.fillStyle = p.colour;
-        ctx.fillRect(Math.round(p.x - size / 2), Math.round(p.y - size / 2), size, size);
+        ctx.fillRect(Math.round(p.x / ART) * ART, Math.round(p.y / ART) * ART, ART, ART);
       }
-      ctx.globalAlpha = 1;
       return;
     }
-    const { left, top, pixelW, pixelH } = this.layout();
-    for (let row = 0; row < 6; row++) {
-      const line = this.spriteRow(row);
-      for (let col = 0; col < 5; col++) {
-        const c = line[this.facingRight ? col : 4 - col];
-        if (c === '.') continue;
-        // round each edge (not each size) so neighbouring pixels don't leave gaps
-        const x0 = Math.round(left + col * pixelW), x1 = Math.round(left + (col + 1) * pixelW);
-        const y0 = Math.round(top + row * pixelH);
-        const y1 = Math.max(Math.round(top + (row + 1) * pixelH), y0 + 1);   // every row at least a pixel tall
-        ctx.fillStyle = SPRITE_COLOURS[c];
-        ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
-      }
+    for (const p of this.pixels()) {
+      ctx.fillStyle = p.colour;
+      ctx.fillRect(p.x, p.y, ART, ART);
     }
   }
 }
@@ -474,18 +476,18 @@ const MOVED = 0, BLOCKED_BY_GRID = 1, BLOCKED_BY_PLAYER = 2;
 function newGame() {
   const g = {
     clock: 0,                            // seconds of play, so a hidden tab doesn't jump ahead
-    hat: [], speed: 0.3, score: 0,
+    hat: [], bags: 0,
+    speed: 0.2 / 1.5,                    // seconds per row the piece falls; quicker with each bag of pieces
     grid: emptyBoard(),
-    bot: true, needPlan: true, plan: { valid: false }, planStep: 0, botTimer: 0,
+    needPlan: true, plan: { valid: false }, planStep: 0, botTimer: 0,
     player: new Runner(4.7, ROWS - 0.75),
-    squishing: false,                    // the piece's next step down would crush the player, so it presses slowly
+    squishing: false,                    // the piece's next step down would crush the player, so it presses down on them
     squishOffset: 0,                     // how far (in cells) the piece has pressed toward its next row
     over: null,                          // why the game ended: 'squished' or 'topped out'
   };
   g.timer = 0;
   g.focus = SHAPES[drawFromHat(g)];
   g.nextType = drawFromHat(g);           // known ahead of time so the bot can plan for it
-  g.score += 10;
   [g.x, g.y] = SPAWN;
   return g;
 }
@@ -498,7 +500,7 @@ function drawFromHat(g) {
       const j = randomValue(0, i);
       [g.hat[i], g.hat[j]] = [g.hat[j], g.hat[i]];
     }
-    if (g.score) g.speed *= 0.9;         // not for the very first bag
+    if (g.bags++) g.speed *= 0.9;        // not for the very first bag
   }
   return g.hat.pop();
 }
@@ -538,10 +540,10 @@ function botAction(g) {
 }
 
 // the bot's next action is due once the piece has fallen to its scheduled row
-const botActionDue = (g) => g.bot && g.plan.valid && g.planStep < g.plan.actionCount && g.y >= g.plan.actionRows[g.planStep];
+const botActionDue = (g) => g.plan.valid && g.planStep < g.plan.actionCount && g.y >= g.plan.actionRows[g.planStep];
 
-// One frame. `pressed` holds keys that went down this frame, `held` keys that are down.
-function step(g, dt, pressed, held) {
+// One frame. `held` holds the keys that are down.
+function step(g, dt, held) {
   g.clock += dt;
   const { player } = g;
 
@@ -552,17 +554,13 @@ function step(g, dt, pressed, held) {
     return;
   }
 
-  if (pressed.has('KeyB')) {
-    g.bot = !g.bot;
-    g.needPlan = true;
-  }
-
   if (g.squishing) {
-    // the piece holds still apart from pressing down on the player
-    g.squishOffset += SQUISH_SPEED * dt;
+    // the piece holds still apart from pressing down on the player, as fast
+    // as it was falling: a row every `speed` seconds
+    g.squishOffset += dt / g.speed;
     g.timer = g.clock;
     if (g.player.squishUnder(g.focus, g.x, g.y + g.squishOffset)) g.player.explode();
-  } else if (g.bot) {
+  } else {
     if (g.needPlan) {
       g.plan = findBestMove(g.grid, g.focus, g.x, g.y, g.nextType);
       g.planStep = 0;
@@ -575,10 +573,7 @@ function step(g, dt, pressed, held) {
       g.botTimer = g.clock;
       botAction(g);
     }
-  } else if (pressed.has('ArrowRight')) tryMovePiece(g, 1, 0);
-  else if (pressed.has('ArrowLeft')) tryMovePiece(g, -1, 0);
-  else if (pressed.has('ArrowUp')) tryRotatePiece(g);
-  else if (pressed.has('ArrowDown')) while (tryMovePiece(g, 0, 1) === MOVED);
+  }
 
   // the piece steps down a row every `speed` seconds
   if (!g.squishing && g.clock > g.timer + g.speed) {
@@ -592,11 +587,10 @@ function step(g, dt, pressed, held) {
       g.squishOffset = 0;
     } else if (fall === BLOCKED_BY_GRID) {
       addToGrid(g.grid, g.focus, g.x, g.y);
-      g.score += 100 * clearLines(g.grid);
+      clearLines(g.grid);
       g.focus = SHAPES[g.nextType];
       g.nextType = drawFromHat(g);
       g.needPlan = true;
-      g.score += 10;
       [g.x, g.y] = SPAWN;
       if (!locationOpen(g.grid, g.focus, g.x, g.y)) { g.over = 'topped out'; return; }
       // a piece appearing right on top of the player with no way out
@@ -606,10 +600,10 @@ function step(g, dt, pressed, held) {
     }
   }
 
-  // runner controls: A/D/W always, arrows and space too while the bot plays tetris
-  const key = (code) => held.has(code);
-  const direction = (key('KeyD') || (g.bot && key('ArrowRight'))) - (key('KeyA') || (g.bot && key('ArrowLeft')));
-  const jump = key('KeyW') || (g.bot && (key('ArrowUp') || key('Space')));
+  // runner controls: A/D or the arrows to run, W, up or space to jump
+  const key = (...codes) => codes.some((code) => held.has(code));
+  const direction = key('KeyD', 'ArrowRight') - key('KeyA', 'ArrowLeft');
+  const jump = key('KeyW', 'ArrowUp', 'Space');
 
   // small fixed steps so a slow frame can't tunnel the player through blocks
   const steps = Math.floor(dt / (1 / 120)) + 1;
@@ -664,8 +658,8 @@ function draw(ctx, g, blocks) {
 }
 
 // --- the arcade machine's screen ------------------------------------------------
-// `root` is the overlay: a [data-board] canvas, [data-score], [data-time],
-// [data-best] and [data-bot] read-outs, a [data-over] panel with a [data-message]
+// `root` is the overlay: a [data-board] canvas, [data-time] and [data-best]
+// read-outs, a [data-over] panel with a [data-message]
 // and a [data-again] button, and [data-close] buttons. Returns { open, close, isOpen }.
 export function makeArcade(root, blocksUrl) {
   const canvas = root.querySelector('[data-board]');
@@ -682,7 +676,6 @@ export function makeArcade(root, blocksUrl) {
   let frame = 0;
   let last = 0;
   const held = new Set();
-  const pressed = new Set();
 
   let best = 0;
   try { best = Number(localStorage.getItem('arcade.best')) || 0; } catch (e) { /* storage blocked */ }
@@ -698,7 +691,7 @@ export function makeArcade(root, blocksUrl) {
     const dt = Math.min((now - last) / 1000, 0.1);
     last = now;
     if (!game.over) {
-      step(game, dt, pressed, held);
+      step(game, dt, held);
       if (game.over) {
         const survived = game.clock;
         best = Math.max(best, survived);
@@ -708,12 +701,9 @@ export function makeArcade(root, blocksUrl) {
         field('again').focus();
       }
     }
-    pressed.clear();
     if (blocks.complete) draw(ctx, game, blocks);
-    setText('score', String(game.score));
     setText('time', game.clock.toFixed(1) + 's');
     setText('best', best ? best.toFixed(1) + 's' : '-');
-    setText('bot', game.bot ? 'on' : 'off');
     frame = requestAnimationFrame(loop);
   }
 
@@ -722,7 +712,6 @@ export function makeArcade(root, blocksUrl) {
     if (e.code === 'Escape') { close(); return; }
     if (game.over && (e.code === 'Enter' || e.code === 'KeyR')) { e.preventDefault(); restart(); return; }
     if (e.code.startsWith('Arrow') || e.code === 'Space') e.preventDefault();
-    if (!e.repeat) pressed.add(e.code);
     held.add(e.code);
   });
   window.addEventListener('keyup', (e) => held.delete(e.code));

@@ -48,10 +48,10 @@ export const STATUS = {
 
 // Each tree grows one step every n ticks, with n picked at random per tree, so
 // some grow fast and some slow. Redrawing a tree is the slow part, so trees
-// that changed wait their turn: each frame redraws as many as fit in the
-// budget, on-screen ones first.
+// that changed wait their turn: each frame redraws as many on screen as fit
+// in the budget (a 120 Hz screen has about 8 ms a frame for everything).
 export const MIN_TICKS = 1, MAX_TICKS = 10;
-export const RENDER_BUDGET_MS = 6;
+export const RENDER_BUDGET_MS = 4;
 export const CARD_DISTANCE = 170;             // how close to a trunk before its card shows
 
 // --- player -------------------------------------------------------------

@@ -13,9 +13,6 @@ class Config:
     MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD")
     CONTACT_TO = os.environ.get("CONTACT_TO")  # where notes go; defaults to MAIL_USERNAME
 
-    # the address "email me the link" sends, for phones
-    SITE_URL = os.environ.get("SITE_URL", "https://abrampierce.com")
-
     # /visits, the notes on who's been by (app/visits.py), asks for this
     # password (any username). Unset, the page isn't there at all.
     VISITS_PASSWORD = os.environ.get("VISITS_PASSWORD")

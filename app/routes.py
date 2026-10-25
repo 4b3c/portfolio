@@ -111,44 +111,6 @@ def deliver(name, email, message):
               f"{name} <{email}> wrote:\n\n{message}", reply_to=email)
 
 
-# --- "email me the link" (phones) ----------------------------------------------
-# The forest needs a keyboard, so on a phone you can send yourself the site's
-# address, to open later on a computer. It's always the same short email, but
-# it goes to any address someone types, so it's capped per visitor and
-# overall: nobody can use it to fill a stranger's inbox, or burn through the
-# Gmail account's sending limit.
-LINKS_PER_HOUR = 3
-LINKS_PER_HOUR_EVERYONE = 30
-
-
-@main.post("/send-link")
-def send_link():
-    form = request.form
-    if form.get("website"):       # the honeypot, as for /contact
-        return jsonify(ok=True)
-    email = form.get("email", "").strip()[:200]
-    if not EMAIL.fullmatch(email):
-        return jsonify(ok=False, error="That email doesn't look quite right."), 400
-    if too_many("link", LINKS_PER_HOUR, request.remote_addr) or too_many("link", LINKS_PER_HOUR_EVERYONE):
-        return jsonify(ok=False, error="Too many links sent just now. Try again in a little while."), 429
-
-    site = current_app.config["SITE_URL"]
-    if not current_app.config["MAIL_USERNAME"]:
-        current_app.logger.warning("MAIL_USERNAME isn't set; would have emailed %s the link", email)
-    else:
-        try:
-            send_mail(email, "Abram's portfolio, for your computer",
-                      f"Here's the link you asked for, to open on a computer:\n\n{site}\n\n"
-                      "It's a little forest you walk around with the keyboard, one tree per project. "
-                      "Hope you enjoy it!\n\nAbram",
-                      reply_to=current_app.config["CONTACT_TO"] or current_app.config["MAIL_USERNAME"])
-        except Exception:
-            current_app.logger.exception("send-link: couldn't send the link")
-            return jsonify(ok=False, error="Couldn't send that. Try again later?"), 500
-    visits.link(form.get("visitor"), None, email)
-    return jsonify(ok=True)
-
-
 # One email through the Gmail account (MAIL_USERNAME, with an app password).
 def send_mail(to, subject, body, reply_to=None):
     cfg = current_app.config

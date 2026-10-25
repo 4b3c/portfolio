@@ -8,6 +8,15 @@
   <!-- Tailwind CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='dist/tailwind.css') }}">
+  <!-- phones and tablets: bigger text. Sizes are in rem, so raising the root
+       scales everything; the small sizes go up a step more, to be readable. -->
+  <style>
+    @media (max-width: 640px), (pointer: coarse) {
+      html { font-size: 18px; }
+      html .text-xs { font-size: 0.875rem; line-height: 1.25rem; }
+      html .text-sm { font-size: 1rem; line-height: 1.5rem; }
+    }
+  </style>
 
 </head>
 <body class="bg-slate-900 text-slate-100">

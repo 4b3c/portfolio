@@ -5,7 +5,8 @@
 //
 // This file starts it all; the pieces live in projects/:
 //   config.js          every number and bit of text worth tuning
-//   ui/                the HTML overlays: intro, list, guide, contact form, arcade
+//   ui/                the HTML overlays: intro, list, guide, contact form, arcade,
+//                      and the touch-screen buttons
 //   layout.js          where everything goes (trails.js lays the trails)
 //   trees.js           the trees growing
 //   player.js          walking, bumping into things, going in and out
@@ -15,6 +16,7 @@ import { state } from './projects/state.js';
 import { projectsLoaded, spritesLoaded } from './projects/assets.js';
 import './projects/ui/intro.js';
 import './projects/ui/guide.js';
+import './projects/ui/touch.js';
 import { resize, follow } from './projects/camera.js';
 import { buildWorld } from './projects/layout.js';
 import { initGround } from './projects/ground.js';

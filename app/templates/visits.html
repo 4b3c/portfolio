@@ -1,13 +1,13 @@
 {% extends "base.html" %}
 {% block grid_bg %}rgb(56, 104, 146){% endblock %}
 {% block content %}
-<!-- Who's been by (app/visits.py). Each visitor opens up into their visits, and each visit into what they did. -->
+<!-- Who's been by (app/visits.py), a day at a time in Arizona time. Each visitor opens up into that day's visits, and each visit into what they did. -->
 {% set panel = "rounded border-4 border-[#28201e] bg-[#f4ead2] text-[#28201e] shadow-[6px_6px_0_rgba(0,0,0,0.25)]" %}
 <div class="{{ panel }} p-4">
   <h1 class="text-2xl font-bold">Visits</h1>
   <p class="text-sm opacity-70">
     {{ totals.visitors or 0 }} visitors, {{ totals.visits or 0 }} visits, {{ totals.known or 0 }} reached out.
-    Newest first; times are the server's.
+    Newest first; times are Arizona's.
   </p>
   {% if tried %}
   <h2 class="mt-3 font-bold">Most tried</h2>
@@ -19,21 +19,27 @@
   {% endif %}
 </div>
 
-{% for v in visitors %}
-<details class="{{ panel }} mt-4 p-4">
+{% for d in days %}
+<h2 class="mt-6 text-xl font-bold text-[#f4ead2]">
+  {{ d.day.strftime("%A, %B %-d") }}
+  <span class="text-sm font-normal opacity-80">· {{ d.visitors | length }} visitor{{ "s" if d.visitors | length != 1 }}, {{ d.visits }} visit{{ "s" if d.visits != 1 }}</span>
+</h2>
+{% for v in d.visitors.values() %}
+<details class="{{ panel }} mt-3 p-4">
   <summary class="cursor-pointer">
     <b>{{ v.name or "someone" }}</b>{% if v.email %} &lt;<a class="underline" href="mailto:{{ v.email }}">{{ v.email }}</a>&gt;{% endif %}
     <span class="text-sm opacity-70">
-      · {{ v.visits }} visit{{ "s" if v.visits != 1 }} · {{ v.active_ms | duration }} on screen
-      · last {{ v.last_seen | when }}
-      {% if v.visit_list %}· {{ v.visit_list[0].browser }} on {{ v.visit_list[0].system }}, {{ v.visit_list[0].timezone }}{% endif %}
+      · {{ v.visit_list[0].started | clock }}
+      · {{ v.visit_list | length }} visit{{ "s" if v.visit_list | length != 1 }}, {{ v.active_ms | duration }} on screen
+      {% if v.visits > v.visit_list | length %}· {{ v.visits }} in all{% endif %}
+      · {{ v.visit_list[0].browser }} on {{ v.visit_list[0].system }}, {{ v.visit_list[0].timezone }}
     </span>
   </summary>
-  <p class="mt-2 text-xs opacity-50">visitor {{ v.id }} · first seen {{ v.first_seen | when }}</p>
+  <p class="mt-2 text-xs opacity-50">visitor {{ v.id }}{% if v.first_seen %} · first seen {{ v.first_seen | when }}{% endif %}</p>
   {% for x in v.visit_list %}
   <div class="mt-3 border-t-2 border-[#28201e]/20 pt-2 text-sm">
     <p>
-      <b>{{ x.started | when }}</b> · {{ x.active_ms | duration }}
+      <b>{{ x.started | clock }}</b> · {{ x.active_ms | duration }}
       · {{ x.device }}, {{ x.browser }} on {{ x.system }}, {{ x.screen }} (window {{ x.window }})
       · {{ x.language }}, {{ x.timezone }}
       {% if x.before %}· their visit #{{ x.before + 1 }} from this browser{% endif %}
@@ -49,6 +55,7 @@
   </div>
   {% endfor %}
 </details>
+{% endfor %}
 {% else %}
 <p class="{{ panel }} mt-4 p-4">No one yet.</p>
 {% endfor %}

@@ -10,6 +10,7 @@
 import { canvas } from './dom.js';
 
 const SEND_EVERY_MS = 30000;
+const MIN_ACTIVE_MS = 1000;            // less on screen than this isn't a visit; the server agrees
 const off = navigator.globalPrivacyControl === true || navigator.doNotTrack === '1';
 
 const newId = () => (crypto.randomUUID ? crypto.randomUUID()
@@ -47,7 +48,7 @@ function activeMs() {
 // and settings. The server adds the browser and system from the request.
 let first = true;
 function send() {
-  if (off) return;
+  if (off || activeMs() < MIN_ACTIVE_MS) return;   // nothing is lost: the queue waits for the next send
   const note = { visitor, visit, active: activeMs(), events: queue.splice(0) };
   if (first) {
     first = false;
@@ -75,4 +76,3 @@ document.addEventListener('visibilitychange', () => {
 });
 window.addEventListener('pagehide', send);
 setInterval(() => { if (since !== null) send(); }, SEND_EVERY_MS);
-send();

@@ -1,9 +1,9 @@
 {% extends "base.html" %}
 {% block grid_bg %}rgb(56, 104, 146){% endblock %}
 {% block content %}
-<!-- touch screens (ui/touch.js adds html.touch): the buttons go up top, so the
-     card and the guide open under them, clear of the D-pad at the bottom. The
-     camera keeps you below them (camera.js). -->
+<!-- touch screens (ui/touch.js adds html.touch): no projects, contact or help
+     buttons; the card and the guide open up top, clear of the D-pad at the
+     bottom. The camera keeps you below them (camera.js). -->
 <style>
   html:not(.touch) [data-touch], html.touch [data-keys] { display: none !important; }
   #touch [data-dir], #touch button {
@@ -15,9 +15,9 @@
   #touch [data-dir] { border-radius: 0.25rem; font-size: 1.25rem; }
   #touch [data-on="true"] { background: #28201e; color: #f4ead2; }
   #touch [data-dpad] { touch-action: none; }
-  html.touch #buttons { top: 0.75rem; bottom: auto; right: 0.75rem; }
+  html.touch #buttons { display: none !important; }
   html.touch #card, html.touch #guide {
-    top: 4.25rem; bottom: auto; left: 0.75rem; max-width: calc(100vw - 1.5rem);
+    top: 0.75rem; bottom: auto; left: 0.75rem; max-width: calc(100vw - 1.5rem);
     max-height: 40dvh;
   }
   @media (max-width: 640px) {
@@ -109,7 +109,6 @@
       <li>- Slide your thumb between two arrows to walk diagonally</li>
       <li>- Tap run to move faster, and again to walk</li>
       <li>- Tap E to interact with signs and the mailbox; walk through the cabin door to go in</li>
-      <li>- Tap 'projects' up top for arrows to undiscovered projects</li>
     </ul>
     <h2 data-keys class="font-bold">Use WASD or arrow keys to walk</h2>
     <ul data-keys class="mt-2 space-y-1 text-sm leading-relaxed">

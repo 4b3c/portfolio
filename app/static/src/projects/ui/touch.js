@@ -1,4 +1,5 @@
-// On touch screens: a D-pad bottom left, and E and run bottom right. They
+// On touch screens: a D-pad bottom left, and E and run bottom right (E only
+// when there's something to use). They
 // press the same keys a keyboard would (as key events on window), so walking,
 // the cards and the arcade game all work without knowing about them. The
 // D-pad is one pad, not four buttons: slide your thumb round it to turn, and
@@ -6,6 +7,7 @@
 // the mailbox is up. The layout for touch is in projects.html (html.touch).
 import { state } from '../state.js';
 import { list } from './list.js';
+import { arcade } from './arcade.js';
 
 export const touch = window.matchMedia('(pointer: coarse)').matches;
 if (touch) document.documentElement.classList.add('touch');
@@ -13,6 +15,7 @@ if (touch) document.documentElement.classList.add('touch');
 const pad = document.getElementById('touch');
 const dpad = pad.querySelector('[data-dpad]');
 const runButton = pad.querySelector('[data-run]');
+const eButton = pad.querySelector('[data-e]');
 const press = (code) => window.dispatchEvent(new KeyboardEvent('keydown', { code, bubbles: true }));
 const release = (code) => window.dispatchEvent(new KeyboardEvent('keyup', { code, bubbles: true }));
 
@@ -54,7 +57,7 @@ dpad.addEventListener('pointercancel', lift);
 
 // --- E and run --------------------------------------------------------------
 // E is a tap: down and straight back up. Run stays on until tapped again.
-pad.querySelector('[data-e]').addEventListener('pointerdown', (e) => {
+eButton.addEventListener('pointerdown', (e) => {
   e.preventDefault();
   press('KeyE');
   release('KeyE');
@@ -71,6 +74,7 @@ function update() {
   const show = touch && !state.introOpen && !state.contactOpen && list.hidden;
   if (!show && held.size) hold([]);
   pad.style.display = show ? '' : 'none';   // not `hidden`: its Tailwind `flex` class would override that
+  eButton.style.visibility = state.canUse && !arcade.isOpen ? '' : 'hidden';   // visibility, so run stays put
   requestAnimationFrame(update);
 }
 if (touch) update();

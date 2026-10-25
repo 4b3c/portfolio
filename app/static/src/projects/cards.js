@@ -116,7 +116,6 @@ export function updateCard() {
   const guideOpen = !state.introOpen && (state.guidePinned || Boolean(nearest?.guide));
   guide.dataset.open = String(guideOpen);
   const target = guideOpen || state.introOpen ? null : nearest;   // what the card shows
-  state.canUse = guideOpen || Boolean(target?.card.linkText);
   if (target === shown) return;
   shown = target;
   clearInterval(slideshow);

@@ -8,7 +8,7 @@ import { toScreen } from './iso.js';
 
 export const view = { w: 0, h: 0 };
 // How far down the screen you're kept: the middle, but lower on touch screens,
-// where the card opens up top and the D-pad takes the bottom.
+// where the card opens up top and the joystick sits at the bottom.
 const FOCUS_Y = window.matchMedia('(pointer: coarse)').matches ? 0.62 : 0.5;
 export const cam = { x: 0, y: 0, snap: true };   // snap: jump straight there next frame, no easing
 

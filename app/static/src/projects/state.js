@@ -9,5 +9,5 @@ export const state = {
   pinnedNear: null,         // what you were next to when it was opened ('new' until updateCard looks)
   character: null,          // which character you're playing (characters.js picks the first one)
   inside: false,            // in the cabin, or out in the forest
-  canUse: false,            // E would do something here: a link, the mailbox, the arcade, the guide's pages
+  stick: { x: 0, y: 0 },    // the touch joystick (ui/touch.js): which way on screen, 0 to 1 each way
 };

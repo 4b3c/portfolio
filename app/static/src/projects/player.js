@@ -70,14 +70,23 @@ function pushOutBox(x0, y0, x1, y1) {
 
 export function movePlayer(dt, world) {
   if (state.introOpen || state.contactOpen || arcade.isOpen || fading()) { player.anim = 0; return; }
-  const dx = held('KeyD', 'ArrowRight') - held('KeyA', 'ArrowLeft');
-  const dy = held('KeyS', 'ArrowDown') - held('KeyW', 'ArrowUp');
-  if (!dx && !dy) { player.anim = 0; return; }
+  let dx = held('KeyD', 'ArrowRight') - held('KeyA', 'ArrowLeft');
+  let dy = held('KeyS', 'ArrowDown') - held('KeyW', 'ArrowUp');
+  let speed = held('ShiftLeft', 'ShiftRight') ? RUN_SPEED : WALK_SPEED;
+  const { stick } = state;
+  if (!dx && !dy && (stick.x || stick.y)) {
+    // the touch joystick: you face the way it points, and walk where it
+    // points on screen. Across counts half (dx below), since the formula
+    // under it stretches across twice as far as up and down. Pushed less than
+    // most of the way, you walk slower.
+    player.dir = Math.abs(stick.x) > Math.abs(stick.y) ? (stick.x > 0 ? 'right' : 'left') : (stick.y > 0 ? 'down' : 'up');
+    speed = WALK_SPEED * Math.min(1, Math.hypot(stick.x, stick.y) / 0.7);
+    dx = stick.x / 2;
+    dy = stick.y;
+  } else if (dx) player.dir = dx > 0 ? 'right' : 'left';
+  else if (dy) player.dir = dy > 0 ? 'down' : 'up';
+  else { player.anim = 0; return; }
 
-  if (dx) player.dir = dx > 0 ? 'right' : 'left';
-  else player.dir = dy > 0 ? 'down' : 'up';
-
-  const speed = held('ShiftLeft', 'ShiftRight') ? RUN_SPEED : WALK_SPEED;
   player.anim += dt * ANIM_FPS * (speed / WALK_SPEED);
 
   // The keys point across the screen, but you walk on the ground, which runs

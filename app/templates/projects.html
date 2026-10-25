@@ -17,6 +17,16 @@
   html.touch #card .text-xs, html.touch #guide .text-xs { font-size: 0.75rem; line-height: 1.1rem; }
   html.touch #card h2, html.touch #guide h2 { font-size: 0.9375rem; }
   html.touch #buttons { display: none !important; }
+  /* the card: a thumbnail beside the title, and the text full width under both, so
+     the text shows without scrolling past a big image */
+  html.touch #card { display: grid; grid-template-columns: 5.5rem 1fr; column-gap: 0.75rem; padding: 0.75rem; align-content: start; }
+  html.touch #card > div { display: contents; }
+  html.touch #card [data-img] { grid-row: 1 / span 3; align-self: start; width: 5.5rem; height: 5.5rem; object-fit: cover; border: 3px solid #28201e; border-radius: 0.25rem; }
+  html.touch #card [data-date] { grid-column: 2; }
+  html.touch #card [data-title], html.touch #card [data-tags] { grid-column: 2; }
+  html.touch #card [data-text], html.touch #card [data-text] ~ div { grid-column: 1 / -1; }
+  /* no image (signs, the mailbox): everything full width */
+  html.touch #card:has(> [data-img][style*="display: none"]) > div > * { grid-column: 1 / -1; }
   html.touch #card, html.touch #guide {
     top: 0.75rem; bottom: auto; left: 0.75rem; max-width: calc(100vw - 1.5rem);
     max-height: 40dvh;

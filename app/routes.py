@@ -11,6 +11,18 @@ from . import visits
 
 main = Blueprint("main", __name__)
 
+@main.before_app_request
+def cepier_host():
+    # cepier.abrampierce.com is the same container; its host gets the CEPIER page at /
+    if request.host.split(":")[0].startswith("cepier.") and request.path in ("/", "/index.html"):
+        return current_app.send_static_file("cepier/index.html")
+
+
+@main.route("/cepier")
+def cepier():
+    return current_app.send_static_file("cepier/index.html")
+
+
 @main.route("/")
 def home():
     # the project forest is the home page

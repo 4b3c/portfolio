@@ -189,22 +189,22 @@
   },
   {
     "id": "sabL",
-    "title": "SabL-Cesium",
+    "title": "CEPIER",
     "images": [
       "/static/img/projects/sabL/sabL.png"
     ],
-    "description": "A conceptual system of universal measurement units not based on Earth-centric standards like the second or meter.",
-    "linkText": "Check out the project!",
-    "linkUrl": "/static/sabl/convert.html",
+    "description": "A unit for telling an alien how tall you are: time from one tick of an atom (a cepier tick), length from how far light goes in that tick (a cepier tock, about 3.26 cm for cesium). Began in 2024 as SabL; now the end of my video Measuring is a mess.",
+    "linkText": "Convert your height",
+    "linkUrl": "https://cepier.abrampierce.com",
     "start": "2024-04",
-    "updated": "2024-04",
+    "updated": "2026-11",
     "date": "2024",
     "size": "tiny",
     "status": "complete",
     "tags": [
       "coding"
     ],
-    "sign": "SABL",
+    "sign": "CEPIER",
     "tree": {
       "seed": 9986943,
       "maxAge": 149

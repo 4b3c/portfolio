@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CEPIER: how would you tell an alien how tall you are?</title>
+<meta name="description" content="CEPIER: a unit of time and length built from one tick of an atom and the speed of light. Convert your height.">
+<meta property="og:title" content="CEPIER">
+<meta property="og:description" content="How would you tell an alien how tall you are? Convert your height to cesium cepier tocks.">
+<style>
+  :root {
+    --paper: #efe7d4;
+    --grid: rgba(60, 70, 90, 0.09);
+    --ink: #262a33;
+    --soft: #5b5f68;
+    --amber: #d9891c;
+    --cyan: #1b8fb3;
+    --red: #c2432f;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    color: var(--ink);
+    font-family: "Montserrat", "Segoe UI", system-ui, -apple-system, sans-serif;
+    background-color: var(--paper);
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 28px 28px;
+    line-height: 1.55;
+  }
+  main { max-width: 760px; margin: 0 auto; padding: 48px 22px 64px; }
+  .kicker { font-size: 13px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--soft); font-weight: 700; }
+  h1 {
+    font-size: clamp(56px, 13vw, 104px);
+    letter-spacing: 0.06em;
+    margin: 4px 0 0;
+    color: var(--cyan);
+    line-height: 1;
+  }
+  .say { color: var(--soft); margin: 6px 0 28px; font-size: 15px; }
+  .lede { font-size: 22px; font-weight: 700; margin: 0 0 6px; }
+  h2 {
+    font-size: 15px; letter-spacing: 0.16em; text-transform: uppercase;
+    margin: 44px 0 10px; padding-bottom: 6px;
+    border-bottom: 3px solid var(--amber); display: inline-block;
+  }
+  p { margin: 0 0 14px; font-size: 17px; }
+  .card {
+    background: rgba(255, 252, 244, 0.85);
+    border: 2px solid var(--ink);
+    border-radius: 6px;
+    padding: 18px 18px 14px;
+    margin: 14px 0;
+    box-shadow: 4px 4px 0 rgba(38, 42, 51, 0.15);
+  }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  input, select {
+    font: inherit; font-size: 18px; color: var(--ink);
+    background: #fffdf7; border: 2px solid var(--ink); border-radius: 4px;
+    padding: 8px 10px; min-width: 0;
+  }
+  input { width: 120px; }
+  label { font-size: 14px; color: var(--soft); }
+  .out { margin-top: 12px; font-size: 18px; }
+  .num { color: var(--amber); font-weight: 800; font-variant-numeric: tabular-nums; }
+  .cy { color: var(--cyan); font-weight: 800; }
+  .small { font-size: 14px; color: var(--soft); }
+  table { border-collapse: collapse; width: 100%; font-size: 16px; }
+  td { padding: 8px 6px; border-bottom: 1px solid rgba(38, 42, 51, 0.15); vertical-align: top; }
+  td:last-child { text-align: right; }
+  .ruler {
+    height: 30px; margin: 18px 0 4px; position: relative;
+    border: 2px solid var(--ink); border-radius: 3px; background: #fffdf7;
+  }
+  .ruler i { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--ink); }
+  .ruler b { position: absolute; top: 0; bottom: 0; left: 0; background: rgba(27, 143, 179, 0.25); }
+  blockquote {
+    margin: 0 0 14px; padding: 2px 0 2px 16px;
+    border-left: 3px solid var(--cyan); font-size: 17px;
+  }
+  a { color: var(--cyan); font-weight: 700; }
+  footer { margin-top: 48px; font-size: 14px; color: var(--soft); }
+</style>
+</head>
+<body>
+<main>
+  <div class="kicker">Part 5 of "Measuring is a mess"</div>
+  <h1>CEPIER</h1>
+  <div class="say">"Pierce", scrambled</div>
+
+  <p class="lede">How would you tell an alien how tall you are?</p>
+  <p>Feet are someone's foot. Meters are a slice of the Earth. Seconds are a slice of a day. None of it
+    means anything to someone who has never been here. CEPIER is built from two things every alien has
+    too: an atom, and the speed of light.</p>
+
+  <h2>Your height</h2>
+  <div class="card">
+    <div class="row">
+      <input id="hFt" type="number" inputmode="decimal" placeholder="feet" aria-label="feet">
+      <input id="hIn" type="number" inputmode="decimal" placeholder="inches" aria-label="inches">
+      <span class="small">or</span>
+      <input id="hCm" type="number" inputmode="decimal" placeholder="cm" aria-label="centimeters">
+    </div>
+    <div class="out" id="hOut">I'm <span class="num">56</span> cesium cepier tocks tall. How tall are you?</div>
+    <div class="ruler" id="ruler"><b id="rulerFill"></b></div>
+    <div class="small" id="rulerNote">each mark is one cesium cepier tock, about 3.26 cm</div>
+  </div>
+
+  <h2>The idea</h2>
+  <blockquote>
+    It's less of a unit and more of an idea to ditch arbitrary numbers. It's also element agnostic.
+    A cesium cepier tick is the amount of time that passes each tick of a cesium atom, and a hydrogen
+    cepier tick is the amount of time that passes each tick of a hydrogen atom. And the distance is
+    simply how far light travels in a tick.
+  </blockquote>
+  <p>A <span class="cy">tick</span> is time: one tick of the atom. A <span class="cy">tock</span> is length:
+    how far light gets in one tick. No 24, no 60, no splitting the Earth into ten million pieces.
+    Pick the atom for the job, the way you'd pick millimeters or kilometers today.</p>
+
+  <div class="card">
+    <table>
+      <tr><td><b>1 cesium cepier tick</b><br><span class="small">one tick of cesium-133, the atom in atomic clocks</span></td>
+          <td><span class="num">0.000000000108782775 s</span><br><span class="small">9,192,631,770 in a second</span></td></tr>
+      <tr><td><b>1 cesium cepier tock</b><br><span class="small">how far light goes in that tick</span></td>
+          <td><span class="num">3.2612 cm</span><br><span class="small">about 1.28 inches</span></td></tr>
+      <tr><td><b>1 hydrogen cepier tick</b><br><span class="small">one tick of hydrogen, the 21 cm line</span></td>
+          <td><span class="num">0.000000000704024 s</span><br><span class="small">1,420,405,752 in a second</span></td></tr>
+      <tr><td><b>1 hydrogen cepier tock</b><br><span class="small">the length on the Pioneer plaque</span></td>
+          <td><span class="num">21.106 cm</span><br><span class="small">about 8.3 inches</span></td></tr>
+    </table>
+  </div>
+
+  <h2>Convert anything</h2>
+  <div class="card">
+    <div class="row">
+      <input id="lVal" type="number" inputmode="decimal" placeholder="length" aria-label="length" value="1">
+      <select id="lUnit" aria-label="unit">
+        <option value="0.001">millimeters</option>
+        <option value="0.01">centimeters</option>
+        <option value="1" selected>meters</option>
+        <option value="1000">kilometers</option>
+        <option value="0.0254">inches</option>
+        <option value="0.3048">feet</option>
+        <option value="0.9144">yards</option>
+        <option value="1609.344">miles</option>
+      </select>
+    </div>
+    <div class="out" id="lOut"></div>
+  </div>
+  <div class="card">
+    <div class="row">
+      <input id="tVal" type="number" inputmode="decimal" placeholder="time" aria-label="time" value="1">
+      <select id="tUnit" aria-label="unit">
+        <option value="1" selected>seconds</option>
+        <option value="60">minutes</option>
+        <option value="3600">hours</option>
+        <option value="86400">days</option>
+        <option value="31557600">years</option>
+      </select>
+    </div>
+    <div class="out" id="tOut"></div>
+  </div>
+
+  <h2>Someone already tried</h2>
+  <p>In 1972 NASA launched Pioneer 10 with a plaque for whoever finds it. Next to the drawing of two
+    people is the number 8, in binary, in units of the hydrogen line: 8 &times; 21 cm, about 5 ft 6 in.
+    That's a hydrogen cepier tock, before it had a name. Binary is pretty arbitrary too, though.</p>
+
+  <h2>Where this could go</h2>
+  <p>Stick to cesium, since atomic clocks already use it. Use different atoms for different fidelities.
+    Use logarithmic scales instead of prefixes like kilo and milli. Count days up the way we already count
+    years, so "Tuesday" is never ambiguous. Get rid of leap years, and February. Maybe that's getting
+    ahead of myself.</p>
+
+  <footer>
+    By <a href="https://abrampierce.com">Abram Pierce</a>. Watch the whole story on
+    <a href="https://www.youtube.com/@rocks2wifi" id="video">Rocks2WiFi</a>.
+    Speed of light 299,792,458 m/s; cesium 9,192,631,770 Hz (the SI second); hydrogen 1,420,405,751.768 Hz.
+  </footer>
+</main>
+
+<script>
+  const C = 299792458;
+  const CS = 9192631770;
+  const H = 1420405751.768;
+  const CS_TOCK = C / CS;   // meters
+  const H_TOCK = C / H;     // meters
+
+  const fmt = (x, d) => {
+    if (!isFinite(x)) return '';
+    if (Math.abs(x) >= 1e15 || (x !== 0 && Math.abs(x) < 1e-3)) return x.toExponential(3).replace('e+', ' x 10^').replace('e', ' x 10^');
+    return x.toLocaleString('en-US', { maximumFractionDigits: d });
+  };
+  const $ = id => document.getElementById(id);
+
+  function height() {
+    const ft = parseFloat($('hFt').value), inch = parseFloat($('hIn').value), cm = parseFloat($('hCm').value);
+    let m = NaN;
+    if (!isNaN(cm)) m = cm / 100;
+    else if (!isNaN(ft) || !isNaN(inch)) m = ((ft || 0) * 12 + (inch || 0)) * 0.0254;
+    const t = isNaN(m) ? 56 : m / CS_TOCK;
+    if (isNaN(m)) {
+      $('hOut').innerHTML = 'I\'m <span class="num">56</span> cesium cepier tocks tall. How tall are you?';
+    } else {
+      $('hOut').innerHTML = 'You\'re <span class="num">' + fmt(t, 1) + '</span> cesium cepier tocks tall'
+        + ' (<span class="num">' + fmt(m / H_TOCK, 2) + '</span> hydrogen tocks). Abram is 56.';
+    }
+    const n = Math.min(Math.max(Math.round(t), 1), 120);
+    const r = $('ruler');
+    r.querySelectorAll('i').forEach(e => e.remove());
+    const span = Math.max(n, 60);
+    for (let k = 1; k < span; k++) {
+      const tick = document.createElement('i');
+      tick.style.left = (k / span * 100) + '%';
+      tick.style.top = k % 10 === 0 ? '0' : '55%';
+      r.appendChild(tick);
+    }
+    $('rulerFill').style.width = (Math.min(t, span) / span * 100) + '%';
+  }
+
+  function length() {
+    const v = parseFloat($('lVal').value);
+    if (isNaN(v)) { $('lOut').textContent = 'Enter a length.'; return; }
+    const m = v * parseFloat($('lUnit').value);
+    $('lOut').innerHTML = '<span class="num">' + fmt(m / CS_TOCK, 3) + '</span> cesium cepier tocks, or <span class="num">'
+      + fmt(m / H_TOCK, 3) + '</span> hydrogen cepier tocks';
+  }
+
+  function time() {
+    const v = parseFloat($('tVal').value);
+    if (isNaN(v)) { $('tOut').textContent = 'Enter a time.'; return; }
+    const s = v * parseFloat($('tUnit').value);
+    $('tOut').innerHTML = '<span class="num">' + fmt(s * CS, 0) + '</span> cesium cepier ticks, or <span class="num">'
+      + fmt(s * H, 0) + '</span> hydrogen cepier ticks';
+  }
+
+  ['hFt', 'hIn'].forEach(id => $(id).addEventListener('input', () => { $('hCm').value = ''; height(); }));
+  $('hCm').addEventListener('input', () => { $('hFt').value = ''; $('hIn').value = ''; height(); });
+  ['lVal', 'lUnit'].forEach(id => $(id).addEventListener('input', length));
+  ['tVal', 'tUnit'].forEach(id => $(id).addEventListener('input', time));
+  height(); length(); time();
+</script>
+</body>
+</html>

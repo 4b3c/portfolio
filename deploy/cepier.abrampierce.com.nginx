@@ -1,0 +1,16 @@
+# /etc/nginx/sites-available/cepier.abrampierce.com, symlinked into sites-enabled.
+# The same container as abrampierce.com; the app serves the CEPIER page at / for this host.
+# Plain HTTP to start; `certbot --nginx -d cepier.abrampierce.com` adds the 443 block.
+server {
+    listen 80;
+    listen [::]:80;
+    server_name cepier.abrampierce.com;
+
+    location / {
+        proxy_pass http://127.0.0.1:8020;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}

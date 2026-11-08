@@ -23,6 +23,16 @@ def cepier():
     return current_app.send_static_file("cepier/index.html")
 
 
+@main.route("/privacy")
+def privacy():
+    return current_app.send_static_file("privacy/index.html")
+
+
+@main.route("/terms")
+def terms():
+    return current_app.send_static_file("terms/index.html")
+
+
 @main.route("/")
 def home():
     # the project forest is the home page

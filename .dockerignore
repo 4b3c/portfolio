@@ -1,6 +1,6 @@
 .git
 node_modules
-app/static/dist
+www/static/dist
 __pycache__
 .venv
 .env

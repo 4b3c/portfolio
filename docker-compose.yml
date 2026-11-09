@@ -1,17 +1,17 @@
-# The live site, abrampierce.com. nginx on the host proxies to the loopback port;
+# Every *.abrampierce.com site (run.py). nginx on the host proxies to the loopback port;
 # to deploy: git pull && docker compose up -d --build
 services:
   web:
     build: .
     container_name: portfolio
     restart: unless-stopped
-    # MAIL_USERNAME, MAIL_PASSWORD (and optionally CONTACT_TO) for the contact form,
-    # and VISITS_PASSWORD for /visits
+    # SECRET_KEY signs every site's cookies; MAIL_USERNAME, MAIL_PASSWORD (and
+    # optionally CONTACT_TO) for the contact form, and VISITS_PASSWORD for /visits
     env_file:
       - path: .env
         required: false
     ports:
       - "127.0.0.1:8020:8000"
-    # instance/ holds visits.db (and messages.jsonl): kept on the host, so a rebuild doesn't wipe it
+    # instance/ holds every site's data (visits.db, stonkle.db, halloween.db, messages.jsonl): kept on the host, so a rebuild doesn't wipe it
     volumes:
       - ./instance:/app/instance

@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>stonkle</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="icon" type="image/png" href="/static/favicon.png">
+    <style>
+        .level-up-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1001;
+        }
+        
+        .confidence-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .confidence-content {
+            background: #111827;
+            border-radius: 18px;
+            padding: 2rem;
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+        }
+        
+        .confidence-content h3 {
+            color: #ffffff;
+            margin-bottom: 1.5rem;
+            font-size: 1.5rem;
+        }
+        
+        .confidence-buttons {
+            display: flex;
+            gap: 0.8rem;
+            justify-content: center;
+            margin-bottom: 1rem;
+        }
+        
+        .confidence-btn {
+            width: 70px;
+            height: 55px;
+            border: 2px solid #374151;
+            background: #1f2937;
+            color: #ffffff;
+            border-radius: 8px;
+            font-size: 1.3rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .confidence-btn:hover {
+            background: #374151;
+            border-color: #60efff;
+            transform: scale(1.1);
+        }
+        
+        .confidence-btn.selected {
+            background: #00ff87;
+            border-color: #00ff87;
+            color: #001c10;
+        }
+        
+        .confidence-hint {
+            color: #8b8fa3;
+            font-size: 0.9rem;
+            margin: 0;
+        }
+        
+        .level-up-content {
+            background: #111827;
+            border-radius: 18px;
+            padding: 2.5rem;
+            text-align: center;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+        }
+        
+        .level-up-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+        
+        .level-up-content h2 {
+            color: #00ff87;
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+        
+        .level-up-content p {
+            color: #ffffff;
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .level-up-content .difficulty-info {
+            color: #8b8fa3;
+            font-size: 0.9rem;
+            line-height: 1.4;
+            margin-bottom: 1.5rem;
+        }
+        
+        #level-number {
+            color: #ffffff;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body style="padding: 1rem 0;">
+    <div class="container">
+        <div class="header-flex">
+            <div class="header-spacer"></div>
+            <div class="header-center">
+                <div class="header-title" style="margin:10px;">
+                    <h1 class="title">Stonkle</h1>
+                    <div id="ticker-symbol" style="font-size:1.2rem;color:#60efff;visibility:hidden;min-height:1.5em;"></div>
+                </div>
+                
+            </div>
+            <div id="score-container">
+                <div class="game-btn score-btn" id="score-btn" style="margin:10px;">
+                    <p id="level-display">🏆 Level: -</p>
+                    <p id="score-progress-display">- / -</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <canvas id="stockChart"></canvas>
+        </div>
+
+        <div class="game-controls">
+            <button id="buy-btn" class="game-btn buy">Buy</button>
+            <button id="sell-btn" class="game-btn sell">Sell</button>
+        </div>
+        
+        <div id="result-message" class="result-message"></div>
+        <div id="play-again-container" style="text-align:center; margin-top:1.5rem;"></div>
+    </div>
+
+    <!-- Level Up Modal -->
+    <div id="level-up-modal" class="level-up-modal" style="display: none;">
+        <div class="level-up-content">
+            <div class="level-up-icon">🎉</div>
+            <h2>Level Up!</h2>
+            <p>Congratulations! You've reached level <span id="level-number"></span>!</p>
+            <div class="difficulty-info" id="difficulty-info">
+                Your new difficulty is: <span id="new-difficulty"></span><br>
+                You'll win the same points when correct, but lose <span id="difficulty-multiplier"></span>× more when wrong!
+            </div>
+            <button id="level-up-close" class="game-btn" style="background: #00ff87; color: #001c10; margin-top: 1rem;">Continue</button>
+        </div>
+    </div>
+
+    <script>
+        let chart;
+        let currentData = null;
+        let fullDateRange = null;
+        let globalYRange = null;
+        let labelsVisible = false;
+        let firstHalfData = null;
+        let midpointIndex = null;
+        let guessMade = false;
+        let currentDifficulty = null;
+        let currentPlayerLevel = null;
+        let currentScore = null;
+
+        const LEVELS = {
+            // (points, difficulty)
+            0: [0, 1.0],
+            1: [25, 1.2],
+            2: [75, 1.5],
+            3: [150, 2.0],
+            4: [250, 3.0],
+            5: [350, 4.0],
+            6: [500, 6.0],
+            7: [750, 8.0],
+            8: [1000, 10.0],
+            9: [1500, 15.0],
+            10: [2000, 20.0],
+            11: [2500, 25.0],
+            12: [3000, 30.0]
+        };
+
+        // Chart configuration
+        const chartConfig = {
+            type: 'line',
+            data: {
+                datasets: [{
+                    label: 'Price',
+                    borderColor: '#00ff87',
+                    backgroundColor: 'rgba(0, 255, 135, 0.1)',
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    pointHoverRadius: 4,
+                    fill: true,
+                    tension: 0.4,
+                    data: []
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        enabled: false, // Start with tooltip disabled
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: '#fff',
+                        bodyColor: '#fff',
+                        borderColor: '#333',
+                        borderWidth: 1,
+                        padding: 12,
+                        displayColors: false,
+                        callbacks: {
+                            label: function(context) {
+                                return `$${context.parsed.y.toFixed(1)}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: {
+                            unit: 'day',
+                            displayFormats: {
+                                day: 'MMM d'
+                            }
+                        },
+                        min: null,  // Will be set dynamically
+                        max: null,  // Will be set dynamically
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            color: '#666',
+                            maxRotation: 0,
+                            autoSkip: true,
+                            maxTicksLimit: 8,
+                            display: false // Start with labels hidden
+                        }
+                    },
+                    y: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            color: '#666',
+                            callback: function(value) {
+                                return '$' + Math.round(value);
+                            },
+                            display: false // Start with labels hidden
+                        },
+                        min: null,
+                        max: null
+                    }
+                }
+            }
+        };
+
+        // Initialize chart
+        const ctx = document.getElementById('stockChart').getContext('2d');
+        chart = new Chart(ctx, chartConfig);
+
+        // Load random stock data and set up the game
+        async function setupGame() {
+            // Only fetch first half initially
+            const firstHalfResponse = await fetch('/api/stock-data/first-half');
+            const firstHalf = await firstHalfResponse.json();
+            currentDifficulty = firstHalf.metadata.difficulty;
+            currentPlayerLevel = firstHalf.metadata.player_level;
+            const gameCode = firstHalf.metadata.game_code;
+
+            // Store first half data for later use
+            firstHalfData = firstHalf;
+            midpointIndex = firstHalf.prices.length;
+
+            // Calculate the full 6-month window
+            const startDate = new Date(firstHalf.dates[0]);
+            const endDate = new Date(startDate);
+            endDate.setMonth(endDate.getMonth() + 6);  // Add 6 months to get full window
+
+            // For the initial display, only show the first half
+            chart.data.datasets[0].data = firstHalf.prices.map((price, index) => ({
+                x: new Date(firstHalf.dates[index]),
+                y: price
+            }));
+
+            // Set axis ranges based on full 6-month window
+            fullDateRange = {
+                min: startDate,
+                max: endDate
+            };
+            chart.options.scales.x.min = startDate;
+            chart.options.scales.x.max = endDate;
+
+            // Set y-axis range based on first half data
+            const minY = Math.min(...firstHalf.prices);
+            const maxY = Math.max(...firstHalf.prices);
+            // Add some padding to y-axis
+            const yPadding = (maxY - minY) * 0.1;
+            globalYRange = { 
+                min: minY - yPadding, 
+                max: maxY + yPadding 
+            };
+            chart.options.scales.y.min = globalYRange.min;
+            chart.options.scales.y.max = globalYRange.max;
+
+            // Hide axis labels for new game
+            chart.options.scales.x.ticks.display = false;
+            chart.options.scales.y.ticks.display = false;
+
+            // In setupGame, after hiding axis labels, also disable tooltip
+            chart.options.plugins.tooltip.enabled = false;
+            chart.update();
+
+            // Try to render the initial score display
+            updateScoreDisplay();
+        }
+
+        // New score display logic
+        function updateScoreDisplay(animate = false, newScoreValue = null) {
+            const scoreToDisplay = newScoreValue !== null ? newScoreValue : currentScore;
+
+            // Exit if we don't have the data we need yet
+            if (scoreToDisplay === null || currentPlayerLevel === null) {
+                return; 
+            }
+
+            const scoreDiv = document.getElementById('score-btn');
+            const levelDisplay = document.getElementById('level-display');
+            const scoreProgressDisplay = document.getElementById('score-progress-display');
+
+            // Always update the level
+            levelDisplay.innerHTML = `🏆 Level: ${currentPlayerLevel}`;
+
+            const nextLevel = currentPlayerLevel + 1;
+            const nextLevelPoints = LEVELS[nextLevel] ? LEVELS[nextLevel][0] : 'Max';
+
+            if (animate && newScoreValue !== null) {
+                let start = currentScore;
+                let end = newScoreValue;
+                let duration = 1000;
+                let startTime = null;
+
+                function animateStep(ts) {
+                    if (!startTime) startTime = ts;
+                    let progress = Math.min((ts - startTime) / duration, 1);
+                    let val = start + (end - start) * progress;
+                    let valRounded = (Math.round(val * 10) / 10).toFixed(1);
+
+                    scoreProgressDisplay.textContent = `${valRounded} / ${nextLevelPoints} points`;
+                    scoreDiv.classList.remove('buy', 'sell');
+                    scoreDiv.classList.add(val >= 0 ? 'buy' : 'sell');
+
+                    if (progress < 1) {
+                        requestAnimationFrame(animateStep);
+                    } else {
+                        currentScore = end; // Final update to global score
+                    }
+                }
+                requestAnimationFrame(animateStep);
+            } else {
+                let scoreRounded = (Math.round(scoreToDisplay * 10) / 10).toFixed(1);
+                scoreProgressDisplay.textContent = `${scoreRounded} / ${nextLevelPoints} points`;
+                scoreDiv.classList.remove('buy', 'sell');
+                scoreDiv.classList.add(scoreToDisplay >= 0 ? 'buy' : 'sell');
+            }
+        }
+
+        async function fetchInitialScore() {
+            const resp = await fetch('/api/get-player-score');
+            const data = await resp.json();
+            if (typeof data.score === 'number') {
+                currentScore = data.score;
+                updateScoreDisplay(); // Attempt to render
+            }
+        }
+
+        // Fetch score on load
+        fetchInitialScore();
+
+        // On load, set the correct class for the score display
+        window.addEventListener('DOMContentLoaded', () => {
+            const scoreDiv = document.getElementById('score-btn');
+            scoreDiv.classList.remove('buy', 'sell');
+            scoreDiv.classList.add(currentScore >= 0 ? 'buy' : 'sell');
+            scoreDiv.style.margin = '10px';
+        });
+
+        // Handle guess
+        async function handleGuess(type) {
+            if (guessMade) return;
+            guessMade = true;
+
+            // Fetch second half only after user makes a guess
+            const secondHalfResponse = await fetch('/api/stock-data/second-half');
+            const secondHalf = await secondHalfResponse.json();
+            const tickerName = secondHalf.metadata.ticker_name;
+            document.getElementById('ticker-symbol').setAttribute('data-ticker', tickerName);
+
+            // Combine first and second half data
+            const allDates = [...firstHalfData.dates, ...secondHalf.dates];
+            const allPrices = [...firstHalfData.prices, ...secondHalf.prices];
+
+            // Update chart with full data
+            chart.data.datasets[0].data = allPrices.map((price, index) => ({
+                x: new Date(allDates[index]),
+                y: price
+            }));
+
+            // Keep the same x-axis range (full 6 months) but update y-axis for full data
+            const minY = Math.min(...allPrices);
+            const maxY = Math.max(...allPrices);
+            const yPadding = (maxY - minY) * 0.1;
+            chart.options.scales.y.min = minY - yPadding;
+            chart.options.scales.y.max = maxY + yPadding;
+
+            // Show labels
+            chart.options.scales.x.ticks.display = true;
+            chart.options.scales.y.ticks.display = true;
+            chart.options.plugins.tooltip.enabled = true;
+            chart.update();
+
+            // Calculate gain/loss
+            const start = allPrices[midpointIndex - 1];
+            const end = allPrices[allPrices.length - 1];
+            const percent = ((end - start) / start) * 100;
+            let wentUp = percent > 0;
+            let correct = false;
+            if (type === 'buy' && wentUp) correct = true;
+            if (type === 'sell' && !wentUp) correct = true;
+            const direction = wentUp ? 'up' : 'down';
+            const emojiCount = Math.min(Math.floor(Math.abs(percent) / 3), 3);
+            const exclamation = correct ? 'Congrats! ' + '🎉'.repeat(emojiCount) : 'Oh no! ' + '😭'.repeat(emojiCount);
+            const action = type === 'buy' ? 'bought' : 'sold';
+            const resultMsg = `${exclamation} You ${action} and the stock went ${direction} ${Math.abs(percent).toFixed(1)}%`;
+            document.getElementById('result-message').textContent = resultMsg;
+
+            // Calculate and animate score immediately
+            const points_gained = Math.abs(percent) * (correct ? 1 : -1 * currentDifficulty);
+            const newScore = Math.round((currentScore + points_gained) * 10) / 10;
+
+            // Add points breakdown
+            const pointsBreakdown = document.createElement('div');
+            pointsBreakdown.style.marginTop = '1rem';
+            pointsBreakdown.style.textAlign = 'center';
+            pointsBreakdown.style.fontSize = '1.1rem';
+            const pointsRounded = Math.abs(points_gained).toFixed(1);
+
+            if (correct) {
+                pointsBreakdown.innerHTML = `
+                    <div style="color: #00ff87; font-weight: bold;">+${pointsRounded} points!</div>
+                `;
+            } else {
+                const basePoints = Math.abs(percent).toFixed(1);
+                if (parseFloat(currentDifficulty) > 1) {
+                    pointsBreakdown.innerHTML = `
+                        <div>${basePoints}% × ${currentDifficulty} difficulty</div>
+                        <div style="color: #ff4d4d; font-weight: bold;">-${pointsRounded} points!</div>
+                    `;
+                } else {
+                    pointsBreakdown.innerHTML = `
+                        <div style="color: #ff4d4d; font-weight: bold;">-${pointsRounded} points!</div>
+                    `;
+                }
+            }
+            
+            document.getElementById('result-message').appendChild(pointsBreakdown);
+
+            // Save game (async, don't wait)
+            const selection = type;
+            const result = correct ? 'win' : 'loss';
+            const saveGameResponse = await fetch('/api/save-game', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ selection, difficulty: currentDifficulty, points_gained, result })
+            });
+
+            const saveGameData = await saveGameResponse.json();
+
+            // Handle level up FIRST, to update state before rendering
+            if (saveGameData.level_up) {
+                const level = saveGameData.level;
+                currentPlayerLevel = level; // Update global level state
+                const newDifficulty = LEVELS[level] ? LEVELS[level][1] : 1.0;
+                
+                // Set up the modal
+                document.getElementById('level-number').textContent = level;
+                document.getElementById('new-difficulty').textContent = newDifficulty.toFixed(1);
+                document.getElementById('difficulty-multiplier').textContent = newDifficulty.toFixed(1);
+                document.getElementById('level-up-modal').style.display = 'flex';
+                
+                // Add event listener to close button
+                document.getElementById('level-up-close').onclick = function() {
+                    document.getElementById('level-up-modal').style.display = 'none';
+                };
+
+                updateScoreDisplay(true, newScore);
+            }
+
+            updateScoreDisplay(true, newScore);
+
+            // Reveal ticker and year
+            const tickerDiv = document.getElementById('ticker-symbol');
+            const startYear = allDates[0].slice(0, 4);
+            const endYear = allDates[allDates.length - 1].slice(0, 4);
+            let yearLabel = startYear;
+            if (endYear !== startYear) {
+                yearLabel = `${startYear}–${endYear.slice(2)}`;
+            }
+            const ticker = document.getElementById('ticker-symbol').getAttribute('data-ticker');
+            tickerDiv.innerHTML = `${ticker} (${yearLabel})`;
+            tickerDiv.style.visibility = 'visible';
+            document.getElementById('play-again-container').innerHTML =
+                '<button id="play-again-btn" class="game-btn" style="width:300px;max-width:90%;background:#374151;color:#fff;">Play Again</button>';
+            document.getElementById('play-again-btn').onclick = () => {
+                // Reset UI for new game
+                chart.data.datasets[0].data = [];
+                chart.update();
+                document.getElementById('result-message').textContent = '';
+                document.getElementById('play-again-container').innerHTML = '';
+                document.getElementById('ticker-symbol').innerHTML = '';
+                document.getElementById('ticker-symbol').style.visibility = 'hidden';
+                guessMade = false;
+                setupGame();
+            };
+
+            // Auto-scroll to bottom after result and play again button are shown
+            setTimeout(() => {
+                window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+            }, 100);
+        }
+
+        document.getElementById('buy-btn').onclick = () => handleGuess('buy');
+        document.getElementById('sell-btn').onclick = () => handleGuess('sell');
+
+        // Start game
+        setupGame();
+
+        // Add emoji pop animation on score button click
+        document.getElementById('score-btn').addEventListener('click', function() {
+            const emoji = currentScore >= 0 ? '🎉' : '😭';
+            const scoreBtn = this;
+            const rect = scoreBtn.getBoundingClientRect();
+            const container = document.body;
+            const emojiElem = document.createElement('div');
+            emojiElem.textContent = emoji;
+            emojiElem.style.position = 'fixed';
+            emojiElem.style.left = (rect.left + rect.width / 2) + 'px';
+            emojiElem.style.top = (rect.top + rect.height / 2) + 'px';
+            emojiElem.style.fontSize = '2.2rem';
+            emojiElem.style.pointerEvents = 'none';
+            emojiElem.style.zIndex = 9999;
+            emojiElem.style.transition = 'none';
+            container.appendChild(emojiElem);
+
+            // Animation parameters
+            const duration = 1200;
+            const start = performance.now();
+            const xDrift = (Math.random() - 0.5) * 120; // random x drift
+            const yPeak = -50 - Math.random() * 40; // how high the parabola goes
+
+            function animateEmoji(now) {
+                const t = Math.min((now - start) / duration, 1);
+                // Parabolic y: y = 4 * yPeak * t * (1 - t)
+                const y = 3 * yPeak * t * (1 - t);
+                // Linear x
+                const x = xDrift * t;
+                // Fade out
+                emojiElem.style.opacity = (1 - t).toString();
+                emojiElem.style.transform = `translate(${x}px, ${y}px)`;
+                if (t < 1) {
+                    requestAnimationFrame(animateEmoji);
+                } else {
+                    emojiElem.remove();
+                }
+            }
+            requestAnimationFrame(animateEmoji);
+        });
+    </script>
+</body>
+</html> 

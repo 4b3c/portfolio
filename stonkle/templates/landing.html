@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>stonkle</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="icon" type="image/png" href="/static/favicon.png">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <style>
+        #bgChart {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            z-index: 0;
+            opacity: 0.35;
+            filter: blur(0.7px);
+            pointer-events: none;
+        }
+        body > .container {
+            position: relative;
+            z-index: 1;
+        }
+        .about-card-container {
+            width: 100%;
+            max-width: 520px;
+            margin: 2.5rem auto 0 auto;
+            display: block;
+        }
+        .about-card {
+            background: rgba(18,22,34,0.98);
+            border-radius: 18px;
+            box-shadow: 0 6px 32px 0 rgba(0,0,0,0.18);
+            padding: 2.2rem 2.5rem;
+            max-width: 440px;
+            width: 100%;
+            margin: 0 auto;
+            display: block;
+        }
+        .about-card-desc {
+            font-size: 1.18rem;
+            color: #e0e0e0;
+            margin-bottom: 2.2rem;
+            line-height: 1.7;
+            text-align: left;
+            word-break: normal;
+        }
+        .about-card-btn {
+            text-align: center;
+        }
+        .about-card-btn .game-btn {
+            width: 220px;
+            max-width: 90%;
+            font-size: 1.1rem;
+        }
+    </style>
+</head>
+<body style="display:flex;justify-content:center;align-items:center;">
+    <canvas id="bgChart"></canvas>
+    <div class="container">
+        <div class="content" style="margin:2.5rem auto 0 auto; padding:2.2rem 2.5rem; text-align:center; max-width: 800px; width:100%; border-radius:18px; display:block; padding:2rem">
+            <div class="header-center" style="width:100%;">
+                <div class="header-title"">
+                    <h1 class="title" style="font-size:3.9rem;text-align:center;">Stonkle</h1>
+                </div>
+            </div>
+            <div class="desc" style="font-size:2.3rem; color:#e0e0e0; line-height:1.7; text-align:center;">
+                <p>As simple as buying the dip and selling the peak...</p>
+                <div class="btn-container" style="text-align:center;">
+                    <a href="/play"><button class="game-btn buy play-btn" style="width:220px;margin:10px;font-size:1.1rem;">Play</button></a>
+                </div>
+            </div>                
+        </div>
+    </div>
+    <script>
+
+
+        // Responsive full-window canvas
+        function resizeBgChart() {
+            const canvas = document.getElementById('bgChart');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeBgChart);
+        resizeBgChart();
+
+        // Chart.js animated background
+        const ctx = document.getElementById('bgChart').getContext('2d');
+        let dataPoints = Math.floor(document.body.clientWidth / 4);
+        let data = [];
+        let base = 100 + Math.random() * 20;
+        let t = Date.now() - dataPoints * 3200;
+        for (let i = 0; i < dataPoints; i++) {
+            base += (Math.random() - 0.49) * 0.7;
+            data.push({ x: new Date(t + i * 3200), y: base });
+        }
+        // Set initial y-range
+        let yCenter = data[data.length - 1].y;
+        let yRange = 18; // Range of y-axis (higher = more vertical space)
+        let yMin = yCenter - yRange / 2;
+        let yMax = yCenter + yRange / 2;
+        let targetYMin = yMin;
+        let targetYMax = yMax;
+        const chartConfig = {
+            type: 'line',
+            data: {
+                datasets: [{
+                    label: '',
+                    borderColor: '#00ff87',
+                    backgroundColor: 'rgba(0, 255, 135, 0.13)',
+                    borderWidth: 3,
+                    pointRadius: 0,
+                    pointHoverRadius: 0,
+                    fill: true,
+                    tension: 0.4,
+                    data: data
+                }]
+            },
+            options: {
+                animation: false,
+                responsive: false,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                scales: {
+                    x: {
+                        type: 'time',
+                        display: false,
+                        grid: { display: false },
+                        ticks: { display: false }
+                    },
+                    y: {
+                        display: false,
+                        grid: { display: false },
+                        ticks: { display: false },
+                        min: null,
+                        max: null
+                    }
+                }
+            }
+        };
+        chartConfig.options.scales.y.min = yMin;
+        chartConfig.options.scales.y.max = yMax;
+        const chart = new Chart(ctx, chartConfig);
+
+        function animateChart() {
+            // Add new point
+            const last = data[data.length - 1];
+            let newY = last.y + (Math.random() - 0.49) * 1.1;
+            let newX = new Date(last.x.getTime() + 3200);
+            data.push({ x: newX, y: newY });
+            if (data.length > dataPoints) data.shift();
+
+            // Pan y-axis if needed (set target)
+            const margin = yRange * 0.18;
+            if (newY > targetYMax - margin) {
+                // Shift up
+                let shift = newY - (targetYMax - margin);
+                targetYMin += shift;
+                targetYMax += shift;
+            } else if (newY < targetYMin + margin) {
+                // Shift down
+                let shift = (targetYMin + margin) - newY;
+                targetYMin -= shift;
+                targetYMax -= shift;
+            }
+
+            // Smoothly interpolate yMin/yMax toward target
+            const lerp = (a, b, t) => a + (b - a) * t;
+            yMin = lerp(yMin, targetYMin, 0.13); // 0.13 = smoothing factor
+            yMax = lerp(yMax, targetYMax, 0.13);
+            chart.options.scales.y.min = yMin;
+            chart.options.scales.y.max = yMax;
+
+            chart.update('none');
+            requestAnimationFrame(animateChart);
+        }
+        animateChart();
+    </script>
+</body>
+</html> 

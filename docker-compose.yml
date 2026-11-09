@@ -1,4 +1,5 @@
-# Every *.abrampierce.com site (run.py). nginx on the host proxies to the loopback port;
+# Every *.abrampierce.com site: run.py's sites in web, and GIFs Against Humanity in gifs.
+# nginx on the host proxies to the loopback ports;
 # to deploy: git pull && docker compose up -d --build
 services:
   web:
@@ -15,3 +16,58 @@ services:
     # instance/ holds every site's data (visits.db, stonkle.db, halloween.db, messages.jsonl): kept on the host, so a rebuild doesn't wipe it
     volumes:
       - ./instance:/app/instance
+
+  # GIFs Against Humanity (gifs/): its own process, because games live in that
+  # process's memory and its websockets need gevent's single worker. Deploying the
+  # portfolio doesn't restart it unless gifs/ changed. nginx sends
+  # gifs.abrampierce.com here, and /curate to the curator below.
+  # Its data lives outside git, in instance/gifs/: the GIF files (static/), the deck
+  # and its statistics, which the game writes after every round (curation/), and
+  # its .env (SECRET_KEY, GN_COOKIE_SECURE, CURATOR_PASSWORD, GIPHY_API_KEY).
+  gifs:
+    build: ./gifs
+    image: gifs:local
+    container_name: gifs
+    restart: unless-stopped
+    env_file:
+      - path: ./instance/gifs/.env
+        required: false
+    environment:
+      GN_BEHIND_PROXY: "1"
+      GN_RECORD_STATS: "1"
+    ports:
+      - "127.0.0.1:5050:5050"
+    volumes:
+      - ./instance/gifs/static:/app/app/static/gifs:ro
+      - ./instance/gifs/curation:/app/curation:rw
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # The deck curator, at gifs.abrampierce.com/curate behind CURATOR_PASSWORD. Only
+  # with the profile: docker compose --profile curator up -d
+  gifs-curator:
+    profiles: ["curator"]
+    image: gifs:local
+    container_name: gifs-curator
+    restart: unless-stopped
+    command: ["python", "scripts/curate_gifs.py", "--host", "0.0.0.0", "--port", "5099",
+              "--rating", "r", "--prefix", "/curate"]
+    env_file:
+      - path: ./instance/gifs/.env
+        required: false
+    ports:
+      - "127.0.0.1:5099:5099"
+    volumes:
+      - ./instance/gifs/static:/app/app/static/gifs:rw
+      - ./instance/gifs/curation:/app/curation:rw
+      - ./gifs/scripts:/app/scripts:ro
+    depends_on: [gifs]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys,urllib.request; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:5099/', timeout=4).status == 200 else 1)"]
+      interval: 30s
+      timeout: 6s
+      start_period: 10s
+      retries: 3

@@ -11,12 +11,6 @@ from . import visits
 
 main = Blueprint("main", __name__)
 
-@main.route("/cepier")
-def cepier():
-    # CEPIER has its own subdomain now (cepier/ in this repo)
-    return redirect("https://cepier.abrampierce.com", code=301)
-
-
 @main.route("/privacy")
 def privacy():
     return current_app.send_static_file("privacy/index.html")

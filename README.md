@@ -6,6 +6,9 @@ Every site on abrampierce.com, in one container. One folder per subdomain:
 - `cepier/` — cepier.abrampierce.com
 - `stonkle/` — stonkle.abrampierce.com, the stock guessing game
 - `halloween/` — halloween.abrampierce.com, the party drink counter
+- `gifs/` — gifs.abrampierce.com, GIFs Against Humanity. Its own container, not in
+  `run.py`: games live in memory and need websockets. Its GIF files, deck and settings are
+  in `instance/gifs/`; see `gifs/README.md` for the game itself.
 
 `run.py` picks the site from the Host header. A subdomain that isn't listed there
 goes to www. To add a site: a folder with a `create_app()`, and a line in `SITES`.

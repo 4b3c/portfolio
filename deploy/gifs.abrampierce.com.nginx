@@ -1,0 +1,53 @@
+# /etc/nginx/sites-available/gifs.abrampierce.com, symlinked into sites-enabled.
+# GIFs Against Humanity, the gifs container on :5050, and its curator on :5099 at
+# /curate. An exact name, so it wins over the wildcard vhost. The certificate is the
+# apex one, as for the wildcard: Cloudflare holds the public certificate.
+server {
+    listen 80;
+    listen [::]:80;
+    server_name gifs.abrampierce.com;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    server_name gifs.abrampierce.com;
+    ssl_certificate /etc/letsencrypt/live/abrampierce.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/abrampierce.com/privkey.pem;
+
+    # The deck curator. Password-gated by the app itself; the trailing-slash-free
+    # proxy_pass plus X-Forwarded-Prefix is what makes its links come back here.
+    location /curate {
+        proxy_pass http://127.0.0.1:5099;
+        proxy_http_version 1.1;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Prefix /curate;
+
+        # Resolving a pasted link means fetching someone else's page first.
+        proxy_read_timeout 120s;
+        client_max_body_size 1m;
+    }
+
+    location / {
+        proxy_pass http://127.0.0.1:5050;
+        proxy_http_version 1.1;
+
+        # websockets
+        proxy_set_header Upgrade    $http_upgrade;
+        proxy_set_header Connection "upgrade";
+
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # a game socket stays open for the whole night
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+        proxy_buffering    off;
+    }
+}

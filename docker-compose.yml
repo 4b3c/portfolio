@@ -46,6 +46,16 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  # The shared toggle and the tug-of-war (toggle/): its own process for the same
+  # reason as gifs, state in memory over websockets. nginx sends toggle.abrampierce.com here.
+  toggle:
+    build: ./toggle
+    image: toggle:local
+    container_name: toggle
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5002:5002"
+
   # The deck curator, at gifs.abrampierce.com/curate behind CURATOR_PASSWORD. Only
   # with the profile: docker compose --profile curator up -d
   gifs-curator:

@@ -4,8 +4,9 @@ nginx sends abrampierce.com and every subdomain here; the Host header picks the
 site. To add one: a folder with a create_app(), and a line in SITES. A
 subdomain that isn't in SITES is sent to the portfolio, www.
 
-GIFs Against Humanity (gifs/) is the exception: it runs in its own container
-(docker-compose.yml says why), and nginx sends gifs.abrampierce.com straight there.
+GIFs Against Humanity (gifs/) and the toggle (toggle/) are the exceptions: each runs
+in its own container (docker-compose.yml says why), and nginx sends their subdomains
+straight there.
 """
 import hashlib
 import hmac

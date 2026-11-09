@@ -1,0 +1,35 @@
+# /etc/nginx/sites-available/wildcard.abrampierce.com, symlinked into sites-enabled.
+# Every subdomain of abrampierce.com goes to the same container as the apex
+# (abrampierce.com.nginx, whose exact names win over this wildcard); run.py
+# picks the site from the Host header, and sends one with nothing on it to www.
+# DNS is a proxied wildcard at Cloudflare, which holds the public certificate;
+# this side reuses the abrampierce.com one, which is enough for Cloudflare.
+server {
+    listen 80;
+    listen [::]:80;
+    server_name *.abrampierce.com;
+
+    location / {
+        proxy_pass http://127.0.0.1:8020;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    server_name *.abrampierce.com;
+    ssl_certificate /etc/letsencrypt/live/abrampierce.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/abrampierce.com/privkey.pem;
+
+    location / {
+        proxy_pass http://127.0.0.1:8020;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}

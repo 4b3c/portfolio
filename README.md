@@ -25,4 +25,4 @@ site, send its Host header (`curl -H "Host: stonkle.abrampierce.com" localhost:5
 ## Deploy
 
 Push to `main`, then on the host: `cd /opt/portfolio && git pull && docker compose up -d --build`.
-nginx config is in `deploy/`.
+nginx config is in `deploy/`: the apex and www, and one wildcard vhost for every subdomain.

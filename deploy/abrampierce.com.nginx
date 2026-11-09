@@ -1,12 +1,10 @@
 # /etc/nginx/sites-available/abrampierce.com, symlinked into sites-enabled.
-# abrampierce.com and every subdomain go to the one container; run.py picks the
-# site from the Host header, and sends a subdomain with nothing on it to www.
-# DNS is a proxied wildcard at Cloudflare, so Cloudflare holds the public
-# certificate; the origin certificate here only has to cover the names below.
+# Plain HTTP to start; `certbot --nginx -d abrampierce.com -d www.abrampierce.com`
+# adds the 443 block and the redirect.
 server {
     listen 80;
     listen [::]:80;
-    server_name abrampierce.com *.abrampierce.com;
+    server_name abrampierce.com www.abrampierce.com;
 
     location / {
         proxy_pass http://127.0.0.1:8020;

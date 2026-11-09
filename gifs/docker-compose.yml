@@ -1,0 +1,114 @@
+# Game Night — one container, published on localhost only.
+#
+#   docker compose up -d --build      start (or apply changes after a git pull)
+#   docker compose logs -f            watch it
+#   docker compose down               stop
+#
+# Your existing nginx/Traefik terminates TLS and proxies to 127.0.0.1:5050.
+# Websocket upgrade headers are required — see DEPLOY.md for ready-made snippets.
+#
+# Settings come from a .env file next to this one (copy .env.example). Every value has a
+# working default, so it runs without one.
+
+services:
+  app:
+    build: .
+    image: game-night:local
+    container_name: game-night
+    restart: unless-stopped
+
+    environment:
+      # Set this so player cookies survive a restart: openssl rand -hex 32
+      SECRET_KEY: ${SECRET_KEY:-}
+      # Trust one hop of X-Forwarded-* — you are behind a proxy.
+      GN_BEHIND_PROXY: ${GN_BEHIND_PROXY:-1}
+      # Flip to 1 once HTTPS works. While it's 1, browsers refuse the cookie over
+      # plain http, and nobody can join.
+      GN_COOKIE_SECURE: ${GN_COOKIE_SECURE:-0}
+      # Seconds a room survives after the last person leaves.
+      GN_ROOM_IDLE_TIMEOUT: ${GN_ROOM_IDLE_TIMEOUT:-600}
+      # Count finished rounds in curation/ — which card was played, which won, and which
+      # prompt they answered. On here and nowhere else on purpose: the deck's statistics
+      # should come from real games on the real server, not from a laptop or a bot script
+      # (and test-mode games are skipped even here — see engine.py).
+      GN_RECORD_STATS: ${GN_RECORD_STATS:-1}
+
+    # Localhost only: the proxy reaches it, the internet does not.
+    ports:
+      - "127.0.0.1:${HOST_PORT:-5050}:5050"
+
+    volumes:
+      # The cards themselves, read-only: the image ships the manifest but not the GIFs
+      # (they are not in git — see scripts/rehydrate_gifs.py), so they come from the host.
+      - ./app/static/gifs:/app/app/static/gifs:ro
+      # The rest of the deck: the prompts the game deals from, and the card library it
+      # writes back into — every round records which cards were played and which won.
+      # Shared with the curator container, which is why every write takes a lock.
+      - ./curation:/app/curation:rw
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # The deck curator (GIFs and prompts). Off by default — start it when you want to curate:
+  #
+  #   docker compose --profile curator up -d curator
+  #   docker compose --profile curator down
+  #
+  # It has a password (CURATOR_PASSWORD, required — it refuses to start without one), so
+  # it can be published for friends to help. Behind the proxy it lives at /curate on the
+  # game's domain, which is why it binds to localhost by default: nginx reaches it, the
+  # internet only reaches it through nginx. See DEPLOY.md.
+  curator:
+    profiles: ["curator"]
+    build: .
+    image: game-night:local
+    container_name: gah-curator
+    restart: unless-stopped
+    command:
+      - python
+      - scripts/curate_gifs.py
+      - "--host"
+      - "0.0.0.0"          # inside the container; the published port below is the gate
+      - "--port"
+      - "5099"
+      - "--rating"
+      - "${CURATOR_RATING:-r}"
+      # Served under a path on the game's domain; nginx also sends X-Forwarded-Prefix,
+      # and either one is enough for the links it generates to come back here.
+      - "--prefix"
+      - "${CURATOR_PREFIX:-/curate}"
+    environment:
+      GIPHY_API_KEY: ${GIPHY_API_KEY:-}
+      TENOR_API_KEY: ${TENOR_API_KEY:-}
+      # Required. The container exits immediately if this is empty.
+      CURATOR_PASSWORD: ${CURATOR_PASSWORD:-}
+      # Signs the curator's own session cookie; falls back to SECRET_KEY.
+      CURATOR_SECRET_KEY: ${CURATOR_SECRET_KEY:-}
+      # Turn on once it's reachable over https, same as GN_COOKIE_SECURE for the game.
+      CURATOR_COOKIE_SECURE: ${CURATOR_COOKIE_SECURE:-0}
+    ports:
+      - "${CURATOR_BIND:-127.0.0.1}:5099:5099"
+    volumes:
+      # Writes cards straight into the folder the game reads, so anything you tag is in
+      # the next game — the app re-reads the manifest when it changes.
+      - ./app/static/gifs:/app/app/static/gifs:rw
+      - ./curation:/app/curation:rw
+      # The tool itself, read-only: tweaking the curator UI then needs a `restart`, not a
+      # rebuild. (The game deliberately doesn't do this — it runs what was built.)
+      - ./scripts:/app/scripts:ro
+    # The image's healthcheck asks the *game* about /healthz on 5050; this container runs
+    # the curator on 5099 instead, so it needs its own.
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys,urllib.request; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:5099/', timeout=4).status == 200 else 1)"]
+      interval: 30s
+      timeout: 6s
+      start_period: 10s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

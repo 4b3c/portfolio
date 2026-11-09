@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Deck curator</title>
+  <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+  <style>
+    /* Borrowed from the game's tokens, so a GIF is judged in the colours it will have
+       on a card. */
+    body { min-height: 100vh; }
+    .curate { max-width: 1100px; margin: 0 auto; padding: 14px 16px 28px; display: flex; flex-direction: column; gap: 12px; }
+
+    .bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    .brand { font-family: var(--gn-font-display); font-size: 1.15rem; white-space: nowrap; }
+    .brand small {
+      display: block; font-family: var(--gn-font-body); font-size: .68rem;
+      text-transform: uppercase; letter-spacing: var(--gn-track-label); color: var(--gn-ink-dim);
+    }
+    .tally { display: flex; gap: 7px; flex-wrap: wrap; align-items: center; }
+    /* A column, so the meter can sit under the label — which means every child is its
+       own line. The label and its count therefore have to be ONE child: loose text runs
+       next to a <b> each became a flex item of their own and stacked, ballooning the
+       pill into a circle. */
+    .pill {
+      display: inline-flex; flex-direction: column; gap: 3px; overflow: hidden;
+      padding: 5px 11px 6px; border: var(--gn-outline-sm) solid var(--gn-outline-color);
+      border-radius: var(--gn-radius-pill); background: var(--gn-bg-2);
+      font-size: .78rem; font-weight: 800; white-space: nowrap;
+    }
+    .pill__text { display: block; }
+    .pill b { font-family: var(--gn-font-display); }
+    .pill--normal { background: var(--gn-accent-3); color: var(--gn-accent-3-ink); }
+    .pill--adult { background: var(--gn-accent-2); color: var(--gn-accent-2-ink); }
+    .meter { display: block; width: 100%; height: 5px; border-radius: 3px; background: rgba(0,0,0,.24); overflow: hidden; }
+    .meter i { display: block; height: 100%; background: currentColor; opacity: .8; }
+
+    /* --- tabs: the library is the job, discovery is how you feed it ---------- */
+    .tabs { display: flex; gap: 8px; border-bottom: var(--gn-outline-sm) solid var(--gn-outline-color); padding-bottom: 10px; }
+    .tab {
+      padding: 9px 18px; border: var(--gn-outline-sm) solid var(--gn-outline-color);
+      border-radius: var(--gn-radius-pill); background: transparent; color: var(--gn-ink);
+      font-family: var(--gn-font-display); font-size: .92rem; cursor: pointer;
+    }
+    .tab[aria-selected="true"] { background: var(--gn-accent-4); color: var(--gn-accent-4-ink); }
+    [hidden] { display: none !important; }
+
+    /* --- shared: a GIF is shown whole, never cropped ------------------------ */
+    /* Fixed width, natural height. Cards used to be forced into a 4:3 box with
+       object-fit:cover, which sliced the top off anything tall and the sides off
+       anything wide — and left the page's midnight blue showing through GIFs with a
+       transparent background. Both problems go away by letting the picture set its
+       own height and sitting it on white, which is what these were authored against. */
+    .shot { display: block; width: 100%; height: auto; background: #fff; }
+
+    /* --- library ------------------------------------------------------------ */
+    .filters { display: flex; gap: 7px; flex-wrap: wrap; align-items: center; }
+    .filter {
+      padding: 6px 13px; border: var(--gn-outline-sm) solid var(--gn-outline-color);
+      border-radius: var(--gn-radius-pill); background: var(--gn-bg-3); color: var(--gn-ink);
+      font-size: .8rem; font-weight: 800; cursor: pointer;
+    }
+    .filter[aria-pressed="true"] { background: var(--gn-accent-4); color: var(--gn-accent-4-ink); }
+    .grid { columns: 3 220px; column-gap: 12px; }
+    .item {
+      break-inside: avoid; margin: 0 0 12px; position: relative; overflow: hidden;
+      border: var(--gn-outline) solid var(--gn-outline-color); border-radius: var(--gn-radius-sm);
+      background: var(--gn-bg-2); box-shadow: var(--gn-shadow);
+    }
+    .item--gone { opacity: .45; }
+    .item__name {
+      display: block; padding: 6px 9px; font-size: .74rem; font-weight: 800;
+      color: var(--gn-ink-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .item__sets { display: flex; gap: 5px; padding: 0 7px 8px; }
+    .chipbtn {
+      flex: 1 1 0; padding: 6px 0; border: var(--gn-outline-sm) solid var(--gn-ink-dim);
+      border-radius: var(--gn-radius-pill); background: transparent; color: var(--gn-ink-dim);
+      font-size: .72rem; font-weight: 800; cursor: pointer; text-align: center;
+    }
+    .chipbtn[aria-pressed="true"] { border-color: var(--gn-outline-color); }
+    .chipbtn--normal[aria-pressed="true"] { background: var(--gn-accent-3); color: var(--gn-accent-3-ink); }
+    .chipbtn--adult[aria-pressed="true"] { background: var(--gn-accent-2); color: var(--gn-accent-2-ink); }
+    .item__drop {
+      position: absolute; top: 6px; right: 6px; width: 28px; height: 28px; display: grid;
+      place-items: center; border: var(--gn-outline-sm) solid var(--gn-outline-color);
+      border-radius: 50%; background: var(--gn-danger); color: var(--gn-danger-ink);
+      font-size: .9rem; font-weight: 800; cursor: pointer; opacity: 0; transition: opacity 140ms ease;
+    }
+    .item:hover .item__drop, .item:focus-within .item__drop { opacity: 1; }
+    .empty { padding: 40px 10px; text-align: center; color: var(--gn-ink-dim); }
+
+    /* --- add by link -------------------------------------------------------- */
+    .adder { display: flex; gap: 8px; align-items: flex-start; flex-wrap: wrap; }
+    .adder textarea {
+      flex: 1 1 320px; min-width: 0; min-height: 44px; padding: 11px 14px; resize: vertical;
+      border: var(--gn-outline) solid var(--gn-outline-color); border-radius: var(--gn-radius-sm);
+      background: var(--gn-surface); color: var(--gn-surface-ink);
+      font-family: var(--gn-font-body); font-weight: 700; font-size: .9rem;
+    }
+
+    /* --- prompts ------------------------------------------------------------ */
+    /* A list, not a grid: these are sentences, and they are read left to right. The
+       set chips are the same control the cards use, so tagging feels identical. */
+    .writer { display: flex; gap: 8px; align-items: stretch; flex-wrap: wrap; }
+    .writer textarea {
+      flex: 1 1 320px; min-width: 0; min-height: 44px; padding: 11px 14px; resize: vertical;
+      border: var(--gn-outline) solid var(--gn-outline-color); border-radius: var(--gn-radius-sm);
+      background: var(--gn-surface); color: var(--gn-surface-ink);
+      font-family: var(--gn-font-body); font-weight: 700; font-size: .9rem;
+    }
+    .lines { display: flex; flex-direction: column; gap: 8px; }
+    .line {
+      display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 8px 9px;
+      border: var(--gn-outline) solid var(--gn-outline-color); border-radius: var(--gn-radius-sm);
+      background: var(--gn-bg-2);
+    }
+    .line__text {
+      flex: 1 1 260px; min-width: 0; padding: 8px 11px;
+      border: var(--gn-outline-sm) solid transparent; border-radius: var(--gn-radius-sm);
+      background: transparent; color: var(--gn-ink);
+      font-family: var(--gn-font-body); font-weight: 700; font-size: .9rem;
+    }
+    .line__text:hover { border-color: var(--gn-outline-color); }
+    .line__text:focus { outline: none; border-color: var(--gn-accent-4); background: var(--gn-surface); color: var(--gn-surface-ink); }
+    .line__sets { display: flex; gap: 5px; }
+    .line__sets .chipbtn { flex: 0 0 auto; padding: 6px 11px; }
+    .line__drop {
+      width: 30px; height: 30px; flex: 0 0 auto; display: grid; place-items: center;
+      border: var(--gn-outline-sm) solid var(--gn-outline-color); border-radius: 50%;
+      background: var(--gn-bg-3); color: var(--gn-ink-dim);
+      font-size: .85rem; font-weight: 800; cursor: pointer;
+    }
+    /* Second click deletes. A prompt has no "rejected" list to be undone from, and this
+       tab gets used on a phone, where one stray tap should not lose a line you wrote. */
+    .line__drop[data-sure="1"] { width: auto; padding: 0 11px; border-radius: var(--gn-radius-pill); background: var(--gn-danger); color: var(--gn-danger-ink); }
+    .blank { color: var(--gn-ink-dim); }
+
+    /* --- discover ----------------------------------------------------------- */
+    .find { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .find input {
+      flex: 1 1 220px; min-width: 0; padding: 10px 14px;
+      border: var(--gn-outline) solid var(--gn-outline-color); border-radius: var(--gn-radius-pill);
+      background: var(--gn-surface); color: var(--gn-surface-ink);
+      font-family: var(--gn-font-body); font-weight: 800; font-size: 1rem;
+    }
+
+
+
+    .morewrap { display: flex; justify-content: center; padding: 6px 0 2px; }
+    .hint { color: var(--gn-ink-dim); font-size: .8rem; }
+    .flash {
+      position: fixed; left: 50%; top: 14px; transform: translateX(-50%);
+      padding: 9px 16px; border: var(--gn-outline) solid var(--gn-outline-color);
+      border-radius: var(--gn-radius-pill); background: var(--gn-surface); color: var(--gn-surface-ink);
+      font-family: var(--gn-font-display); box-shadow: var(--gn-shadow);
+      opacity: 0; transition: opacity 180ms ease; z-index: 60; pointer-events: none;
+    }
+    .flash--on { opacity: 1; }
+    .flash--bad { background: var(--gn-danger); color: var(--gn-danger-ink); }
+    .problem {
+      padding: 10px 14px; border: var(--gn-outline) solid var(--gn-outline-color);
+      border-radius: var(--gn-radius-sm); background: var(--gn-danger); color: var(--gn-danger-ink); font-weight: 800;
+    }
+    .problem:empty { display: none; }
+
+    /* On a phone the tap targets have to be above the fold, so the trimmings get
+       compressed rather than pushing the buttons off screen. */
+    @media (max-width: 760px) {
+      .curate { padding: 8px 12px 16px; gap: 7px; }
+      .brand { font-size: 1rem; }
+      .tally { gap: 5px; }
+      .pill { font-size: .7rem; padding: 4px 9px 5px; }
+      .grid { columns: 2 130px; column-gap: 8px; }
+      .item { margin-bottom: 8px; }
+      .item__drop { opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+  <main class="curate" id="curate">
+    <div class="bar">
+      <h1 class="brand">🃏 Deck curator
+        <small>{{ source }} · rating {{ rating }}</small>
+      </h1>
+      <div class="tally" id="tally"></div>
+    </div>
+
+    <div class="tabs" role="tablist">
+      <button class="tab" id="tab-library" role="tab" aria-selected="true" data-tab="library" type="button">Library</button>
+      <button class="tab" id="tab-discover" role="tab" aria-selected="false" data-tab="discover" type="button">Discover</button>
+      <button class="tab" id="tab-prompts" role="tab" aria-selected="false" data-tab="prompts" type="button">Prompts</button>
+      <form method="post" action="{{ url_for('logout') }}" style="margin-left:auto">
+        <button class="btn btn--tiny btn--ghost" type="submit">Sign out</button>
+      </form>
+    </div>
+
+    <p class="problem" id="problem"></p>
+
+    <!-- ============================ LIBRARY ============================ -->
+    <section id="panel-library" role="tabpanel" aria-labelledby="tab-library">
+      <div class="adder">
+        <textarea id="links" placeholder="Paste GIF links — Tenor, Discord, anywhere. One per line, or comma separated."></textarea>
+        <button class="btn" data-action="add-links" type="button">Add</button>
+      </div>
+
+      <div class="filters" id="filters"></div>
+      <div class="grid" id="grid"></div>
+      <p class="empty" id="empty" hidden>Nothing in this set yet — find some in <b>Discover</b>.</p>
+    </section>
+
+    <!-- =========================== DISCOVER ============================ -->
+    <section id="panel-discover" role="tabpanel" aria-labelledby="tab-discover" hidden>
+      <div class="find">
+        <input id="search" type="search" placeholder="Search {{ source }} — type anything" autocomplete="off" spellcheck="false">
+        <button class="btn" data-action="search" type="button">Search</button>
+      </div>
+      <p class="hint" id="found"></p>
+
+      <div class="grid" id="results"></div>
+      <p class="empty" id="noresults" hidden>Search for something to start tagging.</p>
+      <div class="morewrap"><button class="btn btn--ghost" id="more" data-action="more" type="button" hidden>Show 50 more</button></div>
+    </section>
+
+    <!-- =========================== PROMPTS ============================= -->
+    <section id="panel-prompts" role="tabpanel" aria-labelledby="tab-prompts" hidden>
+      <div class="writer">
+        <textarea id="newprompt" placeholder="Write a prompt — use ___ where the GIF goes. One per line to add several."></textarea>
+        <div class="line__sets" id="newsets"></div>
+        <button class="btn" data-action="add-prompt" type="button">Add</button>
+      </div>
+      <p class="hint">New prompts go into the pile lit up above. Edit any line and it saves when you click away.</p>
+
+      <div class="filters" id="pfilters"></div>
+      <div class="lines" id="lines"></div>
+      <p class="empty" id="pempty" hidden>No prompts in this set — write one above.</p>
+    </section>
+  </main>
+
+  <div class="flash" id="flash"></div>
+
+<script>
+(() => {
+  'use strict';
+  const SETS = {{ sets | tojson }};
+  const SET_ORDER = {{ set_order | tojson }};   // Normal, then 18+ — in that order
+  const GIF_BASE = {{ url_for('static', filename='gifs/') | tojson }};
+  // Absolute, not relative. Reached as /curate (no trailing slash) a relative "api/next"
+  // resolves against the parent and lands on the *game*, which answers with HTML — so
+  // every fetch went "Unexpected token '<'". url_for knows the prefix; nothing else does.
+  const BASE = {{ url_for('index') | tojson }};
+  const apiUrl = (path) => BASE.replace(/\/?$/, '/') + path;
+  const el = (id) => document.getElementById(id);
+  const tally = el('tally'), problem = el('problem'), flashEl = el('flash'), search = el('search');
+  const grid = el('grid'), filters = el('filters'), emptyEl = el('empty');
+  const resultsEl = el('results'), foundEl = el('found'), moreEl = el('more'), noResultsEl = el('noresults');
+  const linesEl = el('lines'), pFiltersEl = el('pfilters'), pEmptyEl = el('pempty'), newSetsEl = el('newsets');
+
+  let busy = false;
+  let cards = [];        // the library
+  let ignoredCards = []; // rejected, kept only so search can skip them
+  let filter = 'all';
+  let results = [];      // the current page of search results
+  let term = '';         // what was searched for
+  let offset = 0;
+  let prompts = [];      // every prompt, whatever set it's in
+  let pFilter = 'all';
+  let newSets = [SET_ORDER[0]];  // which pile a freshly written prompt lands in
+  let promptsLoaded = false;
+
+  const esc = (s) => String(s == null ? '' : s).replace(/[<>&"]/g, (c) =>
+    ({'<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;'}[c]));
+
+  function flash(text, bad) {
+    flashEl.textContent = text;
+    flashEl.classList.toggle('flash--bad', !!bad);
+    flashEl.classList.add('flash--on');
+    clearTimeout(flash.timer);
+    flash.timer = setTimeout(() => flashEl.classList.remove('flash--on'), 1400);
+  }
+
+  /**
+   * The tally: how full each pile is.
+   *
+   * Only Normal gets a meter. It's the deck every game deals from, so 56 is a target it
+   * has to hit; the 18+ pile tops that up when the host turns "keep it clean" off, so
+   * any number of them is a fine number.
+   */
+  function renderCounts(counts) {
+    if (!counts) return;
+    const normal = counts.sets.normal || 0;
+    const meter = '<span class="meter"><i style="width:' +
+      Math.min(100, Math.round(100 * normal / counts.target)) + '%"></i></span>';
+    const pill = (kind, label, inner) =>
+      '<span class="pill' + (kind ? ' pill--' + kind : '') + '">' +
+        '<span class="pill__text">' + label + '</span>' + inner + '</span>';
+    tally.innerHTML =
+      pill('normal', 'normal <b>' + normal + '</b>/' + counts.target, meter) +
+      pill('adult', '18+ <b>' + (counts.sets.adult || 0) + '</b>', '') +
+      pill('', 'rejected <b>' + (counts.ignored || 0) + '</b>', '');
+  }
+
+  // --- tabs ---------------------------------------------------------------
+  function showTab(which) {
+    document.querySelectorAll('[data-tab]').forEach((b) =>
+      b.setAttribute('aria-selected', b.dataset.tab === which ? 'true' : 'false'));
+    el('panel-library').hidden = which !== 'library';
+    el('panel-discover').hidden = which !== 'discover';
+    el('panel-prompts').hidden = which !== 'prompts';
+    if (which === 'discover') search.focus();
+    if (which === 'prompts' && !promptsLoaded) loadPrompts();
+  }
+
+  // --- one card, used by both grids ---------------------------------------
+  /**
+   * A tile: the GIF whole, its name, and the three set toggles.
+   *
+   * Library and Discover render the identical thing — the only differences are where
+   * the picture comes from (a file we own vs. the source's preview) and that a library
+   * card can be dropped from the game outright.
+   */
+  function cardHtml(c, kind) {
+    const src = kind === 'library' ? GIF_BASE + encodeURIComponent(c.file) : c.preview;
+    const attr = kind === 'library' ? 'data-card' : 'data-result';
+    const dim = kind === 'library' ? !c.on_disk : (c.known && !c.sets.length);
+    return '<figure class="item' + (dim ? ' item--gone' : '') + '" ' + attr + '="' + esc(c.source_id) + '">' +
+      '<img class="shot" src="' + esc(src) + '" alt="' + esc(c.title) + '" loading="lazy">' +
+      '<button class="item__drop" data-drop="' + esc(c.source_id) +
+        '" title="Not funny — never offer it again" type="button">✕</button>' +
+      '<figcaption class="item__name" title="' + esc(c.title) + '">' + esc(c.title || '(untitled)') + '</figcaption>' +
+      '<div class="item__sets">' +
+        SET_ORDER.map((n) =>
+          '<button class="chipbtn chipbtn--' + n + '" data-' + (kind === 'library' ? 'card' : 'result') +
+          '-set="' + esc(c.source_id) + '" data-set-name="' + n + '" aria-pressed="' +
+          (c.sets.indexOf(n) !== -1) + '" type="button">' + SETS[n].label + '</button>').join('') +
+      '</div>' +
+    '</figure>';
+  }
+
+  // --- the library --------------------------------------------------------
+  function drawFilters() {
+    const counts = {all: cards.length, ignored: ignoredCards.length};
+    SET_ORDER.forEach((n) => { counts[n] = cards.filter((c) => c.sets.indexOf(n) !== -1).length; });
+    const one = (key, label) =>
+      '<button class="filter" data-filter="' + key + '" aria-pressed="' + (filter === key) +
+      '" type="button">' + label + ' <b>' + counts[key] + '</b></button>';
+    filters.innerHTML = one('all', 'Everything') +
+      SET_ORDER.map((n) => one(n, SETS[n].label)).join('') +
+      one('ignored', 'Rejected');
+  }
+
+  function drawGrid() {
+    if (filter === 'ignored') {
+      // No pictures here: the file is gone the moment a card is rejected, and the point
+      // of this view is only to undo a mistake.
+      emptyEl.hidden = ignoredCards.length > 0;
+      grid.innerHTML = ignoredCards.map((c) =>
+        '<figure class="item"><figcaption class="item__name" title="' + esc(c.title) + '">' +
+          esc(c.title) + '</figcaption>' +
+        '<div class="item__sets"><button class="chipbtn" data-unignore="' + esc(c.source_id) +
+          '" type="button">Un-reject</button></div></figure>').join('');
+      return;
+    }
+    const shown = filter === 'all' ? cards : cards.filter((c) => c.sets.indexOf(filter) !== -1);
+    emptyEl.hidden = shown.length > 0;
+    grid.innerHTML = shown.map((c) => cardHtml(c, 'library')).join('');
+  }
+
+  async function loadLibrary() {
+    const data = await (await fetch(apiUrl('api/library'))).json();
+    cards = data.cards || [];
+    ignoredCards = data.ignored || [];
+    renderCounts(data.counts);
+    drawFilters();
+    drawGrid();
+  }
+
+  async function retag(sourceId, sets) {
+    if (busy) return;
+    busy = true;
+    const card = cards.find((c) => c.source_id === sourceId);
+    const before = card ? card.sets.slice() : [];
+    if (card) card.sets = sets;      // optimistic — the grid responds instantly
+    drawGrid();
+    try {
+      const response = await fetch(apiUrl('api/retag'), {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({source_id: sourceId, sets: sets}),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'save failed');
+      if (!sets.length) cards = cards.filter((c) => c.source_id !== sourceId);
+      else if (card) { card.sets = data.sets; card.on_disk = true; }
+      renderCounts(data.counts);
+      flash(sets.length ? 'In: ' + SETS[sets[0]].label : 'Removed from the game');
+    } catch (err) {
+      if (card) card.sets = before;  // put it back if the server refused
+      flash(String(err.message || err), true);
+    } finally {
+      busy = false;
+      drawFilters();
+      drawGrid();
+    }
+  }
+
+  /** The ✕: out of the game, and search stops offering it. Undoable from "Rejected". */
+  async function reject(sourceId) {
+    if (busy) return;
+    busy = true;
+    const known = cards.find((c) => c.source_id === sourceId) ||
+                  results.find((c) => c.source_id === sourceId) || {};
+    cards = cards.filter((c) => c.source_id !== sourceId);
+    results = results.filter((c) => c.source_id !== sourceId);
+    drawFilters(); drawGrid(); drawResults();
+    try {
+      const response = await fetch(apiUrl('api/reject'), {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({source_id: sourceId, title: known.title, page: known.page}),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'could not reject that');
+      renderCounts(data.counts);
+      flash('Rejected — search will skip it');
+    } catch (err) {
+      flash(String(err.message || err), true);
+    } finally {
+      busy = false;
+      loadLibrary();
+    }
+  }
+
+  async function unignore(sourceId) {
+    if (busy) return;
+    busy = true;
+    try {
+      const response = await fetch(apiUrl('api/unignore'), {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({source_id: sourceId}),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'failed');
+      renderCounts(data.counts);
+      flash('Search will offer it again');
+    } catch (err) {
+      flash(String(err.message || err), true);
+    } finally {
+      busy = false;
+      loadLibrary();
+    }
+  }
+
+  async function addLinks() {
+    const raw = el('links').value.split(/[\s,]+/).map((s) => s.trim()).filter(Boolean);
+    if (!raw.length) { flash('Paste a link first', true); return; }
+    flash('Fetching ' + raw.length + ' link(s)…');
+    const data = await (await fetch(apiUrl('api/add-link'), {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({links: raw}),
+    })).json();
+    problem.textContent = (data.failed || []).map((f) => f.link + ' — ' + f.why).join('\n');
+    if (data.candidates && data.candidates.length) {
+      // Straight into Discover as results, so they can be tagged like anything else.
+      results = data.candidates.concat(results);
+      results.forEach((c) => { c.sets = c.sets || []; });
+      el('links').value = '';
+      term = '';
+      showTab('discover');
+      drawResults();
+      foundEl.textContent = data.candidates.length + ' from your links — tag them below';
+      flash('Yours — now tag them');
+    } else {
+      flash('Nothing could be read from those', true);
+    }
+  }
+
+  // --- prompts: the other half of the deck ---------------------------------
+  /** The three set toggles, shared by a prompt line and the "new prompt" row. */
+  function setChips(sets, attr, id) {
+    return SET_ORDER.map((n) =>
+      '<button class="chipbtn chipbtn--' + n + '" ' + attr + '="' + esc(id) +
+      '" data-set-name="' + n + '" aria-pressed="' + (sets.indexOf(n) !== -1) +
+      '" type="button">' + SETS[n].label + '</button>').join('');
+  }
+
+  function drawNewSets() {
+    newSetsEl.innerHTML = setChips(newSets, 'data-newset', 'new');
+  }
+
+  function drawPromptFilters() {
+    const counts = {all: prompts.length};
+    SET_ORDER.forEach((n) => { counts[n] = prompts.filter((p) => p.sets.indexOf(n) !== -1).length; });
+    const one = (key, label) =>
+      '<button class="filter" data-pfilter="' + key + '" aria-pressed="' + (pFilter === key) +
+      '" type="button">' + label + ' <b>' + counts[key] + '</b></button>';
+    pFiltersEl.innerHTML = one('all', 'Everything') + SET_ORDER.map((n) => one(n, SETS[n].label)).join('');
+  }
+
+  function drawPrompts() {
+    const shown = pFilter === 'all' ? prompts : prompts.filter((p) => p.sets.indexOf(pFilter) !== -1);
+    pEmptyEl.hidden = shown.length > 0;
+    linesEl.innerHTML = shown.map((p) =>
+      '<div class="line" data-prompt="' + esc(p.id) + '">' +
+        '<input class="line__text" data-prompt-text="' + esc(p.id) + '" value="' + esc(p.text) +
+          '" aria-label="prompt text">' +
+        '<div class="line__sets">' + setChips(p.sets, 'data-prompt-set', p.id) + '</div>' +
+        '<button class="line__drop" data-prompt-drop="' + esc(p.id) +
+          '" title="Delete this prompt" type="button">✕</button>' +
+      '</div>').join('');
+  }
+
+  async function loadPrompts() {
+    const data = await (await fetch(apiUrl('api/prompts'))).json();
+    prompts = (data.prompts || []).map((p) => { p.sets = p.sets || []; return p; });
+    promptsLoaded = true;
+    drawPromptFilters();
+    drawPrompts();
+  }
+
+  /**
+   * Write one prompt. `id` null means a new one.
+   *
+   * Deliberately one endpoint for both the text and the set chips: editing a line and
+   * tagging it are the same write, so they can't disagree about what was saved.
+   */
+  async function savePrompt(id, text, sets) {
+    if (busy) return null;
+    busy = true;
+    try {
+      const response = await fetch(apiUrl('api/prompt-save'), {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({id: id, text: text, sets: sets}),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'save failed');
+      const saved = data.prompt;
+      const at = prompts.findIndex((p) => p.id === saved.id);
+      if (at === -1) prompts.push(saved); else prompts[at] = saved;
+      return saved;
+    } catch (err) {
+      flash(String(err.message || err), true);
+      return null;
+    } finally {
+      busy = false;
+    }
+  }
+
+  async function retagPrompt(id, sets) {
+    const row = prompts.find((p) => p.id === id);
+    if (!row) return;
+    const before = row.sets.slice();
+    row.sets = sets;                 // optimistic — the chips respond instantly
+    drawPrompts();
+    const saved = await savePrompt(id, row.text, sets);
+    if (!saved) row.sets = before;   // put it back if the server refused
+    else flash(sets.length ? 'In: ' + SETS[sets[0]].label : 'Retired — in no game');
+    drawPromptFilters();
+    drawPrompts();
+  }
+
+  async function editPrompt(id, text) {
+    const row = prompts.find((p) => p.id === id);
+    if (!row || text === row.text) return;
+    const saved = await savePrompt(id, text, row.sets);
+    if (saved) flash('Saved');
+    drawPrompts();                   // re-renders from what the server actually stored
+  }
+
+  /** Add however many lines are in the box, each into the pile lit up beside it. */
+  async function addPrompts() {
+    const box = el('newprompt');
+    const lines = box.value.split('\n').map((s) => s.trim()).filter(Boolean);
+    if (!lines.length) { flash('Write something first', true); return; }
+    if (!newSets.length) { flash('Pick a pile first', true); return; }
+    let added = 0;
+    for (const text of lines) {
+      if (await savePrompt(null, text, newSets)) added++;
+    }
+    if (added) {
+      box.value = '';
+      prompts.sort((a, b) => (a.id < b.id ? -1 : 1));
+      flash(added + (added === 1 ? ' prompt added' : ' prompts added'));
+    }
+    drawPromptFilters();
+    drawPrompts();
+  }
+
+  /** Two taps to delete: there is no un-reject list for a sentence you wrote. */
+  async function dropPrompt(id, button) {
+    if (button.dataset.sure !== '1') {
+      linesEl.querySelectorAll('[data-sure="1"]').forEach((b) => {
+        b.dataset.sure = '0'; b.textContent = '✕';
+      });
+      button.dataset.sure = '1';
+      button.textContent = 'Delete?';
+      return;
+    }
+    if (busy) return;
+    busy = true;
+    try {
+      const response = await fetch(apiUrl('api/prompt-drop'), {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({id: id}),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'could not delete that');
+      prompts = prompts.filter((p) => p.id !== id);
+      flash('Gone');
+    } catch (err) {
+      flash(String(err.message || err), true);
+    } finally {
+      busy = false;
+      drawPromptFilters();
+      drawPrompts();
+    }
+  }
+
+  // --- discover: you search, it shows the results --------------------------
+  function drawResults() {
+    noResultsEl.hidden = results.length > 0;
+    moreEl.hidden = results.length === 0;
+    resultsEl.innerHTML = results.map((c) => cardHtml(c, 'result')).join('');
+  }
+
+  async function doSearch(more) {
+    if (busy) return;
+    busy = true;
+    const wanted = more ? term : search.value.trim();
+    offset = more ? offset + 50 : 0;
+    foundEl.textContent = 'Searching…';
+    try {
+      const response = await fetch(apiUrl('api/search?q=') + encodeURIComponent(wanted) + '&offset=' + offset);
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'search failed');
+      term = wanted;
+      problem.textContent = '';
+      const found = data.results || [];
+      results = more ? results.concat(found) : found;
+      renderCounts(data.counts);
+      drawResults();
+      foundEl.textContent = results.length + (more ? ' results' : ' results') +
+        (term ? ' for “' + term + '”' : ' — trending right now') +
+        (found.length === 0 ? ' (nothing more)' : '');
+      if (!more) window.scrollTo({top: 0, behavior: 'smooth'});
+    } catch (err) {
+      problem.textContent = String(err.message || err);
+      foundEl.textContent = '';
+    } finally {
+      busy = false;
+    }
+  }
+
+  /** Tag a search result. Unlike the library this may have to download the file, so the
+   *  whole candidate goes to the server, not just its id. */
+  async function tagResult(sourceId, sets) {
+    const c = results.find((r) => r.source_id === sourceId);
+    if (!c || busy) return;
+    busy = true;
+    const before = (c.sets || []).slice();
+    c.sets = sets;               // optimistic, so the chips respond instantly
+    drawResults();
+    try {
+      const response = await fetch(apiUrl('api/sets'), {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({candidate: c, sets: sets}),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'save failed');
+      c.sets = data.sets;
+      c.known = true;
+      renderCounts(data.counts);
+      flash(sets.length ? 'In: ' + SETS[sets[0]].label : 'Removed');
+      loadLibrary();             // so the Library tab already agrees when you switch
+    } catch (err) {
+      c.sets = before;           // put it back if the server refused
+      flash(String(err.message || err), true);
+    } finally {
+      busy = false;
+      drawResults();
+    }
+  }
+
+  /**
+   * Pick a pile for a card or a prompt.
+   *
+   * The two are exclusive: Normal plays in every game and 18+ tops it up, so "in both"
+   * would just be a longer way of writing Normal. Tapping the lit one clears it — for a
+   * card that means out of the game, for a prompt it means retired but still on file.
+   */
+  function chosen(current, name) {
+    return (current || []).indexOf(name) === -1 ? [name] : [];
+  }
+
+  // --- input -------------------------------------------------------------
+  document.addEventListener('click', (event) => {
+    const hit = event.target.closest(
+      '[data-action], [data-tab], [data-filter], [data-card-set], [data-result-set], [data-drop], ' +
+      '[data-unignore], [data-pfilter], [data-prompt-set], [data-prompt-drop], [data-newset]');
+    if (!hit) return;
+    if (hit.dataset.tab) return void showTab(hit.dataset.tab);
+    if (hit.dataset.filter) { filter = hit.dataset.filter; drawFilters(); drawGrid(); return; }
+    if (hit.dataset.pfilter) { pFilter = hit.dataset.pfilter; drawPromptFilters(); drawPrompts(); return; }
+    if (hit.dataset.drop) return void reject(hit.dataset.drop);
+    if (hit.dataset.unignore) return void unignore(hit.dataset.unignore);
+    if (hit.dataset.promptDrop) return void dropPrompt(hit.dataset.promptDrop, hit);
+    if (hit.dataset.newset !== undefined && hit.dataset.setName) {
+      newSets = [hit.dataset.setName];   // a radio group: one pile or the other
+      drawNewSets();
+      return;
+    }
+    if (hit.dataset.promptSet !== undefined && hit.dataset.setName) {
+      const row = prompts.find((p) => p.id === hit.dataset.promptSet);
+      if (row) retagPrompt(row.id, chosen(row.sets, hit.dataset.setName));
+      return;
+    }
+    if (hit.dataset.cardSet !== undefined && hit.dataset.setName) {
+      const card = cards.find((c) => c.source_id === hit.dataset.cardSet);
+      if (card) retag(card.source_id, chosen(card.sets, hit.dataset.setName));
+      return;
+    }
+    if (hit.dataset.resultSet !== undefined && hit.dataset.setName) {
+      const found = results.find((c) => c.source_id === hit.dataset.resultSet);
+      if (found) tagResult(found.source_id, chosen(found.sets, hit.dataset.setName));
+      return;
+    }
+    switch (hit.dataset.action) {
+      case 'search': doSearch(false); break;
+      case 'more': doSearch(true); break;
+      case 'add-links': addLinks(); break;
+      case 'add-prompt': addPrompts(); break;
+    }
+  });
+
+  // An edited line saves when you click away — `change` only fires if the text actually
+  // differs, so tabbing through the list doesn't write 150 identical rows.
+  document.addEventListener('change', (event) => {
+    const box = event.target.closest('[data-prompt-text]');
+    if (box) editPrompt(box.dataset.promptText, box.value);
+  });
+
+  linesEl.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' && event.target.matches('[data-prompt-text]')) {
+      event.preventDefault();
+      event.target.blur();          // which fires `change`, and saves
+    }
+  });
+
+  search.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') { event.preventDefault(); doSearch(false); search.blur(); }
+  });
+
+  renderCounts({{ counts | tojson }});
+  drawNewSets();
+  loadLibrary();
+})();
+</script>
+</body>
+</html>

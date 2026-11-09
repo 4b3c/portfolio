@@ -12,6 +12,9 @@ Every site on abrampierce.com, in one container. One folder per subdomain:
 - `toggle/` — toggle.abrampierce.com, one switch everyone shares and a tug-of-war at `/tug`.
   Its own container too, for the same reason.
 
+`archive/` isn't a site: old projects kept for their code and history, never deployed.
+`archive/zipper-mk1/` is Zipper's first version.
+
 `run.py` picks the site from the Host header. A subdomain that isn't listed there
 goes to www. To add a site: a folder with a `create_app()`, and a line in `SITES`.
 Each site keeps its data in `instance/` (SQLite), which lives outside the image.

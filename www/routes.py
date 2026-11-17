@@ -16,6 +16,11 @@ def privacy():
     return current_app.send_static_file("privacy/index.html")
 
 
+@main.route("/zipper/privacy")
+def zipper_privacy():
+    return current_app.send_static_file("zipper/privacy/index.html")
+
+
 @main.route("/terms")
 def terms():
     return current_app.send_static_file("terms/index.html")
